@@ -301,7 +301,7 @@ h4.sub3{font-size:12px;font-weight:700;color:var(--ink2);margin:16px 0 9px}
 <div class="osect"><h3>Авто парку</h3><div class="fstat" id="fleetStat" style="margin-bottom:10px"></div>
 <textarea id="fleetTxt" placeholder="Один держномер у рядок…&#10;BC1234AA&#10;BC5678BB"></textarea>
 <div class="phint2">Впиши всі держномери парку (по одному в рядок).</div></div>
-<div class="osect"><h3>Паспорт авто</h3><p class="sub" style="margin-top:-4px">Постав раз: паливо (план) і тип авто. Газ — план 2500, решта 3000. Оренда/лізинг не рахуються в недобір плану.</p><div id="passList"></div></div>
+<div class="osect"><h3>База водіїв</h3><p class="sub" style="margin-top:-4px">Постав раз для кожного водія: тип і план. Оренда/лізинг — водій зникає зі списків і не йде в недобір. Газ — план 2500, решта 3000.</p><div id="passList"></div></div>
 <div class="osect"><h3>Не працювали / простоюють</h3><div id="carsList"></div></div></div>
 <div id="owner" class="hide"></div>
 </div></div>
@@ -1027,7 +1027,7 @@ finally{hide.forEach(x=>x&&(x.style.visibility=''));b.textContent='Зберег�
 function showView(v){view=v;document.getElementById('overview').classList.toggle('hide',v!=='overview');document.getElementById('owner').classList.toggle('hide',v!=='owner');document.getElementById('cars').classList.toggle('hide',v!=='cars');document.getElementById('detail').classList.add('hide');if(v==='cars')renderCars();if(v==='overview')renderStandingMini();[...document.getElementById('topnav').children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v));if(v==='owner')renderOwner();window.scrollTo(0,0);}
 function daybar(){const S=shown();const pv=S.map(o=>o.pace_net).filter(x=>x!=null).sort((a,b)=>a-b);const np=pv.length?Math.round(pv[Math.floor(pv.length/2)]):null;const ok=np!=null&&np>=HOURLY;const col=np==null?'var(--amber)':(ok?'var(--good)':'var(--bad)');
 document.getElementById('daybar').innerHTML=`<span class="dot" style="background:${col}"></span><div>Середній темп по парку — <b>${np==null?'—':np+' ₴/год чистими'}</b> (норма ${HOURLY} ₴/год). `+(ok?'Парк тримає норму — гарний день, тисніть.':'Темп нижче норми — варто підганяти водіїв.')+`</div>`;}
-function shown(){return selDrivers.size?A.filter(o=>selDrivers.has(o.name)):A;}
+function shown(){var base=A.filter(o=>isTaxi(o));return selDrivers.size?base.filter(o=>selDrivers.has(o.name)):base;}
 function kpis(){const S=shown();const k=S.reduce((s,o)=>s+(o.gross||0),0),done=S.filter(o=>(o.net||0)>=TARGET).length,nw=S.filter(o=>statusOf(o)=='nowork'||statusOf(o)=='low').length;
 const stt=S.map(o=>effStartMin(o)).filter(x=>x!=null).sort((a,b)=>a-b);const sh=stt.length?stt[Math.floor(stt.length/2)]:null;
 const sm=hm(sh);
@@ -1057,7 +1057,7 @@ function registerDay(d){if(d&&d.date){DAYS[d.date]=d;saveDays();if(typeof cloudS
 function fillDaySel(){const sel=document.getElementById('daySel');if(!sel)return;const ks=Object.keys(DAYS).sort().reverse();
 sel.innerHTML=ks.map(k=>`<option value="${k}" ${DATA&&DATA.date===k?'selected':''}>${(DAYS[k].date_label||k)}</option>`).join('');sel.style.display=ks.length>1?'':'none';}
 function setDay(date){if(DAYS[date]){DATA=DAYS[date];boot();}}const rank={nowork:0,low:1,behind:2,ontrack:3,done:4};
-function renderList(){let L=A.filter(o=>o.name.toLowerCase().includes(q)&&(selDrivers.size===0||selDrivers.has(o.name))&&(statusF=='all'||statusOf(o)==statusF||(statusF=='nowork'&&statusOf(o)=='low')));
+function renderList(){let L=A.filter(o=>isTaxi(o)&&o.name.toLowerCase().includes(q)&&(selDrivers.size===0||selDrivers.has(o.name))&&(statusF=='all'||statusOf(o)==statusF||(statusF=='nowork'&&statusOf(o)=='low')));
 const key={attn:o=>[rank[statusOf(o)],-(o.idle||0)],start:o=>[o.start_h==null?99:o.start_h],plan:o=>{const p=plan(o);return p.done?[0,-(o.net||0)]:(p.hLeft!=null?[1,p.hLeft]:[2,0]);},gross:o=>[-(o.gross||0)],unacc:o=>[-(o.unacc_km||0)]}[sort];
 L.sort((a,b)=>{const ka=key(a),kb=key(b);for(let j=0;j<ka.length;j++)if(ka[j]!=kb[j])return ka[j]-kb[j];return 0;});
 document.getElementById('list').innerHTML=L.length?L.map(row).join(''):'<p style="color:var(--muted)">Нікого не знайдено.</p>';}
@@ -1210,13 +1210,11 @@ const work=f.filter(p=>ACT.has(p)),non=f.filter(p=>!ACT.has(p));return{work:work
 function renderFleet(){const st=fleetStats();const el=document.getElementById('fleetStat');if(el)el.innerHTML=`<div class="big">${st.work} <b>/ ${st.total}</b></div><div class="l">робочих авто сьогодні</div>`;}
 function carNotes(){try{return JSON.parse(localStorage.getItem('cars_notes')||'{}')}catch(e){return{}}}
 var PLANS={std:3000,hybrid:3000,gas:2500};
-function carPass(){try{return JSON.parse(localStorage.getItem('cars_pass')||'{}')}catch(e){return{}}}
-function saveCarPass(pl,o){const m=carPass();if(o==null)delete m[pl];else m[pl]=Object.assign({},m[pl],o);try{localStorage.setItem('cars_pass',JSON.stringify(m))}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('carpass',m);}
-function drvTypes(){try{return JSON.parse(localStorage.getItem('drv_types')||'{}')}catch(e){return{}}}
-function saveDrvType(name,t){const m=drvTypes();if(t==null||t==='taxi')delete m[name];else m[name]=t;try{localStorage.setItem('drv_types',JSON.stringify(m))}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('drvtype',m);}
-function carFuel(o){const p=carPass()[o&&o.plate_norm]||{};return p.fuel||'std';}
-function carTarget(o){return PLANS[carFuel(o)]||(DATA&&DATA.plan_default)||3000;}
-function ownOf(o){const dt=drvTypes()[o&&o.name];if(dt==='rent'||dt==='lease')return dt;const cp=carPass()[o&&o.plate_norm]||{};if(cp.own==='rent'||cp.own==='lease')return cp.own;return 'taxi';}
+function drvPass(){try{return JSON.parse(localStorage.getItem('drv_pass')||'{}')}catch(e){return{}}}
+function saveDrvPass(name,patch){const m=drvPass();m[name]=Object.assign({},m[name],patch);try{localStorage.setItem('drv_pass',JSON.stringify(m))}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('drvpass',m);}
+function ownOf(o){const p=drvPass()[o&&o.name]||{};return p.type||'taxi';}
+function isTaxi(o){return ownOf(o)==='taxi';}
+function planOf(o){const p=drvPass()[o&&o.name]||{};return PLANS[p.fuel||'std']||(DATA&&DATA.plan_default)||3000;}
 function saveCarNote(pl,o){const n=carNotes();n[pl]=o;try{localStorage.setItem('cars_notes',JSON.stringify(n))}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('notes',n);}
 const REASONS=['Готове авто — немає водія','Водій на вихідному','Водій захворів','Утримуємо як підмінне','Не готове до таксі / готуємо до випуску','На ремонті / ТО','ДТП / пошкоджено','Інше'];
 const OUT_OF_SERVICE=new Set(['Не готове до таксі / готуємо до випуску','На ремонті / ТО','ДТП / пошкоджено']);
@@ -1227,29 +1225,26 @@ return `<div class="carcard"><div class="carhd"><b>${c.plate}</b>${c.car?' · '+
 <div class="carnote"><select class="creason" data-pl="${c.plate}">${opts}</select><textarea class="cdesc" data-pl="${c.plate}" placeholder="Опис: чому не їздило">${nt.desc||''}</textarea></div></div>`;}
 function renderPass(){
   var el=document.getElementById('passList');if(!el)return;
-  var CYR={'А':'A','В':'B','Е':'E','І':'I','Ї':'I','Є':'E','Ґ':'G','К':'K','М':'M','Н':'H','О':'O','Р':'P','С':'C','Т':'T','У':'U','Х':'X'};
-  var NPL2=function(p){return (p||'').replace(/\s/g,'').toUpperCase().replace(/[А-ЯІЇЄҐ]/g,function(c){return CYR[c]||c;});};
-  var raw='';try{raw=localStorage.getItem('fleet_plates')||'';}catch(e){}
-  var ft=document.getElementById('fleetTxt');if(!raw&&ft)raw=ft.value;
-  var plates=raw.split(/\n+/).map(function(x){return x.trim();}).filter(Boolean);
-  if(!plates.length){el.innerHTML='<div class="phint2">Спершу впиши номери в «Авто парку» вище.</div>';return;}
-  var pass=carPass();
-  var FUEL=[['std','Стандарт'],['hybrid','Гібрид'],['gas','Газ']];
-  var OWN=[['taxi','Таксі'],['rent','Оренда'],['lease','Лізинг']];
+  var pass=drvPass();var names=[];
+  if(typeof A!=='undefined'&&A&&A.length){A.forEach(function(o){if(o&&o.name&&names.indexOf(o.name)<0)names.push(o.name);});}
+  Object.keys(pass).forEach(function(n){if(names.indexOf(n)<0)names.push(n);});
+  names.sort(function(a,b){return a.localeCompare(b,'uk');});
+  if(!names.length){el.innerHTML='<div class="phint2">Спершу онови дані (Bolt/Uklon) — і тут зʼявляться водії.</div>';return;}
+  var TYPE=[['taxi','Таксі'],['rent','Оренда'],['lease','Лізинг']];
+  var FUEL=[['std','Стандарт 3000'],['gas','Газ 2500'],['hybrid','Гібрид 3000']];
   var html='';
-  plates.forEach(function(pl){
-    var k=NPL2(pl);var p=pass[k]||{};var fuel=p.fuel||'std';var own=p.own||'taxi';
-    var plan=PLANS[fuel]||3000;var rentCls=(own!=='taxi')?' pp-rent':'';
-    html+='<div class="passrow" data-k="'+k+'"><span class="pp-plate">'+pl+'</span>';
-    html+='<select class="pp-fuel">'+FUEL.map(function(f){return '<option value="'+f[0]+'"'+(f[0]===fuel?' selected':'')+'>'+f[1]+'</option>';}).join('')+'</select>';
-    html+='<select class="pp-own">'+OWN.map(function(t){return '<option value="'+t[0]+'"'+(t[0]===own?' selected':'')+'>'+t[1]+'</option>';}).join('')+'</select>';
-    html+='<span class="pp-plan'+rentCls+'">'+(own!=='taxi'?(own==='rent'?'оренда':'лізинг'):(plan+' ₴'))+'</span></div>';
+  names.forEach(function(n){
+    var p=pass[n]||{};var type=p.type||'taxi';var fuel=p.fuel||'std';var rentCls=(type!=='taxi')?' pp-rent':'';
+    html+='<div class="passrow" data-n="'+encodeURIComponent(n)+'"><span class="pp-plate">'+n+'</span>';
+    html+='<select class="pp-type">'+TYPE.map(function(t){return '<option value="'+t[0]+'"'+(t[0]===type?' selected':'')+'>'+t[1]+'</option>';}).join('')+'</select>';
+    html+='<select class="pp-fuel"'+(type!=='taxi'?' disabled':'')+'>'+FUEL.map(function(f){return '<option value="'+f[0]+'"'+(f[0]===fuel?' selected':'')+'>'+f[1]+'</option>';}).join('')+'</select>';
+    html+='<span class="pp-plan'+rentCls+'">'+(type!=='taxi'?(type==='rent'?'оренда':'лізинг'):(PLANS[fuel]+' ₴'))+'</span></div>';
   });
   el.innerHTML=html;
   el.querySelectorAll('.passrow').forEach(function(row){
-    var k=row.getAttribute('data-k');
-    row.querySelector('.pp-fuel').onchange=function(e){saveCarPass(k,{fuel:e.target.value});renderPass();if(typeof kpis==='function')kpis();if(typeof renderList==='function')renderList();};
-    row.querySelector('.pp-own').onchange=function(e){saveCarPass(k,{own:e.target.value});renderPass();if(typeof kpis==='function')kpis();if(typeof renderList==='function')renderList();};
+    var n=decodeURIComponent(row.getAttribute('data-n'));
+    row.querySelector('.pp-type').onchange=function(e){saveDrvPass(n,{type:e.target.value});renderPass();if(typeof kpis==='function')kpis();if(typeof renderList==='function')renderList();};
+    var fs=row.querySelector('.pp-fuel');if(fs)fs.onchange=function(e){saveDrvPass(n,{fuel:e.target.value});renderPass();if(typeof kpis==='function')kpis();if(typeof renderList==='function')renderList();};
   });
 }
 function renderCars(){renderFleet();renderPass();const notes=carNotes();const sd=standing();const os=outService();const el=document.getElementById('carsList');
@@ -1459,7 +1454,7 @@ async function cloudLoadDays(){if(!supa)return;try{const r=await supa.from("app_
 async function cloudSaveDay(d){if(!supa||!d||!d.date)return;try{await supa.from("app_data").upsert({key:"day:"+d.date,value:d});}catch(e){console.error(e);}}
 async function cloudDeleteAllDays(){if(!supa)return;try{await supa.from("app_data").delete().like("key","day:%");}catch(e){console.error(e);}}
 async function cloudSaveKV(k,v){if(!supa)return;try{await supa.from("app_data").upsert({key:"kv:"+k,value:v});}catch(e){console.error(e);}}
-async function cloudLoadKV(){if(!supa)return;try{const r=await supa.from("app_data").select("key,value").in("key",["kv:fleet","kv:notes","kv:carpass","kv:drvtype"]);if(r.error){console.error(r.error);return;}(r.data||[]).forEach(x=>{if(x.key==="kv:fleet"&&typeof x.value==="string"){try{localStorage.setItem("fleet_plates",x.value);}catch(e){}}if(x.key==="kv:notes"&&x.value){try{localStorage.setItem("cars_notes",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:carpass"&&x.value){try{localStorage.setItem("cars_pass",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:drvtype"&&x.value){try{localStorage.setItem("drv_types",JSON.stringify(x.value));}catch(e){}}});}catch(e){console.error(e);}}
+async function cloudLoadKV(){if(!supa)return;try{const r=await supa.from("app_data").select("key,value").in("key",["kv:fleet","kv:notes","kv:drvpass"]);if(r.error){console.error(r.error);return;}(r.data||[]).forEach(x=>{if(x.key==="kv:fleet"&&typeof x.value==="string"){try{localStorage.setItem("fleet_plates",x.value);}catch(e){}}if(x.key==="kv:notes"&&x.value){try{localStorage.setItem("cars_notes",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:drvpass"&&x.value){try{localStorage.setItem("drv_pass",JSON.stringify(x.value));}catch(e){}}});}catch(e){console.error(e);}}
 function showLogin(b){var el=document.getElementById("login");if(el)el.style.display=b?"flex":"none";}
 function revealForm(){var l=document.getElementById("loginLoading"),f=document.getElementById("loginForm");if(l)l.style.display="none";if(f)f.style.display="block";}
 async function startCloud(){await cloudLoadDays();await cloudLoadKV();try{loadDays();}catch(e){}var ks=Object.keys(DAYS).sort();if(ks.length){DATA=DAYS[ks[ks.length-1]];boot();}else{showUploaderOnly();}}
