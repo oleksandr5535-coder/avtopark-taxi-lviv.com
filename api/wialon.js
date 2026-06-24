@@ -1,17 +1,13 @@
-// /api/wialon-probe.js  — ДІАГНОСТИКА Wialon
-// Мета: побачити реальну структуру ПІД-РЯДКІВ (окремі поїздки/стоянки),
-// а не лише денні підсумки. Нічого не змінює у робочій /api/wialon.js.
-// Змінна оточення: WIALON_TOKEN (той самий, що в /api/wialon).
+// /api/wialon.js  — ПОВНА ВЕРСІЯ з витягом окремих поїздок/стоянок (під-рядків)
+// Логіниться, виконує груповий звіт, тягне під-рядки через select_result_rows,
+// бере час із надійного поля v (unix) і переводить у київський сам.
+// Повертає { ok, date, trips:[...], stops:[...] } — рядки в форматі, який розуміє дашборд.
+// Змінна оточення: WIALON_TOKEN
 
 const HOST = 'https://hst-api.wialon.eu';
 const RESOURCE_ID = 600586295;  // ресурс "Holubkov"
 const REPORT_ID   = 5;          // шаблон "Груповий звіт"
 const GROUP_ID    = 600601067;  // група авто "Super-Sasha"
-
-// Київ: EET/EEST. tzOffset для Wialon = пакет (зсув + прапор DST).
-// 0x0CEA6000 — типове значення для України (UTC+2/+3 з автоматичним переходом).
-// Якщо години зміщені — підкоригуємо за результатом діагностики.
-const TZ_KYIV = 0x0CEA6000;
 
 async function call(svc, params, sid) {
   let url = HOST + '/wialon/ajax.html?svc=' + svc + '&params=' + encodeURIComponent(JSON.stringify(params));
@@ -20,93 +16,109 @@ async function call(svc, params, sid) {
   return r.json();
 }
 
-function ymd(d){ // unix(сек) -> межі доби за Києвом? ні: беремо просту добу UTC діапазону навколо дати
-  return d;
+// unix(сек) -> київський рядок. withDate=true: "YYYY-MM-DD HH:MM:SS"; false: "HH:MM:SS"
+function fmtKyiv(v, withDate) {
+  const d = new Date(v * 1000);
+  const opt = withDate
+    ? { timeZone:'Europe/Kyiv', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }
+    : { timeZone:'Europe/Kyiv', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false };
+  const p = new Intl.DateTimeFormat('en-CA', opt).formatToParts(d);
+  const g = t => { const x = p.find(z => z.type === t); return x ? x.value : ''; };
+  if (withDate) return g('year')+'-'+g('month')+'-'+g('day')+' '+g('hour')+':'+g('minute')+':'+g('second');
+  return g('hour')+':'+g('minute')+':'+g('second');
+}
+const cellText = c => (c && typeof c === 'object') ? (c.t || '') : (c == null ? '' : String(c));
+const cellTime = (c, withDate) => (c && typeof c === 'object' && typeof c.v === 'number' && c.v > 0) ? fmtKyiv(c.v, withDate) : cellText(c);
+function flatten(rows, acc) { (rows || []).forEach(r => { if (r && r.c) acc.push(r); if (r && Array.isArray(r.r)) flatten(r.r, acc); }); return acc; }
+
+// київський зсув (сек) для конкретного моменту
+function kyivOffsetSec(date) {
+  const dtf = new Intl.DateTimeFormat('en-US', { timeZone:'Europe/Kyiv', hour12:false,
+    year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  const p = dtf.formatToParts(date).reduce((a, x) => { a[x.type] = x.value; return a; }, {});
+  const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+  return (asUTC - date.getTime()) / 1000;
 }
 
 export default async function handler(req, res) {
-  const out = { steps: {} };
   try {
     const token = process.env.WIALON_TOKEN;
-    if (!token) throw new Error('Немає WIALON_TOKEN у змінних оточення');
+    if (!token) throw new Error('Немає WIALON_TOKEN');
 
-    // 1) ВХІД
+    // дата (?date=YYYY-MM-DD) або сьогодні за Києвом
+    let dateStr = (req.query && req.query.date) ? String(req.query.date) : null;
+    if (!dateStr) {
+      const p = new Intl.DateTimeFormat('en-CA', { timeZone:'Europe/Kyiv', year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(new Date());
+      const g = t => p.find(x => x.type === t).value;
+      dateStr = g('year')+'-'+g('month')+'-'+g('day');
+    }
+    // точна київська доба [00:00, 24:00)
+    const off = kyivOffsetSec(new Date(dateStr + 'T12:00:00Z'));
+    const from = Math.floor(Date.parse(dateStr + 'T00:00:00Z') / 1000) - off;
+    const to = from + 86400;
+
+    // 1) вхід
     const login = await call('token/login', { token });
     if (!login || !login.eid) throw new Error('Вхід не вдався: ' + JSON.stringify(login).slice(0, 200));
     const sid = login.eid;
-    out.steps.login = { ok: true, user: login.user && login.user.nm };
 
-    // 2) ЛОКАЛІЗАЦІЯ (київський час + формат як у zip)
-    const loc = await call('render/set_locale',
-      { tzOffset: TZ_KYIV, language: 'uk', formatDate: '%Y-%m-%d %H:%M:%S' }, sid);
-    out.steps.locale = loc;
+    // 2) локалізація (мова; час усе одно беремо з v)
+    await call('render/set_locale', { tzOffset: 10800, language: 'uk', formatDate: '%Y-%m-%d %H:%M:%S' }, sid);
 
-    // 3) Інтервал: вибрана дата (?date=YYYY-MM-DD) або останні 24 год
-    const dateStr = (req.query && req.query.date) ? String(req.query.date) : null;
-    let from, to;
-    if (dateStr) {
-      // доба за Києвом ~ UTC-2; беремо з запасом
-      const base = Math.floor(new Date(dateStr + 'T00:00:00Z').getTime() / 1000);
-      from = base - 3 * 3600;          // трохи раніше
-      to   = base + 24 * 3600 + 3600;  // до кінця доби з запасом
-    } else {
-      to = Math.floor(Date.now() / 1000);
-      from = to - 24 * 3600;
-    }
-    out.steps.interval = { from, to, dateStr };
-
-    // 4) Очистити попередній результат (в сесії може бути лише один звіт)
+    // 3) очистити попередній звіт у сесії
     await call('report/cleanup_result', {}, sid);
 
-    // 5) ВИКОНАТИ ЗВІТ
+    // 4) виконати звіт
     const exec = await call('report/exec_report', {
-      reportResourceId: RESOURCE_ID,
-      reportTemplateId: REPORT_ID,
-      reportObjectId: GROUP_ID,
-      reportObjectSecId: 0,
+      reportResourceId: RESOURCE_ID, reportTemplateId: REPORT_ID,
+      reportObjectId: GROUP_ID, reportObjectSecId: 0,
       interval: { from, to, flags: 0 },
     }, sid);
-
     const rr = exec && exec.reportResult;
     if (!rr) throw new Error('Звіт не виконався: ' + JSON.stringify(exec).slice(0, 300));
-    out.steps.exec = {
-      ok: true,
-      stats: rr.stats,
-      tables: (rr.tables || []).map((t, i) => ({
-        index: i, name: t.name, label: t.label, rows: t.rows, level: t.level,
-        columns: t.columns, header: t.header,
-      })),
-    };
 
-    // 6) ВИТЯГ ПІД-РЯДКІВ: для кожної таблиці беремо ВСІ рівні через select_result_rows
-    out.steps.tables_data = [];
     const tables = rr.tables || [];
-    for (let ti = 0; ti < tables.length; ti++) {
-      const rowsCount = tables[ti].rows || 0;
-      // запит діапазону всіх рядків з глибиною рівнів (level: великий, щоб дістати під-рядки)
+    const tripsTblIdx = tables.findIndex(t => t.name === 'unit_group_trips');
+    const stopsTblIdx = tables.findIndex(t => t.name === 'unit_group_stays');
+
+    async function pull(idx) {
+      if (idx < 0) return [];
+      const rowsCount = tables[idx].rows || 0;
       const sel = await call('report/select_result_rows', {
-        tableIndex: ti,
+        tableIndex: idx,
         config: { type: 'range', data: { from: 0, to: Math.max(rowsCount - 1, 0), level: 8 } },
       }, sid);
-      // показуємо лише ПЕРШІ елементи, щоб побачити структуру (не весь масив)
-      let preview = sel;
-      if (Array.isArray(sel)) {
-        preview = sel.slice(0, 2).map(top => ({
-          c: top.c, i1: top.i1, i2: top.i2, t: top.t, d: top.d,
-          rows: Array.isArray(top.r) ? top.r.slice(0, 3) : top.r,
-          _keys: Object.keys(top),
-        }));
-      }
-      out.steps.tables_data.push({
-        tableIndex: ti, name: tables[ti].name, label: tables[ti].label,
-        rowsCount, sample: preview,
-      });
+      return Array.isArray(sel) ? sel : [];
     }
+    const tripsRaw = await pull(tripsTblIdx);
+    const stopsRaw = await pull(stopsTblIdx);
+
+    const trips = [];
+    flatten(tripsRaw, []).forEach(r => {
+      const c = r.c; const num = cellText(c[0]); if (num.indexOf('.') < 0) return;
+      trips.push({
+        '№': num, 'Групування': cellText(c[1]),
+        'Початок': cellTime(c[2], true), 'Кінець': cellTime(c[3], true),
+        'Тривалість': cellText(c[4]), 'Пробіг': cellText(c[5]),
+        'Макс. швидкість': cellText(c[6]), 'Штраф': cellText(c[7]),
+      });
+    });
+
+    const stops = [];
+    flatten(stopsRaw, []).forEach(r => {
+      const c = r.c; const num = cellText(c[0]); if (num.indexOf('.') < 0) return;
+      const start = cellTime(c[2], false); if (!start) return; // відсіяти порожні
+      stops.push({
+        '№': num, 'Групування': cellText(c[1]),
+        'Початок': start, 'Кінець': cellTime(c[3], false),
+        'Тривалість': cellText(c[4]), 'Місцезнаходження': cellText(c[5]),
+      });
+    });
 
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.status(200).send(JSON.stringify({ ok: true, ...out }, null, 2));
+    res.status(200).send(JSON.stringify({ ok: true, date: dateStr, trips, stops }));
   } catch (err) {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.status(200).send(JSON.stringify({ ok: false, error: err.message, ...out }, null, 2));
+    res.status(200).send(JSON.stringify({ ok: false, error: err.message }));
   }
 }
