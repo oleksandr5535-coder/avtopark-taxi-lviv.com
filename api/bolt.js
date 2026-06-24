@@ -1,40 +1,12 @@
-// /api/bolt-probe.js  (РАУНД 2 — ширший перебір + контрольні робочі ендпойнти)
-// Логіниться в Bolt Fleet API і перебирає ймовірні "грошові" ендпойнти.
-// Контрольні (відомо робочі) додані, щоб переконатись, що пробник коректний.
-// Змінні оточення: BOLT_CLIENT_ID, BOLT_CLIENT_SECRET (ті самі, що в /api/bolt).
+// /api/bolt.js  — РОБОЧА функція: тягне поїздки Bolt за день
+// OAuth2 (client_credentials) -> getFleetOrders -> повертає { ok, date, orders }
+// Змінні оточення: BOLT_CLIENT_ID, BOLT_CLIENT_SECRET
 
 const COMPANY_ID = 25859;
-
-const BASES = [
-  'https://node.bolt.eu/fleet-integration-gateway/fleetIntegration/v1',
-  'https://node.bolt.eu/fleet-integration-gateway/fleetIntegration/v2',
-];
-
-// КОНТРОЛЬНІ — мають віддати 200 (доказ, що пробник правильний)
-const CONTROL = ['getFleetOrders', 'getDrivers', 'getVehicles'];
-
-// КАНДИДАТИ на заробітки/виплати/бонуси/рахунки
-const CANDIDATES = [
-  'getFleetOrdersEarnings', 'getOrderEarnings', 'getOrdersEarnings',
-  'getDriverEarnings', 'getDriverEarningsReport', 'getCompanyEarnings',
-  'getFleetEarnings', 'getEarnings', 'getEarningsReport',
-  'getFleetEarningStatement', 'getEarningStatement',
-  'getDriverEngagementData', 'getFleetEngagementData',
-  'getInvoices', 'getFleetInvoices', 'getDriverInvoices', 'getCompanyInvoices',
-  'getPayouts', 'getFleetPayouts', 'getDriverPayouts',
-  'getStatements', 'getFleetStatements',
-  'getBalance', 'getFleetBalance', 'getCompanyBalance',
-  'getRevenue', 'getFleetRevenue',
-  'getReports', 'getFleetReports', 'getDriverReports',
-  'getActivityReport', 'getDriverActivity', 'getFleetActivity',
-  'getCampaignEarnings', 'getBonuses', 'getDriverBonuses',
-  'getCompensations', 'getFleetCompensations',
-  'getWeeklyReport', 'getDriverWeeklyReport',
-];
+const API = 'https://node.bolt.eu/fleet-integration-gateway/fleetIntegration/v1';
 
 async function getToken() {
-  const id = process.env.BOLT_CLIENT_ID;
-  const secret = process.env.BOLT_CLIENT_SECRET;
+  const id = process.env.BOLT_CLIENT_ID, secret = process.env.BOLT_CLIENT_SECRET;
   if (!id || !secret) throw new Error('Немає BOLT_CLIENT_ID або BOLT_CLIENT_SECRET');
   const body = new URLSearchParams({
     client_id: id, client_secret: secret,
@@ -50,53 +22,43 @@ async function getToken() {
   return j.access_token;
 }
 
-async function probe(url, token, body) {
-  let status = null, snippet = '';
-  try {
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body,
-    });
-    status = r.status;
-    snippet = (await r.text()).slice(0, 200);
-  } catch (e) { snippet = 'fetch error: ' + e.message; }
-  return { status, snippet };
+// київський зсув (сек) для моменту
+function kyivOffsetSec(date) {
+  const dtf = new Intl.DateTimeFormat('en-US', { timeZone:'Europe/Kyiv', hour12:false,
+    year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  const p = dtf.formatToParts(date).reduce((a, x) => { a[x.type] = x.value; return a; }, {});
+  const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+  return (asUTC - date.getTime()) / 1000;
 }
 
 export default async function handler(req, res) {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
   try {
-    const token = await getToken();
-    const now = Math.floor(Date.now() / 1000);
-    const weekAgo = now - 7 * 24 * 3600;
-    const body = JSON.stringify({
-      company_ids: [COMPANY_ID], company_id: COMPANY_ID,
-      start_ts: weekAgo, end_ts: now, offset: 0, limit: 50,
-    });
-
-    const control = [];
-    const found = [];
-
-    for (const base of BASES) {
-      const ver = base.endsWith('v2') ? 'v2' : 'v1';
-      for (const ep of CONTROL) {
-        const { status, snippet } = await probe(base + '/' + ep, token, body);
-        if (status !== 404) control.push({ ep, ver, status, snippet: snippet.slice(0, 80) });
-      }
-      for (const ep of CANDIDATES) {
-        const { status, snippet } = await probe(base + '/' + ep, token, body);
-        if (status !== 404) found.push({ ep, ver, status, snippet });
-      }
+    // дата (?date=YYYY-MM-DD) або сьогодні за Києвом
+    let dateStr = (req.query && req.query.date) ? String(req.query.date) : null;
+    if (!dateStr) {
+      const p = new Intl.DateTimeFormat('en-CA', { timeZone:'Europe/Kyiv', year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(new Date());
+      const g = t => p.find(x => x.type === t).value;
+      dateStr = g('year')+'-'+g('month')+'-'+g('day');
     }
+    // точна київська доба [00:00, 24:00)
+    const off = kyivOffsetSec(new Date(dateStr + 'T12:00:00Z'));
+    const start_ts = Math.floor(Date.parse(dateStr + 'T00:00:00Z') / 1000) - off;
+    const end_ts = start_ts + 86400;
 
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.status(200).send(JSON.stringify({
-      ok: true,
-      hint: 'control = відомо робочі (мають бути 200). found = знайдені грошові ендпойнти (200 = є!).',
-      control,
-      found,
-    }, null, 2));
+    const token = await getToken();
+    const r = await fetch(API + '/getFleetOrders', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        company_ids: [COMPANY_ID], company_id: COMPANY_ID,
+        start_ts, end_ts, offset: 0, limit: 1000,
+      }),
+    });
+    const j = await r.json();
+    // повертаємо все, що прийшло; дашборд сам знайде масив поїздок
+    res.status(200).send(JSON.stringify({ ok: true, date: dateStr, start_ts, end_ts, orders: (j && j.data) ? j.data : j }));
   } catch (err) {
-    res.status(200).send(JSON.stringify({ ok: false, error: err.message }, null, 2));
+    res.status(200).send(JSON.stringify({ ok: false, error: err.message }));
   }
 }
