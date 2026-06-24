@@ -6,22 +6,23 @@ export default async function handler(req, res) {
     if (!tr.access_token) return res.status(401).json({ step: "token", response: tr });
     const token = tr.access_token;
 
-    // пробуємо кілька можливих базових адрес із ендпоінтом /test
-    const hosts = [
-      "https://node.bolt.eu/fleet-integration",
-      "https://fleets.bolt.eu/fleet-integration",
-      "https://node.bolt.eu",
-      "https://fleet-integration.bolt.eu",
+    const urls = [
+      "https://node.bolt.eu/fleet-integration/v1/test",
+      "https://node.bolt.eu/fleet/integration/fleetIntegration/v1/test",
+      "https://node.bolt.eu/partner/fleetIntegration/v1/test",
+      "https://node.bolt.eu/fleetIntegrationGateway/fleetIntegration/v1/test",
+      "https://node.bolt.eu/fleet-integration-gateway/fleetIntegration/v1/test",
+      "https://fleet-integration.taxify.eu/fleetIntegration/v1/test",
+      "https://node.bolt.eu/fleetIntegration/fleetIntegrationGatewayAuth/fleetIntegration/v1/test",
     ];
     const out = [];
-    for (const h of hosts) {
-      const url = `${h}/fleetIntegration/v1/test`;
+    for (const url of urls) {
       try {
         const r = await fetch(url, { method: "POST", headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" }, body: "{}" });
         const txt = await r.text();
-        out.push({ url, status: r.status, body: txt.slice(0, 200) });
+        out.push({ url, status: r.status, body: txt.slice(0, 120) });
       } catch (e) {
-        out.push({ url, error: String(e) });
+        out.push({ url, error: String(e).slice(0, 60) });
       }
     }
     res.status(200).json({ ok: true, tried: out });
