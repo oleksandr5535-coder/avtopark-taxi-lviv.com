@@ -189,6 +189,10 @@ h4.sub3{font-size:12px;font-weight:700;color:var(--ink2);margin:16px 0 9px}
   .boltbar .bb-lbl{font-weight:700;color:#9A6B12}
   .boltbar input[type=date]{border:1px solid #E4Cfa0;border-radius:9px;padding:7px 9px;font:inherit;background:#fff;color:var(--ink)}
   .boltbar .bb-go{border-color:#E2A93B;color:#9A6B12;font-weight:700}
+  .boltbar .bb-all{background:#9A6B12;border-color:#9A6B12;color:#fff;font-weight:800}
+  .files-toggle{margin-top:14px;text-align:center;font-size:13px;color:#9aa3b2;cursor:pointer;user-select:none;padding:6px}
+  .files-toggle:hover{color:#5b6472;text-decoration:underline}
+  .boltbar .bb-all:hover{background:#7d560e}
   .boltbar .bb-stat{font-size:13px;font-weight:600}
   .boltbar .bb-stat.ok{color:var(--good)} .boltbar .bb-stat.bad{color:var(--bad)}
   .liveup{background:linear-gradient(90deg,#FFF6E9,#FFFDF8);border:1px solid #F1D9A8;border-radius:14px;padding:14px 16px;margin:0 0 16px;text-align:left}
@@ -253,14 +257,14 @@ h4.sub3{font-size:12px;font-weight:700;color:var(--ink2);margin:16px 0 9px}
 <p class="eyebrow">AVTO PARK Lviv · Golubkov</p><h1>Завантаж <span class="accent">денні файли</span></h1>
 <p class="up-sub">Кинь сюди вивантажені звіти: Bolt (дохід + історія поїздок), Uklon (звіт + поїздки) та zip Wialon. Розпізнаю кожен сам і порахую день у браузері — нічого не йде в інтернет.</p>
 <div class="liveup"><span class="lu-lbl">⚡ Працювати наживо (без файлів)</span><div class="lu-row"><input id="boltDateUp" type="date"><button id="boltBtnUp" class="btnf bb-go">Тягнути Bolt за день</button></div><div class="lu-hint">Створить день із даних Bolt. GPS доллєш кнопкою «🛰 Оновити GPS» уже всередині, на «Зведенні дня».</div></div>
-<div class="updiv">— або завантаж файли —</div>
+<div id="filesToggle" class="files-toggle">⬇ Завантажити з файлів (резерв)</div><div id="filesArea" class="hide"><div class="updiv">— або завантаж файли —</div>
 <label id="drop" class="drop"><div class="drop-ic">⬆</div><div>Перетягни або <span class="pick">тапни тут, щоб обрати файли</span><input id="fileInput" type="file" multiple hidden></div><div class="drop-hint">.csv та .zip · можна кілька одразу</div></label>
 <div id="fileList" class="filelist"></div><button id="clearFiles" class="btnf hide" style="margin-top:8px">Очистити список</button><div id="upErr" class="up-err hide"></div>
-<button id="processBtn" class="processb" disabled>Порахувати день</button></div></div>
+<button id="processBtn" class="processb" disabled>Порахувати день</button></div></div></div>
 <div id="app" class="hide">
 <div class="navrow"><div class="topnav" id="topnav"><button data-v="overview" aria-pressed="true">Зведення дня</button><button data-v="cars" aria-pressed="false">Авто</button><button data-v="owner" aria-pressed="false">Власнику</button></div><select id="daySel" class="daysel" style="display:none"></select><button id="logout" class="btnf" style="margin-left:auto">Вийти</button></div>
 <div id="overview">
-  <div class="ovhead"><div class="ovhead-l"><p class="eyebrow">AVTO PARK Lviv · Golubkov</p><h1>День <span class="accent">водіїв</span></h1><p class="sub" id="sub"></p><button id="reload" class="btnf">↻ Завантажити / скинути файли</button> <button id="newWeek" class="btnf" style="border-color:#E7B7B0;color:var(--bad)">🗓 Новий тиждень</button></div><div id="standMini" class="ovhead-r"></div></div><div class="boltbar" id="boltbar"><span class="bb-ic">⚡</span><span class="bb-lbl">Наживо</span><input id="boltDate" type="date"><button id="boltBtn" class="btnf bb-go">↻ Оновити Bolt</button><button id="gpsBtn" class="btnf bb-go">🛰 Оновити GPS</button><span id="boltStat" class="bb-stat"></span></div><div class="daybar" id="daybar"></div><div class="kpis" id="kpis"></div><div id="fleetMini"></div>
+  <div class="ovhead"><div class="ovhead-l"><p class="eyebrow">AVTO PARK Lviv · Golubkov</p><h1>День <span class="accent">водіїв</span></h1><p class="sub" id="sub"></p><button id="reload" class="btnf">↻ Завантажити / скинути файли</button> <button id="newWeek" class="btnf" style="border-color:#E7B7B0;color:var(--bad)">🗓 Новий тиждень</button></div><div id="standMini" class="ovhead-r"></div></div><div class="boltbar" id="boltbar"><span class="bb-ic">⚡</span><span class="bb-lbl">Наживо</span><input id="boltDate" type="date"><button id="allBtn" class="btnf bb-all">⚡ Оновити все</button><button id="boltBtn" class="btnf bb-go">↻ Оновити Bolt</button><button id="uklonBtn" class="btnf bb-go">↻ Оновити Uklon</button><button id="gpsBtn" class="btnf bb-go">🛰 Оновити GPS</button><span id="boltStat" class="bb-stat"></span></div><div class="daybar" id="daybar"></div><div class="kpis" id="kpis"></div><div id="fleetMini"></div>
   <div class="bar2">
     <div class="seg" id="sort" role="group" aria-label="Сортування">
       <button data-s="attn" aria-pressed="true">Потребують уваги</button><button data-s="start" aria-pressed="false">Старт зранку</button>
@@ -275,7 +279,7 @@ h4.sub3{font-size:12px;font-weight:700;color:var(--ink2);margin:16px 0 9px}
     <div id="driverPanel" class="dropdown hide"></div>
   </div>
   
-  <div class="leg">Стан за виконанням плану (${gv(TARGET)} ₴ чистими, зміна до <span id="legshift"></span>): <b>Виконав</b> = закрив план; <b>Встигає</b> = за своїм темпом закриє план до кінця зміни; <b>Відстає</b> = за поточним темпом не встигає; <b>Без роботи</b> = майже не возить. Норма темпу — <span id="legnorm"></span> ₴/год. Залежить від <b>темпу</b>, а не від %: за однакової каси хто заробляє швидше — встигає, повільніший — ні. Поїздки до «День з» — нічна зміна з учора (🌙), не псують старт.</div><div class="list" id="list"></div>
+  <div class="leg">Стан за виконанням плану (<span id="legtarget"></span> ₴ чистими, зміна до <span id="legshift"></span>): <b>Виконав</b> = закрив план; <b>Встигає</b> = за своїм темпом закриє план до кінця зміни; <b>Відстає</b> = за поточним темпом не встигає; <b>Без роботи</b> = майже не возить. Норма темпу — <span id="legnorm"></span> ₴/год. Залежить від <b>темпу</b>, а не від %: за однакової каси хто заробляє швидше — встигає, повільніший — ні. Поїздки до «День з» — нічна зміна з учора (🌙), не псують старт.</div><div class="list" id="list"></div>
 </div>
 <div id="detail" class="hide"></div>
 <div id="cars" class="hide">
@@ -1174,7 +1178,7 @@ document.getElementById('sort').onclick=e=>{const b=e.target.closest('button');i
 document.getElementById('q').oninput=e=>{q=e.target.value.toLowerCase();renderList();};
 document.getElementById('statusf').onclick=e=>{const b=e.target.closest('button');if(!b)return;statusF=b.dataset.st;[...e.currentTarget.children].forEach(x=>x.setAttribute('aria-pressed',x===b));renderList();};
 const pin=document.getElementById('plan');pin.value=TARGET||'';
-pin.oninput=e=>{TARGET=Math.max(0,+e.target.value||0);kpis();renderList();if(cur!=null)openDetail(cur);};
+pin.oninput=e=>{TARGET=Math.max(0,+e.target.value||0);var lt=document.getElementById('legtarget');if(lt)lt.textContent=TARGET;kpis();renderList();if(cur!=null)openDetail(cur);};
 const hin=document.getElementById('hourly');hin.value=HOURLY;hin.oninput=e=>{HOURLY=Math.max(0,+e.target.value||0);var ln=document.getElementById('legnorm');if(ln)ln.textContent=HOURLY;var ls=document.getElementById('legshift');if(ls)ls.textContent=document.getElementById('shiftend').value;daybar();kpis();renderList();if(cur!=null)openDetail(cur);};
 const tin=document.getElementById('tripgoal');tin.value=TRIPGOAL;tin.oninput=e=>{TRIPGOAL=Math.max(0,+e.target.value||0);kpis();renderList();if(cur!=null)openDetail(cur);};
 const dsin=document.getElementById('daystart');if(dsin){dsin.value=DAYSTART;dsin.oninput=e=>{DAYSTART=Math.max(0,Math.min(12,+e.target.value||0));kpis();renderList();if(cur!=null)openDetail(cur);};}
@@ -1228,7 +1232,7 @@ function boot(){A=DATA.drivers;M=DATA.med;TARGET=DATA.plan_default;NOW=DATA.now_
 A.forEach((o,i)=>o._i=i);
 document.getElementById('sub').textContent=DATA.window+' · попит сьогодні '+DATA.dayq;
 prefillFleet();document.getElementById('plan').value=TARGET;document.getElementById('hourly').value=HOURLY;document.getElementById('tripgoal').value=TRIPGOAL;var dse=document.getElementById('daystart');if(dse)dse.value=DAYSTART;
-loadSel();renderDriverPanel();drvLabel();renderFleet();daybar();kpis();renderList();renderStandingMini();var ln=document.getElementById('legnorm');if(ln)ln.textContent=HOURLY;var ls=document.getElementById('legshift');if(ls)ls.textContent=document.getElementById('shiftend').value;
+loadSel();renderDriverPanel();drvLabel();renderFleet();daybar();kpis();renderList();renderStandingMini();var ln=document.getElementById('legnorm');if(ln)ln.textContent=HOURLY;var ls=document.getElementById('legshift');if(ls)ls.textContent=document.getElementById('shiftend').value;var lt=document.getElementById('legtarget');if(lt)lt.textContent=TARGET;
 document.getElementById('uploader').classList.add('hide');document.getElementById('app').classList.remove('hide');showView(view);fillDaySel();window.scrollTo(0,0);}
 
 // ===== UPLOADER =====
@@ -1316,7 +1320,44 @@ async function updateBolt(){
   }catch(err){stat.textContent='Помилка: '+err.message;stat.className='bb-stat bad';}
   btn.textContent=old;btn.disabled=false;
 }
-(function(){var di=document.getElementById('boltDate');if(di&&!di.value)di.value=kyivToday();var bb=document.getElementById('boltBtn');if(bb)bb.onclick=updateBolt;var gb=document.getElementById('gpsBtn');if(gb)gb.onclick=updateGPS;
+async function updateAll(){
+  var btn=document.getElementById('allBtn');
+  var di=document.getElementById('boltDate');var date=(di&&di.value)||kyivToday();
+  var old=btn.textContent;btn.disabled=true;
+  try{
+    btn.textContent='⚡ Bolt…';await updateBolt();
+    if(DAYS[date]&&DAYS[date]._parts){
+      btn.textContent='⚡ Uklon…';await updateUklon();
+      btn.textContent='🛰 GPS…';await updateGPS();
+    }
+  }catch(e){}
+  btn.textContent=old;btn.disabled=false;
+}
+async function updateUklon(){
+  var btn=document.getElementById('uklonBtn'),stat=document.getElementById('boltStat');
+  var di=document.getElementById('boltDate');var date=(di&&di.value)||kyivToday();
+  var old=btn.textContent;btn.disabled=true;btn.textContent='Тягну Uklon…';stat.textContent='';stat.className='bb-stat';
+  try{
+    var ex=DAYS[date];
+    if(!ex||!ex._parts){stat.textContent='Спершу натисни «Оновити Bolt» за '+date+', тоді Uklon';stat.className='bb-stat bad';btn.textContent=old;btn.disabled=false;return;}
+    var res=await fetch('/api/uklon?date='+encodeURIComponent(date));
+    if(!res.ok)throw new Error('сервер відповів '+res.status);
+    var j=await res.json();
+    if(j&&j.ok===false)throw new Error(j.error||'функція повернула помилку');
+    var agg=j.uklon_agg||[];
+    if(!agg.length){stat.textContent='За '+date+' даних Uklon не знайдено';stat.className='bb-stat bad';btn.textContent=old;btn.disabled=false;return;}
+    var base=Object.assign({},ex._parts);
+    base.uklon_agg=agg;base.uklon_trips=j.uklon_trips||[];
+    var D=PROC.buildData(base);D._parts=base;
+    if(!D.date)D.date=date;if(!D.date_label)D.date_label=D.date;
+    DATA=D;registerDay(D);boot();
+    stat.textContent='✓ Uklon '+date+': '+agg.length+' водіїв · '+(j.count_orders||0)+' поїздок';stat.className='bb-stat ok';
+  }catch(err){stat.textContent='Помилка Uklon: '+err.message;stat.className='bb-stat bad';}
+  btn.textContent=old;btn.disabled=false;
+}
+(function(){var di=document.getElementById('boltDate');if(di&&!di.value)di.value=kyivToday();var bb=document.getElementById('boltBtn');if(bb)bb.onclick=updateBolt;var gb=document.getElementById('gpsBtn');if(gb)gb.onclick=updateGPS;var ub=document.getElementById('uklonBtn');if(ub)ub.onclick=updateUklon;
+var ab=document.getElementById('allBtn');if(ab)ab.onclick=updateAll;
+var ft=document.getElementById('filesToggle'),fa=document.getElementById('filesArea');if(ft&&fa)ft.onclick=function(){fa.classList.toggle('hide');ft.textContent=fa.classList.contains('hide')?'⬇ Завантажити з файлів (резерв)':'⬆ Сховати завантаження файлів';};
 var dup=document.getElementById('boltDateUp');if(dup&&!dup.value)dup.value=kyivToday();
 var bbu=document.getElementById('boltBtnUp');if(bbu)bbu.onclick=async function(){
   var up=document.getElementById('boltDateUp');var d=(up&&up.value)||kyivToday();
