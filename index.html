@@ -53,6 +53,12 @@ input.search:focus-visible{outline:2px solid var(--amber)}
 .creason{font:inherit;font-size:12.5px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
 .cdesc{flex:1;min-width:200px;font:inherit;font-size:12.5px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;resize:vertical;min-height:38px}
 #cars textarea#fleetTxt{width:100%;min-height:120px;font:inherit;font-size:13px;padding:10px;border:1px solid var(--line);border-radius:10px;resize:vertical}
+  .passrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel);margin-bottom:7px}
+  .passrow .pp-plate{font-weight:700;min-width:88px;font-size:13.5px}
+  .passrow select{font:inherit;font-size:12.5px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+  .passrow .pp-plan{margin-left:auto;font-size:12.5px;font-weight:700;color:#9A6B12;white-space:nowrap}
+  .passrow .pp-rent{color:#C0392B}
+  @media (max-width:700px){.passrow .pp-plan{margin-left:0}.passrow select{flex:1 1 40%}}
 .leg{font-size:11.5px;color:var(--ink2);background:var(--soft);border:1px solid var(--line);border-radius:9px;padding:8px 12px;margin-bottom:12px}.leg b{color:var(--ink)}
 .list{display:flex;flex-direction:column;gap:10px}
 .rowc{display:grid;grid-template-columns:116px 1.2fr 120px 1.15fr 128px;gap:16px;align-items:center;
@@ -194,6 +200,13 @@ h4.sub3{font-size:12px;font-weight:700;color:var(--ink2);margin:16px 0 9px}
   .files-toggle:hover{color:#5b6472;text-decoration:underline}
   .boltbar .bb-all:hover{background:#7d560e}
   .boltbar .bb-stat{font-size:13px;font-weight:600}
+  @media (max-width:700px){
+    .boltbar{gap:8px;padding:12px}
+    .boltbar #boltDate{flex:1 1 auto;height:40px}
+    .boltbar #allBtn{flex:1 1 100%;order:1;height:50px;font-size:16px;border-radius:12px}
+    .boltbar #boltBtn,.boltbar #uklonBtn,.boltbar #gpsBtn{flex:1 1 28%;min-width:0;order:2;height:44px;font-size:13px}
+    .boltbar #boltStat{flex:1 1 100%;order:3;text-align:center}
+  }
   .boltbar .bb-stat.ok{color:var(--good)} .boltbar .bb-stat.bad{color:var(--bad)}
   .liveup{background:linear-gradient(90deg,#FFF6E9,#FFFDF8);border:1px solid #F1D9A8;border-radius:14px;padding:14px 16px;margin:0 0 16px;text-align:left}
   .liveup .lu-lbl{font-weight:700;color:#9A6B12;display:block;margin-bottom:8px}
@@ -288,6 +301,7 @@ h4.sub3{font-size:12px;font-weight:700;color:var(--ink2);margin:16px 0 9px}
 <div class="osect"><h3>Авто парку</h3><div class="fstat" id="fleetStat" style="margin-bottom:10px"></div>
 <textarea id="fleetTxt" placeholder="Один держномер у рядок…&#10;BC1234AA&#10;BC5678BB"></textarea>
 <div class="phint2">Впиши всі держномери парку (по одному в рядок).</div></div>
+<div class="osect"><h3>Паспорт авто</h3><p class="sub" style="margin-top:-4px">Постав раз: паливо (план) і тип авто. Газ — план 2500, решта 3000. Оренда/лізинг не рахуються в недобір плану.</p><div id="passList"></div></div>
 <div class="osect"><h3>Не працювали / простоюють</h3><div id="carsList"></div></div></div>
 <div id="owner" class="hide"></div>
 </div></div>
@@ -792,16 +806,16 @@ function buildData(parts){
   // derive
   const drivers=[];let maxT=0;
   for(const d of D.values()){
-    const bOnline=d.b_revph?d.b_gross/d.b_revph:0;
     const work=(d.u_work||0)+(d.b_min?d.b_min/60:0);
-    let online=Math.max(d.u_online||0,bOnline,work)||null;
-    let idle=online!=null?online-work:null;if(idle!=null&&idle<0)idle=0;
-    const util=(online&&work)?work/online:(online?0:null);
-    const gross=(d.u_gross+d.b_gross)||null,net=(d.u_net+d.b_net)||null,tips=(d.u_tips+d.b_tips)||null;
-    const revph=(gross&&online)?gross/online:null;const orders=(d.u_orders||0)+d.b_comp;
     const times=d.times.slice().sort((a,b)=>a-b);
     const start=times.length?fmtM(times[0]):null,end=times.length?fmtM(times[times.length-1]):null;
-    const span=times.length>1?Math.round((times[times.length-1]-times[0])/60*10)/10:null;
+    let _sm=0;for(let i=1;i<times.length;i++){const g=times[i]-times[i-1];if(g<=150)_sm+=g;}
+    const shift=times.length>1?Math.round(Math.max(_sm/60,work)*10)/10:(work?Math.round(work*10)/10:null);
+    const span=shift;let online=shift;
+    let idle=(shift!=null)?Math.max(Math.round((shift-work)*10)/10,0):null;
+    const util=(shift&&work)?work/shift:null;
+    const gross=(d.u_gross+d.b_gross)||null,net=(d.u_net+d.b_net)||null,tips=(d.u_tips+d.b_tips)||null;
+    const revph=(gross&&shift)?gross/shift:null;const orders=(d.u_orders||0)+d.b_comp;
     const start_h=times.length?times[0]/60:null;if(times.length)maxT=Math.max(maxT,times[times.length-1]);
     const trips=d.trips.slice().sort((a,b)=>(a.t||'').localeCompare(b.t||''));
     // per-trip net & pk
@@ -1059,15 +1073,15 @@ function prodBlock(o){
   const uc=util>=0.85?'good':(util>=0.6?'mid':'bad');
   const ds=DAYSTART*60;
   const stops=(o.stops||[]).map(x=>({m:T2(x.t),d:durToMin(x.dur),a:x.addr})).filter(x=>x.m!=null&&x.m>=ds&&x.d>=15).sort((a,b)=>b.d-a.d);
-  if(onl<=0)return `<div class="sect"><h3>Продуктивність і простій</h3><div class="muted2">Немає даних про години онлайн для цього водія.</div></div>`;
+  if(onl<=0)return `<div class="sect"><h3>Продуктивність і простій</h3><div class="muted2">Немає даних про години зміни для цього водія.</div></div>`;
   const ign=(canc>=15||(comp>0&&(canc+noans)>=comp))?`<span class="ignflag">⚠ багато скасувань — схоже, перебирає або ігнорує замовлення</span>`:'';
-  const gap=(idle>=1&&perWork>perOnline*1.12)?`<div class="prodgap">Везе по <b>${gv(perWork)} ₴/год</b>, але через <b>${H(idle)} год</b> простою виходить лише <b>${gv(perOnline)} ₴/год</b> від усього часу онлайн.</div>`:'';
+  const gap=(idle>=1&&perWork>perOnline*1.12)?`<div class="prodgap">Везе по <b>${gv(perWork)} ₴/год</b>, але через <b>${H(idle)} год</b> простою виходить лише <b>${gv(perOnline)} ₴/год</b> від усього часу зміни.</div>`:'';
   const ms=o.gps_move_start,fo=o.first_order_min,pm=o.pre_order_min||0,pk=o.pre_order_km||0;
   const startline=(ms!=null&&fo!=null&&pm>20)?`<div class="startline">🛰 Рух трекера з <b>${hm(ms)}</b>, а перше замовлення о <b>${hm(fo)}</b> — <b>${durFmt(pm)}</b> без замовлень на старті${pk>0?` (${pk} км порожнем)`:''}.</div>`:'';
-  const tl=stops.length?`<div class="idleline"><div class="ill-h">Де стояв під час зміни (онлайн, але без замовлення):</div>${stops.slice(0,6).sort((a,b)=>a.m-b.m).map(x=>`<div class="ilrow"><span class="ilt">${hm(x.m)}</span><span class="ild">${durFmt(x.d)}</span><span class="ila">${x.a||'—'}</span></div>`).join('')}</div>`:'';
+  const tl=stops.length?`<div class="idleline"><div class="ill-h">Де стояв під час зміни (на лінії, але без замовлення):</div>${stops.slice(0,6).sort((a,b)=>a.m-b.m).map(x=>`<div class="ilrow"><span class="ilt">${hm(x.m)}</span><span class="ild">${durFmt(x.d)}</span><span class="ila">${x.a||'—'}</span></div>`).join('')}</div>`:'';
   return `<div class="sect"><h3>Продуктивність і простій</h3>
-   <div class="prodhead ${uc}"><div class="ph-big">${Math.round(util*100)}%</div><div class="ph-sub">утилізація — на замовленнях <b>${H(wrk)} год</b> із <b>${H(onl)} год</b> онлайн</div></div>
-   <div class="prodrates"><div class="pr"><div class="v">${gv(perOnline)} ₴</div><div class="l">за годину онлайн</div></div><div class="pr"><div class="v">${gv(perWork)} ₴</div><div class="l">за годину на замовленні</div></div><div class="pr"><div class="v warn">${H(idle)} год</div><div class="l">простій онлайн</div></div></div>
+   <div class="prodhead ${uc}"><div class="ph-big">${Math.round(util*100)}%</div><div class="ph-sub">утилізація — на замовленнях <b>${H(wrk)} год</b> із <b>${H(onl)} год</b> зміни</div></div>
+   <div class="prodrates"><div class="pr"><div class="v">${gv(perOnline)} ₴</div><div class="l">за годину зміни</div></div><div class="pr"><div class="v">${gv(perWork)} ₴</div><div class="l">за годину на замовленні</div></div><div class="pr"><div class="v warn">${H(idle)} год</div><div class="l">простій (на зміні)</div></div></div>
    ${gap}${startline}
    <div class="acceptrow">Замовлення: <b>${comp}</b> виконано${canc?` · <b>${canc}</b> скасував`:''}${noans?` · <b>${noans}</b> не відповів`:''} ${ign}</div>
    ${tl}</div>`;
@@ -1092,7 +1106,7 @@ return `<button class="back" id="back">‹ До зведення дня</button>
 <div class="c"><div class="v">${stDisp(o)}</div><div class="l">старт</div></div>
 <div class="c"><div class="v">${o.end||'—'}</div><div class="l">останнє</div></div>
 <div class="c"><div class="v">${o.span==null?'—':o.span+' год'}</div><div class="l">зміна</div></div>
-<div class="c"><div class="v">${H(o.online)} год</div><div class="l">онлайн</div></div>
+<div class="c"><div class="v">${H(o.online)} год</div><div class="l">зміна</div></div>
 <div class="c"><div class="v warn">${H(o.idle)} год</div><div class="l">простій</div></div></div>
 <div class="planbox"><div class="top"><span class="lab">План на день</span><span class="big">${gv(p.net)} <b>/ ${gv(TARGET)} ₴</b></span></div>
 <div class="pbar2"><i class="${p.done?'done':''}" style="width:${Math.min(100,p.pct*100)}%"></i></div>${planNeed}</div>
@@ -1195,6 +1209,14 @@ function fleetStats(){const f=getFleet().filter(p=>!isOOS(p));if(!f.length)retur
 const work=f.filter(p=>ACT.has(p)),non=f.filter(p=>!ACT.has(p));return{work:work.length,total:f.length,non};}
 function renderFleet(){const st=fleetStats();const el=document.getElementById('fleetStat');if(el)el.innerHTML=`<div class="big">${st.work} <b>/ ${st.total}</b></div><div class="l">робочих авто сьогодні</div>`;}
 function carNotes(){try{return JSON.parse(localStorage.getItem('cars_notes')||'{}')}catch(e){return{}}}
+var PLANS={std:3000,hybrid:3000,gas:2500};
+function carPass(){try{return JSON.parse(localStorage.getItem('cars_pass')||'{}')}catch(e){return{}}}
+function saveCarPass(pl,o){const m=carPass();if(o==null)delete m[pl];else m[pl]=Object.assign({},m[pl],o);try{localStorage.setItem('cars_pass',JSON.stringify(m))}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('carpass',m);}
+function drvTypes(){try{return JSON.parse(localStorage.getItem('drv_types')||'{}')}catch(e){return{}}}
+function saveDrvType(name,t){const m=drvTypes();if(t==null||t==='taxi')delete m[name];else m[name]=t;try{localStorage.setItem('drv_types',JSON.stringify(m))}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('drvtype',m);}
+function carFuel(o){const p=carPass()[o&&o.plate_norm]||{};return p.fuel||'std';}
+function carTarget(o){return PLANS[carFuel(o)]||(DATA&&DATA.plan_default)||3000;}
+function ownOf(o){const dt=drvTypes()[o&&o.name];if(dt==='rent'||dt==='lease')return dt;const cp=carPass()[o&&o.plate_norm]||{};if(cp.own==='rent'||cp.own==='lease')return cp.own;return 'taxi';}
 function saveCarNote(pl,o){const n=carNotes();n[pl]=o;try{localStorage.setItem('cars_notes',JSON.stringify(n))}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('notes',n);}
 const REASONS=['Готове авто — немає водія','Водій на вихідному','Водій захворів','Утримуємо як підмінне','Не готове до таксі / готуємо до випуску','На ремонті / ТО','ДТП / пошкоджено','Інше'];
 const OUT_OF_SERVICE=new Set(['Не готове до таксі / готуємо до випуску','На ремонті / ТО','ДТП / пошкоджено']);
@@ -1203,7 +1225,34 @@ function outService(){const seen=new Set();const out=[];const gc=DATA.gps_cars||
 function carCard(c,notes){const nt=notes[c.plate]||{};const opts='<option value="">— причина —</option>'+REASONS.map(r=>`<option value="${r}" ${r===(nt.reason||'')?'selected':''}>${r}</option>`).join('');
 return `<div class="carcard"><div class="carhd"><b>${c.plate}</b>${c.car?' · '+c.car:''}${c.driver?' · '+c.driver:''}<span class="cstate">${carStat(c)}</span></div>
 <div class="carnote"><select class="creason" data-pl="${c.plate}">${opts}</select><textarea class="cdesc" data-pl="${c.plate}" placeholder="Опис: чому не їздило">${nt.desc||''}</textarea></div></div>`;}
-function renderCars(){renderFleet();const notes=carNotes();const sd=standing();const os=outService();const el=document.getElementById('carsList');
+function renderPass(){
+  var el=document.getElementById('passList');if(!el)return;
+  var CYR={'А':'A','В':'B','Е':'E','І':'I','Ї':'I','Є':'E','Ґ':'G','К':'K','М':'M','Н':'H','О':'O','Р':'P','С':'C','Т':'T','У':'U','Х':'X'};
+  var NPL2=function(p){return (p||'').replace(/\s/g,'').toUpperCase().replace(/[А-ЯІЇЄҐ]/g,function(c){return CYR[c]||c;});};
+  var raw='';try{raw=localStorage.getItem('fleet_plates')||'';}catch(e){}
+  var ft=document.getElementById('fleetTxt');if(!raw&&ft)raw=ft.value;
+  var plates=raw.split(/\n+/).map(function(x){return x.trim();}).filter(Boolean);
+  if(!plates.length){el.innerHTML='<div class="phint2">Спершу впиши номери в «Авто парку» вище.</div>';return;}
+  var pass=carPass();
+  var FUEL=[['std','Стандарт'],['hybrid','Гібрид'],['gas','Газ']];
+  var OWN=[['taxi','Таксі'],['rent','Оренда'],['lease','Лізинг']];
+  var html='';
+  plates.forEach(function(pl){
+    var k=NPL2(pl);var p=pass[k]||{};var fuel=p.fuel||'std';var own=p.own||'taxi';
+    var plan=PLANS[fuel]||3000;var rentCls=(own!=='taxi')?' pp-rent':'';
+    html+='<div class="passrow" data-k="'+k+'"><span class="pp-plate">'+pl+'</span>';
+    html+='<select class="pp-fuel">'+FUEL.map(function(f){return '<option value="'+f[0]+'"'+(f[0]===fuel?' selected':'')+'>'+f[1]+'</option>';}).join('')+'</select>';
+    html+='<select class="pp-own">'+OWN.map(function(t){return '<option value="'+t[0]+'"'+(t[0]===own?' selected':'')+'>'+t[1]+'</option>';}).join('')+'</select>';
+    html+='<span class="pp-plan'+rentCls+'">'+(own!=='taxi'?(own==='rent'?'оренда':'лізинг'):(plan+' ₴'))+'</span></div>';
+  });
+  el.innerHTML=html;
+  el.querySelectorAll('.passrow').forEach(function(row){
+    var k=row.getAttribute('data-k');
+    row.querySelector('.pp-fuel').onchange=function(e){saveCarPass(k,{fuel:e.target.value});renderPass();if(typeof kpis==='function')kpis();if(typeof renderList==='function')renderList();};
+    row.querySelector('.pp-own').onchange=function(e){saveCarPass(k,{own:e.target.value});renderPass();if(typeof kpis==='function')kpis();if(typeof renderList==='function')renderList();};
+  });
+}
+function renderCars(){renderFleet();renderPass();const notes=carNotes();const sd=standing();const os=outService();const el=document.getElementById('carsList');
 let html='';
 if(!sd.length){html+='<div class="orow"><span class="l" style="color:var(--good)">Усі авто в роботі або поза лінією.</span></div>';}
 else{const gpsN=sd.filter(c=>c.gps).length,noN=sd.length-gpsN;const byR={};sd.forEach(c=>{const r=(notes[c.plate]||{}).reason||'без причини';byR[r]=(byR[r]||0)+1;});
@@ -1321,16 +1370,21 @@ async function updateBolt(){
   btn.textContent=old;btn.disabled=false;
 }
 async function updateAll(){
-  var btn=document.getElementById('allBtn');
+  var btn=document.getElementById('allBtn'),stat=document.getElementById('boltStat');
   var di=document.getElementById('boltDate');var date=(di&&di.value)||kyivToday();
   var old=btn.textContent;btn.disabled=true;
+  var lines=[];function grab(){return (stat.textContent||'').trim();}
   try{
-    btn.textContent='⚡ Bolt…';await updateBolt();
+    btn.textContent='⚡ Bolt…';await updateBolt();lines.push(grab());
     if(DAYS[date]&&DAYS[date]._parts){
-      btn.textContent='⚡ Uklon…';await updateUklon();
-      btn.textContent='🛰 GPS…';await updateGPS();
+      btn.textContent='⚡ Uklon…';await updateUklon();lines.push(grab());
+      btn.textContent='🛰 GPS…';await updateGPS();lines.push(grab());
     }
-  }catch(e){}
+  }catch(e){lines.push('Помилка: '+e.message);}
+  var clean=lines.filter(Boolean);
+  var bad=clean.some(function(t){return /помилк|не знайдено|спершу/i.test(t);});
+  stat.innerHTML=clean.join('<br>');
+  stat.className='bb-stat '+(bad?'bad':'ok');
   btn.textContent=old;btn.disabled=false;
 }
 async function updateUklon(){
@@ -1405,7 +1459,7 @@ async function cloudLoadDays(){if(!supa)return;try{const r=await supa.from("app_
 async function cloudSaveDay(d){if(!supa||!d||!d.date)return;try{await supa.from("app_data").upsert({key:"day:"+d.date,value:d});}catch(e){console.error(e);}}
 async function cloudDeleteAllDays(){if(!supa)return;try{await supa.from("app_data").delete().like("key","day:%");}catch(e){console.error(e);}}
 async function cloudSaveKV(k,v){if(!supa)return;try{await supa.from("app_data").upsert({key:"kv:"+k,value:v});}catch(e){console.error(e);}}
-async function cloudLoadKV(){if(!supa)return;try{const r=await supa.from("app_data").select("key,value").in("key",["kv:fleet","kv:notes"]);if(r.error){console.error(r.error);return;}(r.data||[]).forEach(x=>{if(x.key==="kv:fleet"&&typeof x.value==="string"){try{localStorage.setItem("fleet_plates",x.value);}catch(e){}}if(x.key==="kv:notes"&&x.value){try{localStorage.setItem("cars_notes",JSON.stringify(x.value));}catch(e){}}});}catch(e){console.error(e);}}
+async function cloudLoadKV(){if(!supa)return;try{const r=await supa.from("app_data").select("key,value").in("key",["kv:fleet","kv:notes","kv:carpass","kv:drvtype"]);if(r.error){console.error(r.error);return;}(r.data||[]).forEach(x=>{if(x.key==="kv:fleet"&&typeof x.value==="string"){try{localStorage.setItem("fleet_plates",x.value);}catch(e){}}if(x.key==="kv:notes"&&x.value){try{localStorage.setItem("cars_notes",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:carpass"&&x.value){try{localStorage.setItem("cars_pass",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:drvtype"&&x.value){try{localStorage.setItem("drv_types",JSON.stringify(x.value));}catch(e){}}});}catch(e){console.error(e);}}
 function showLogin(b){var el=document.getElementById("login");if(el)el.style.display=b?"flex":"none";}
 function revealForm(){var l=document.getElementById("loginLoading"),f=document.getElementById("loginForm");if(l)l.style.display="none";if(f)f.style.display="block";}
 async function startCloud(){await cloudLoadDays();await cloudLoadKV();try{loadDays();}catch(e){}var ks=Object.keys(DAYS).sort();if(ks.length){DATA=DAYS[ks[ks.length-1]];boot();}else{showUploaderOnly();}}
