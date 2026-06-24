@@ -10,8 +10,33 @@ font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
 h1{font-size:30px;margin:0;font-weight:820;letter-spacing:-.015em}.accent{color:var(--amber)}
 .sub{font-size:13px;color:var(--ink2);margin-top:7px}
 .daybar{display:flex;align-items:center;gap:11px;margin:18px 0;padding:13px 16px;border-radius:13px;background:var(--panel);border:1px solid var(--line)}
+  #daybar{display:none}
 .daybar .dot{width:10px;height:10px;border-radius:50%;flex:none}.daybar b{font-weight:750}
-.kpis{display:flex;gap:30px;flex-wrap:wrap;margin:16px 0 22px}
+.kpis{margin:16px 0 22px}
+  .ovhero{display:flex;gap:14px;flex-wrap:wrap;margin:14px 0 12px}
+  .oh-card{flex:1;min-width:240px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .oh-l{font-size:13px;color:var(--ink2)}
+  .oh-big{font-size:40px;font-weight:820;line-height:1.05;color:var(--ink)}
+  .oh-big2{font-size:29px;font-weight:820;line-height:1.1;color:var(--ink)}
+  .oh-sub{font-size:12.5px;color:var(--ink2);margin-top:3px}
+  .oh-pace{max-width:262px}
+  .oh-pace.good{background:#E6F2EA;border-color:#BFDCC8}
+  .oh-pace.good .oh-big2,.oh-pace.good .oh-verdict,.oh-pace.good .oh-l{color:#1E6E42}
+  .oh-pace.bad{background:#FBEBEA;border-color:#F0C9C6}
+  .oh-pace.bad .oh-big2,.oh-pace.bad .oh-verdict,.oh-pace.bad .oh-l{color:#B23B30}
+  .oh-verdict{font-size:13px;margin-top:8px;font-weight:700}
+  .ovprim{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px}
+  .pcard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 15px}
+  .pc-l{font-size:12.5px;color:var(--ink2)}
+  .pc-n{font-size:24px;font-weight:820;color:var(--ink);line-height:1.1}
+  .pc-n span{font-size:14px;color:var(--ink2);font-weight:400}
+  .pc-n.bad{color:#C0392B}
+  .pc-bar{height:6px;background:rgba(0,0,0,.08);border-radius:4px;margin-top:8px;overflow:hidden}
+  .pc-bar i{display:block;height:100%;background:#9A6B12}
+  .pc-s{font-size:11.5px;color:var(--ink2);margin-top:6px}
+  .ovsec{display:flex;flex-wrap:wrap;gap:6px 16px;background:rgba(0,0,0,.035);border-radius:10px;padding:10px 14px;font-size:12.5px;color:var(--ink2);margin-bottom:16px}
+  .ovsec b{color:var(--ink);font-weight:600}
+  @media (max-width:700px){.ovprim{grid-template-columns:1fr 1fr}.oh-pace{max-width:none}.oh-big{font-size:34px}}
 .kpi .n{font-size:25px;font-weight:820;line-height:1}.kpi .l{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:5px}
 .kpi.alert .n{color:var(--bad)}
 .bar2{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
@@ -1034,8 +1059,7 @@ function kpis(){const S=shown();const k=S.reduce((s,o)=>s+(o.gross||0),0),done=S
 const stt=S.map(o=>effStartMin(o)).filter(x=>x!=null).sort((a,b)=>a-b);const sh=stt.length?stt[Math.floor(stt.length/2)]:null;
 const sm=hm(sh);
 const uk=S.reduce((s,o)=>s+(o.unacc_km||0),0);const fl=fleetStats();
-document.getElementById('kpis').innerHTML=[['',S.length,'активних'],['',gv(k)+' ₴','каса'],['',`${done}/${S.length}`,'виконали план'],['alert',nw,'без роботи'],['alert',standing().length,'простоюють авто'],['',sm,'медіана старту'],['',H(uk)+' км','поза агрегат.'],['',`${S.filter(o=>o.pace_net!=null&&o.pace_net>=HOURLY).length}/${S.length}`,`у темпі ≥${HOURLY}/год`],['',`${S.filter(o=>(o.orders||0)>=TRIPGOAL).length}/${S.length}`,`закрили ${TRIPGOAL} п.`],['',`${fl.work}/${fl.total}`,'робочих авто']]
-.map(([c,n,l])=>`<div class="kpi ${c}"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');renderFleetMini();}
+const pv=S.map(o=>o.pace_net).filter(x=>x!=null).sort((a,b)=>a-b);const np=pv.length?Math.round(pv[Math.floor(pv.length/2)]):null;const okp=np!=null&&np>=HOURLY;const inPace=S.filter(o=>o.pace_net!=null&&o.pace_net>=HOURLY).length;const goal=S.filter(o=>(o.orders||0)>=TRIPGOAL).length;const verdict=np==null?'Ще мало даних':(okp?'Парк тримає норму':'Темп нижче норми');const stcnt=standing().length;document.getElementById('kpis').innerHTML=`<div class="ovhero"><div class="oh-card oh-cash"><div class="oh-l">Каса дня</div><div class="oh-big">${gv(k)} ₴</div><div class="oh-sub">${S.length} активних · ${fl.work}/${fl.total} авто в роботі</div></div><div class="oh-card oh-pace ${okp?'good':'bad'}"><div class="oh-l">Темп по парку</div><div class="oh-big2">${np==null?'—':np+' ₴/год'}</div><div class="oh-sub">чистими · норма ${HOURLY}</div><div class="oh-verdict">${verdict}</div></div></div><div class="ovprim"><div class="pcard"><div class="pc-l">Виконали план</div><div class="pc-n">${done} <span>/ ${S.length}</span></div><div class="pc-bar"><i style="width:${Math.round(done/Math.max(S.length,1)*100)}%"></i></div></div><div class="pcard"><div class="pc-l">Без роботи</div><div class="pc-n ${nw?'bad':''}">${nw}</div><div class="pc-s">потребують уваги</div></div><div class="pcard"><div class="pc-l">Простоюють авто</div><div class="pc-n ${stcnt?'bad':''}">${stcnt}</div><div class="pc-s">деталі у «Авто»</div></div></div><div class="ovsec"><span><b>Медіана старту</b> ${sm}</span><span><b>Поза агрегатами</b> ${H(uk)} км</span><span><b>У темпі ≥${HOURLY}</b> ${inPace}/${S.length}</span><span><b>Закрили ${TRIPGOAL}п.</b> ${goal}/${S.length}</span></div>`;renderFleetMini();}
 function spark(hourly,big){let mx=Math.max(1,...hourly.slice(H0,Hx+1)),s='';
 for(let h=H0;h<=Hx;h++){const v=hourly[h];const ht=v?Math.max(big?6:3,v/mx*100):0;s+=v?`<i style="height:${ht}%">${big?`<span>${v}</span>`:''}</i>`:`<i class="z"></i>`;}return s;}
 function row(o){const p=plan(o);
