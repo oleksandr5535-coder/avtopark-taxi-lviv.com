@@ -20,6 +20,7 @@ h1{font-size:30px;margin:0;font-weight:820;letter-spacing:-.015em}.accent{color:
   .oh-big2{font-size:29px;font-weight:820;line-height:1.1;color:var(--ink)}
   .oh-sub{font-size:12.5px;color:var(--ink2);margin-top:3px}
   .oh-pace{max-width:262px}
+  .oh-net{background:#FBF6EC;border-color:#E8D9B8}
   .oh-pace.good{background:#E6F2EA;border-color:#BFDCC8}
   .oh-pace.good .oh-big2,.oh-pace.good .oh-verdict,.oh-pace.good .oh-l{color:#1E6E42}
   .oh-pace.bad{background:#FBEBEA;border-color:#F0C9C6}
@@ -836,8 +837,7 @@ function buildData(parts){
     const work=(d.u_work||0)+(d.b_min?d.b_min/60:0);
     const times=d.times.slice().sort((a,b)=>a-b);
     const start=times.length?fmtM(times[0]):null,end=times.length?fmtM(times[times.length-1]):null;
-    let _sm=0;for(let i=1;i<times.length;i++){const g=times[i]-times[i-1];if(g<=150)_sm+=g;}
-    const shift=times.length>1?Math.round(Math.max(_sm/60,work)*10)/10:(work?Math.round(work*10)/10:null);
+    const shift=times.length>1?Math.round(Math.max((times[times.length-1]-times[0])/60,work)*10)/10:(work?Math.round(work*10)/10:null);
     const span=shift;let online=shift;
     let idle=(shift!=null)?Math.max(Math.round((shift-work)*10)/10,0):null;
     const util=(shift&&work)?work/shift:null;
@@ -1029,7 +1029,7 @@ const surgeH=`<div class="tlbig" style="height:80px">${sbars}</div><div class="t
 const idleH=t.idle.length?`<div class="idlebox"><div class="idleh">⏸ ${t.idle.length} авто стоять</div><div class="idlelist">${t.idle.map(c=>`<div class="idlecar"><div><b>${c.plate}</b>${c.car?' · '+c.car:''}${c.driver?' · '+c.driver:''}</div><div class="ia">${carStat(c)}</div>${(function(){const n=carNotes()[c.plate];return n&&(n.reason||n.desc)?`<div class="ia" style="color:var(--ink2);margin-top:2px">📝 ${n.reason||''}${n.reason&&n.desc?' — ':''}${n.desc||''}</div>`:'';})()}</div>`).join('')}</div></div>`:'';
 document.getElementById('owner').innerHTML=`<p class="eyebrow">AVTO PARK Lviv · Golubkov</p><h1>Підсумок для <span class="accent">власника</span>${selDrivers.size?`<span class="ofilter">фільтр: ${t.tot} водіїв</span>`:''}</h1>
 <p class="sub">${DATA.window} · попит ${DATA.dayq}</p>
-<div class="kpis" style="margin:16px 0 18px">${kpi.map(([c,n,l])=>`<div class="kpi ${c}"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('')}</div>
+<div class="ovhero"><div class="oh-card oh-cash"><div class="oh-l">Каса (валовий)</div><div class="oh-big">${gv(t.k)} ₴</div><div class="oh-sub">${t.orders} поїздок · ${t.tot} активних</div></div><div class="oh-card oh-net"><div class="oh-l">Чистими</div><div class="oh-big">${gv(t.net)} ₴</div><div class="oh-sub">${t.done}/${t.tot} виконали план</div></div></div><div class="ovprim"><div class="pcard"><div class="pc-l">Готівка (у водіїв)</div><div class="pc-n">${gv(t.cashG)} <span>₴</span></div><div class="pc-s">${t.cashShare}% каси · звести</div></div><div class="pcard"><div class="pc-l">Безготівка</div><div class="pc-n">${gv(t.cardG)} <span>₴</span></div><div class="pc-s">на рахунок</div></div><div class="pcard"><div class="pc-l">Недобір до плану</div><div class="pc-n ${m.total>0?'bad':''}">${m.total>0?'−'+gv(m.total):'0'} <span>₴</span></div><div class="pc-s">недоотримано</div></div></div><div class="ovsec"><span><b>Серед. темп</b> ${t.mp==null?'—':t.mp+' ₴/год'}</span><span><b>Без роботи</b> ${t.nw.length}</span><span><b>Простій авто</b> ${t.idle.length}</span><span><b>Поза агрегатами</b> ${Math.round(t.off)} км</span></div>
 ${fleetPic}
 <div class="osect"><h3>Звіт для надсилання</h3><div class="odigest" id="odigest">${ownerDigest()}</div>
 <button class="copy" id="ocopy">Скопіювати текст</button><button class="copy" id="opdf" style="margin-left:8px">Зберегти / надіслати PDF</button>
@@ -1132,7 +1132,7 @@ return `<button class="back" id="back">‹ До зведення дня</button>
 <div class="c"><div class="v">${stDisp(o)}</div><div class="l">старт</div></div>
 <div class="c"><div class="v">${o.end||'—'}</div><div class="l">останнє</div></div>
 <div class="c"><div class="v">${o.span==null?'—':o.span+' год'}</div><div class="l">зміна</div></div>
-<div class="c"><div class="v">${H(o.online)} год</div><div class="l">зміна</div></div>
+<div class="c"><div class="v">${H(Math.max((o.online||0)-(o.idle||0),0))} год</div><div class="l">у поїздках</div></div>
 <div class="c"><div class="v warn">${H(o.idle)} год</div><div class="l">простій</div></div></div>
 <div class="planbox"><div class="top"><span class="lab">План на день</span><span class="big">${gv(p.net)} <b>/ ${gv(TARGET)} ₴</b></span></div>
 <div class="pbar2"><i class="${p.done?'done':''}" style="width:${Math.min(100,p.pct*100)}%"></i></div>${planNeed}</div>
