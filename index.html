@@ -184,6 +184,13 @@ h4.sub3{font-size:12px;font-weight:700;color:var(--ink2);margin:16px 0 9px}
   .topnav{display:flex;width:100%;margin-bottom:12px;overflow-x:auto}
   .topnav button{flex:1 0 auto;padding:11px 10px;font-size:13px;white-space:nowrap}
   #daySel{flex:1;min-width:120px}
+  .boltbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:linear-gradient(90deg,#FFF6E9,#FFFDF8);border:1px solid #F1D9A8;border-radius:14px;padding:10px 14px;margin:0 0 14px}
+  .boltbar .bb-ic{font-size:18px}
+  .boltbar .bb-lbl{font-weight:700;color:#9A6B12}
+  .boltbar input[type=date]{border:1px solid #E4Cfa0;border-radius:9px;padding:7px 9px;font:inherit;background:#fff;color:var(--ink)}
+  .boltbar .bb-go{border-color:#E2A93B;color:#9A6B12;font-weight:700}
+  .boltbar .bb-stat{font-size:13px;font-weight:600}
+  .boltbar .bb-stat.ok{color:var(--good)} .boltbar .bb-stat.bad{color:var(--bad)}
   .kpis{gap:12px 18px;margin:12px 0 16px}
   .bar2{gap:7px}
   .seg{flex-wrap:nowrap;overflow-x:auto;max-width:100%}
@@ -244,7 +251,7 @@ h4.sub3{font-size:12px;font-weight:700;color:var(--ink2);margin:16px 0 9px}
 <div id="app" class="hide">
 <div class="navrow"><div class="topnav" id="topnav"><button data-v="overview" aria-pressed="true">Зведення дня</button><button data-v="cars" aria-pressed="false">Авто</button><button data-v="owner" aria-pressed="false">Власнику</button></div><select id="daySel" class="daysel" style="display:none"></select><button id="logout" class="btnf" style="margin-left:auto">Вийти</button></div>
 <div id="overview">
-  <div class="ovhead"><div class="ovhead-l"><p class="eyebrow">AVTO PARK Lviv · Golubkov</p><h1>День <span class="accent">водіїв</span></h1><p class="sub" id="sub"></p><button id="reload" class="btnf">↻ Завантажити / скинути файли</button> <button id="newWeek" class="btnf" style="border-color:#E7B7B0;color:var(--bad)">🗓 Новий тиждень</button></div><div id="standMini" class="ovhead-r"></div></div><div class="daybar" id="daybar"></div><div class="kpis" id="kpis"></div><div id="fleetMini"></div>
+  <div class="ovhead"><div class="ovhead-l"><p class="eyebrow">AVTO PARK Lviv · Golubkov</p><h1>День <span class="accent">водіїв</span></h1><p class="sub" id="sub"></p><button id="reload" class="btnf">↻ Завантажити / скинути файли</button> <button id="newWeek" class="btnf" style="border-color:#E7B7B0;color:var(--bad)">🗓 Новий тиждень</button></div><div id="standMini" class="ovhead-r"></div></div><div class="boltbar" id="boltbar"><span class="bb-ic">⚡</span><span class="bb-lbl">Наживо</span><input id="boltDate" type="date"><button id="boltBtn" class="btnf bb-go">↻ Оновити Bolt</button><button id="gpsBtn" class="btnf bb-go">🛰 Оновити GPS</button><span id="boltStat" class="bb-stat"></span></div><div class="daybar" id="daybar"></div><div class="kpis" id="kpis"></div><div id="fleetMini"></div>
   <div class="bar2">
     <div class="seg" id="sort" role="group" aria-label="Сортування">
       <button data-s="attn" aria-pressed="true">Потребують уваги</button><button data-s="start" aria-pressed="false">Старт зранку</button>
@@ -1253,11 +1260,76 @@ for(const f of collected){
 if(!parts.bolt_income&&!parts.uklon_agg&&!parts.bolt_hist&&!parts.uklon_trips){throw new Error('Не знайшов жодного звіту Bolt чи Uklon. Перевір файли.');}
 DATA=PROC.buildData(parts);
 if(!DATA.drivers.length){throw new Error('Дані порожні — у файлах немає водіїв за цей період.');}
+DATA._parts=parts;
 registerDay(DATA);boot();
 if(unknown.length){console.warn('не розпізнано:',unknown);}
 }catch(err){upErr.textContent='Помилка: '+err.message;upErr.classList.remove('hide');processBtn.disabled=false;processBtn.textContent='Порахувати день';}};
 document.getElementById('topnav').onclick=e=>{const b=e.target.closest('button');if(b)showView(b.dataset.v);};
 var _ds=document.getElementById('daySel');if(_ds)_ds.onchange=e=>setDay(e.target.value);
+/* ===== Bolt наживо ===== */
+function kyivToday(){var p=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());var g=function(t){return p.find(function(x){return x.type===t}).value};return g('year')+'-'+g('month')+'-'+g('day');}
+function boltOrdersToParts(orders){
+  var TZ='Europe/Kyiv';
+  function fmtDate(ts){if(!ts)return '';var d=new Date(ts*1000);var p=new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(d);var g=function(t){return p.find(function(x){return x.type===t}).value};return g('year')+'-'+g('month')+'-'+g('day')+' '+g('hour')+':'+g('minute');}
+  var stMap={finished:'Завершено',driver_rejected:'Водій відмінив',driver_did_not_respond:'Водій не відповів',driver_cancelled_after_accept:'Водій відмінив',client_cancelled:'Скасовано пасажиром',client_did_not_show:'Пасажир не прийшов'};
+  var payMap={in_app:'Через додаток',cash:'Готівка',business:'Через додаток'};
+  var hist=[],inc={};
+  (orders||[]).forEach(function(o){
+    var pr=o.order_price||{};var st=stMap[o.order_status]||o.order_status||'';var pay=payMap[o.payment_method]||'Через додаток';
+    hist.push({'Дата':fmtDate(o.order_created_timestamp),'Водій':o.driver_name||'','Номерний знак':o.vehicle_license_plate||'','Модель авто':o.vehicle_model||'','Категорія':(o.category_info&&o.category_info.name)||'','Статус':st,'Відстань|км':(o.ride_distance!=null)?(o.ride_distance/1000).toFixed(2):'','Ціна поїздки|₴':(pr.ride_price!=null)?String(pr.ride_price):'','Спосіб оплати':pay,'Тривалість поїздки (мінімум)':(o.order_pickup_timestamp&&o.order_drop_off_timestamp)?String(Math.round((o.order_drop_off_timestamp-o.order_pickup_timestamp)/60)):''});
+    if(o.order_status==='finished'){var n=o.driver_name||'';var a=inc[n]||(inc[n]={n:n,g:0,net:0,cash:0,tip:0});a.g+=(pr.ride_price||0);a.net+=(pr.net_earnings||0);if(o.payment_method==='cash')a.cash+=(pr.ride_price||0);a.tip+=(pr.tip||0);}
+  });
+  var income=Object.keys(inc).map(function(k){var a=inc[k];return {'Водій':a.n,'Валовий дохід (всього)|₴':a.g.toFixed(2),'Отримано готівкою|₴':a.cash.toFixed(2),'Чистий дохід|₴':a.net.toFixed(2),'Чайові від пасажирів|₴':a.tip.toFixed(2)};});
+  return {bolt_income:income,bolt_hist:hist,uklon_agg:[],uklon_trips:[],wialon_trips_rows:[],wialon_stops_rows:[]};
+}
+function extractOrders(j){var found=[];function isOrd(x){return x&&typeof x==='object'&&('order_status'in x||'order_price'in x||'driver_name'in x||'vehicle_license_plate'in x);}function walk(x){if(!x||typeof x!=='object')return;if(Array.isArray(x)){if(x.length&&(isOrd(x[0])||isOrd(x[1])))found.push(x);x.forEach(walk);return;}Object.keys(x).forEach(function(k){walk(x[k])});}walk(j);found.sort(function(a,b){return b.length-a.length});return found[0]||[];}
+async function updateBolt(){
+  var btn=document.getElementById('boltBtn'),stat=document.getElementById('boltStat');
+  var di=document.getElementById('boltDate');var date=(di&&di.value)||kyivToday();
+  var old=btn.textContent;btn.disabled=true;btn.textContent='Тягну Bolt…';stat.textContent='';stat.className='bb-stat';
+  try{
+    var res=await fetch('/api/bolt?date='+encodeURIComponent(date));
+    if(!res.ok)throw new Error('сервер відповів '+res.status);
+    var j=await res.json();
+    if(j&&j.ok===false)throw new Error(j.error||'функція повернула помилку');
+    var orders=extractOrders(j);
+    if(!orders.length){stat.textContent='За '+date+' замовлень не знайдено';stat.className='bb-stat bad';btn.textContent=old;btn.disabled=false;return;}
+    var bp=boltOrdersToParts(orders);
+    var ex=DAYS[date];var base=(ex&&ex._parts)?Object.assign({},ex._parts):{bolt_income:[],bolt_hist:[],uklon_agg:[],uklon_trips:[],wialon_trips_rows:[],wialon_stops_rows:[]};
+    base.bolt_income=bp.bolt_income;base.bolt_hist=bp.bolt_hist;
+    var D=PROC.buildData(base);if(!D.drivers.length)throw new Error('немає водіїв у відповіді');
+    D._parts=base;if(!D.date)D.date=date;if(!D.date_label)D.date_label=D.date;
+    DATA=D;registerDay(D);
+    document.getElementById('uploader').classList.add('hide');document.getElementById('app').classList.remove('hide');
+    boot();
+    var fin=orders.filter(function(o){return o.order_status==='finished'}).length;
+    stat.textContent='✓ '+date+': '+orders.length+' замовлень · '+fin+' виконаних';stat.className='bb-stat ok';
+  }catch(err){stat.textContent='Помилка: '+err.message;stat.className='bb-stat bad';}
+  btn.textContent=old;btn.disabled=false;
+}
+(function(){var di=document.getElementById('boltDate');if(di&&!di.value)di.value=kyivToday();var bb=document.getElementById('boltBtn');if(bb)bb.onclick=updateBolt;var gb=document.getElementById('gpsBtn');if(gb)gb.onclick=updateGPS;})();
+async function updateGPS(){
+  var btn=document.getElementById('gpsBtn'),stat=document.getElementById('boltStat');
+  var di=document.getElementById('boltDate');var date=(di&&di.value)||kyivToday();
+  var old=btn.textContent;btn.disabled=true;btn.textContent='Тягну GPS…';stat.textContent='';stat.className='bb-stat';
+  try{
+    var ex=DAYS[date];
+    if(!ex||!ex._parts){stat.textContent='Спершу натисни «Оновити Bolt» за '+date+', тоді GPS';stat.className='bb-stat bad';btn.textContent=old;btn.disabled=false;return;}
+    var res=await fetch('/api/wialon?date='+encodeURIComponent(date));
+    if(!res.ok)throw new Error('сервер відповів '+res.status);
+    var j=await res.json();
+    if(j&&j.ok===false)throw new Error(j.error||'функція повернула помилку');
+    var trips=j.trips||[],stops=j.stops||[];
+    if(!trips.length&&!stops.length){stat.textContent='За '+date+' GPS-даних не знайдено';stat.className='bb-stat bad';btn.textContent=old;btn.disabled=false;return;}
+    var base=Object.assign({},ex._parts);
+    base.wialon_trips_rows=trips;base.wialon_stops_rows=stops;
+    var D=PROC.buildData(base);D._parts=base;
+    if(!D.date)D.date=date;if(!D.date_label)D.date_label=D.date;
+    DATA=D;registerDay(D);boot();
+    stat.textContent='✓ GPS '+date+': '+trips.length+' поїздок · '+stops.length+' стоянок';stat.className='bb-stat ok';
+  }catch(err){stat.textContent='Помилка GPS: '+err.message;stat.className='bb-stat bad';}
+  btn.textContent=old;btn.disabled=false;
+}
 document.getElementById('reload').onclick=()=>{collected=[];renderFiles();processBtn.textContent='Порахувати день';
 document.getElementById('upBack').classList.toggle('hide',!DATA);
 document.getElementById('app').classList.add('hide');document.getElementById('uploader').classList.remove('hide');window.scrollTo(0,0);};
