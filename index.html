@@ -169,6 +169,7 @@ h4.sub3{font-size:12px;font-weight:700;color:var(--ink2);margin:16px 0 9px}
 .navrow{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .daysel{font:inherit;font-size:13px;font-weight:650;padding:9px 12px;border:1px solid var(--line);border-radius:11px;background:var(--panel);color:var(--ink);cursor:pointer;margin-bottom:18px}
 .topnav{display:inline-flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:4px;margin-bottom:18px}
+  @media (max-width:700px){.navrow{flex-wrap:nowrap}.topnav{display:flex;overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}.topnav button{white-space:nowrap;flex:0 0 auto}}
 .topnav button{border:0;background:transparent;padding:9px 16px;font:inherit;font-size:13px;font-weight:650;color:var(--ink2);border-radius:8px;cursor:pointer}
 .topnav button[aria-pressed=true]{background:var(--ink);color:#fff}
 .odigest{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:16px 18px;font-size:13.5px;line-height:1.6;margin-bottom:16px;white-space:pre-wrap}
@@ -275,7 +276,7 @@ h4.sub3{font-size:12px;font-weight:700;color:var(--ink2);margin:16px 0 9px}
 <div id="fileList" class="filelist"></div><button id="clearFiles" class="btnf hide" style="margin-top:8px">Очистити список</button><div id="upErr" class="up-err hide"></div>
 <button id="processBtn" class="processb" disabled>Порахувати день</button></div></div></div>
 <div id="app" class="hide">
-<div class="navrow"><div class="topnav" id="topnav"><button data-v="overview" aria-pressed="true">Зведення дня</button><button data-v="cars" aria-pressed="false">Авто</button><button data-v="owner" aria-pressed="false">Власнику</button></div><select id="daySel" class="daysel" style="display:none"></select><button id="logout" class="btnf" style="margin-left:auto">Вийти</button></div>
+<div class="navrow"><div class="topnav" id="topnav"><button data-v="overview" aria-pressed="true">Зведення дня</button><button data-v="cars" aria-pressed="false">Авто</button><button data-v="owner" aria-pressed="false">Власнику</button><button data-v="settings" aria-pressed="false">⚙ Налаштування</button></div><select id="daySel" class="daysel" style="display:none"></select><button id="logout" class="btnf" style="margin-left:auto">Вийти</button></div>
 <div id="overview">
   <div class="ovhead"><div class="ovhead-l"><p class="eyebrow">AVTO PARK Lviv · Golubkov</p><h1>День <span class="accent">водіїв</span></h1><p class="sub" id="sub"></p><button id="reload" class="btnf">↻ Завантажити / скинути файли</button> <button id="newWeek" class="btnf" style="border-color:#E7B7B0;color:var(--bad)">🗓 Новий тиждень</button></div><div id="standMini" class="ovhead-r"></div></div><div class="boltbar" id="boltbar"><span class="bb-ic">⚡</span><span class="bb-lbl">Наживо</span><input id="boltDate" type="date"><button id="allBtn" class="btnf bb-all">⚡ Оновити все</button><button id="boltBtn" class="btnf bb-go">↻ Оновити Bolt</button><button id="uklonBtn" class="btnf bb-go">↻ Оновити Uklon</button><button id="gpsBtn" class="btnf bb-go">🛰 Оновити GPS</button><span id="boltStat" class="bb-stat"></span></div><div class="daybar" id="daybar"></div><div class="kpis" id="kpis"></div><div id="fleetMini"></div>
   <div class="bar2">
@@ -301,9 +302,10 @@ h4.sub3{font-size:12px;font-weight:700;color:var(--ink2);margin:16px 0 9px}
 <div class="osect"><h3>Авто парку</h3><div class="fstat" id="fleetStat" style="margin-bottom:10px"></div>
 <textarea id="fleetTxt" placeholder="Один держномер у рядок…&#10;BC1234AA&#10;BC5678BB"></textarea>
 <div class="phint2">Впиши всі держномери парку (по одному в рядок).</div></div>
-<div class="osect"><h3>База водіїв</h3><p class="sub" style="margin-top:-4px">Постав раз для кожного водія: тип і план. Оренда/лізинг — водій зникає зі списків і не йде в недобір. Газ — план 2500, решта 3000.</p><div id="passList"></div></div>
+
 <div class="osect"><h3>Не працювали / простоюють</h3><div id="carsList"></div></div></div>
 <div id="owner" class="hide"></div>
+<div id="settings" class="hide"><h1>Нала<span class="accent">штування</span></h1><p class="sub">Разові налаштування парку — плани й типи водіїв.</p><div class="osect"><h3>Плани за паливом</h3><p class="sub" style="margin-top:-4px">Денний план чистими для кожного типу авто. Зміниш — застосується скрізь.</p><div id="planSettings"></div></div><div class="osect"><h3>База водіїв</h3><p class="sub" style="margin-top:-4px">Тип кожного водія. Оренда/лізинг — водій зникає зі списків і не йде в недобір.</p><div id="passList"></div></div></div>
 </div></div>
 <script>/** @license
  *
@@ -1024,7 +1026,7 @@ try{const blob=pdf.output('blob');const file=new File([blob],fname,{type:'applic
 }catch(e){if(e&&e.name!=='AbortError'){try{pdf.save(fname);}catch(_){}}}
 }catch(err){console.error(err);alert('Не вдалося згенерувати PDF у цьому перегляді. Відкрий файл локально (подвійним кліком) — тоді кнопка створить PDF. Як запасний варіант відкрию системний друк.');try{window.print();}catch(e){}}
 finally{hide.forEach(x=>x&&(x.style.visibility=''));b.textContent='Зберегти / надіслати PDF';}};}
-function showView(v){view=v;document.getElementById('overview').classList.toggle('hide',v!=='overview');document.getElementById('owner').classList.toggle('hide',v!=='owner');document.getElementById('cars').classList.toggle('hide',v!=='cars');document.getElementById('detail').classList.add('hide');if(v==='cars')renderCars();if(v==='overview')renderStandingMini();[...document.getElementById('topnav').children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v));if(v==='owner')renderOwner();window.scrollTo(0,0);}
+function showView(v){view=v;document.getElementById('overview').classList.toggle('hide',v!=='overview');document.getElementById('owner').classList.toggle('hide',v!=='owner');document.getElementById('cars').classList.toggle('hide',v!=='cars');document.getElementById('settings').classList.toggle('hide',v!=='settings');document.getElementById('detail').classList.add('hide');if(v==='cars')renderCars();if(v==='settings')renderSettings();if(v==='overview')renderStandingMini();[...document.getElementById('topnav').children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v));if(v==='owner')renderOwner();window.scrollTo(0,0);}
 function daybar(){const S=shown();const pv=S.map(o=>o.pace_net).filter(x=>x!=null).sort((a,b)=>a-b);const np=pv.length?Math.round(pv[Math.floor(pv.length/2)]):null;const ok=np!=null&&np>=HOURLY;const col=np==null?'var(--amber)':(ok?'var(--good)':'var(--bad)');
 document.getElementById('daybar').innerHTML=`<span class="dot" style="background:${col}"></span><div>Середній темп по парку — <b>${np==null?'—':np+' ₴/год чистими'}</b> (норма ${HOURLY} ₴/год). `+(ok?'Парк тримає норму — гарний день, тисніть.':'Темп нижче норми — варто підганяти водіїв.')+`</div>`;}
 function shown(){var base=A.filter(o=>isTaxi(o));return selDrivers.size?base.filter(o=>selDrivers.has(o.name)):base;}
@@ -1209,12 +1211,14 @@ function fleetStats(){const f=getFleet().filter(p=>!isOOS(p));if(!f.length)retur
 const work=f.filter(p=>ACT.has(p)),non=f.filter(p=>!ACT.has(p));return{work:work.length,total:f.length,non};}
 function renderFleet(){const st=fleetStats();const el=document.getElementById('fleetStat');if(el)el.innerHTML=`<div class="big">${st.work} <b>/ ${st.total}</b></div><div class="l">робочих авто сьогодні</div>`;}
 function carNotes(){try{return JSON.parse(localStorage.getItem('cars_notes')||'{}')}catch(e){return{}}}
-var PLANS={std:3000,hybrid:3000,gas:2500};
+function plansGet(){var d={std:3000,hybrid:3000,gas:2500};try{return Object.assign(d,JSON.parse(localStorage.getItem('plan_fuel')||'{}'))}catch(e){return d}}
+function savePlans(p){try{localStorage.setItem('plan_fuel',JSON.stringify(p))}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('planfuel',p);}
+function PLAN(f){return plansGet()[f]||3000;}
 function drvPass(){try{return JSON.parse(localStorage.getItem('drv_pass')||'{}')}catch(e){return{}}}
 function saveDrvPass(name,patch){const m=drvPass();m[name]=Object.assign({},m[name],patch);try{localStorage.setItem('drv_pass',JSON.stringify(m))}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('drvpass',m);}
 function ownOf(o){const p=drvPass()[o&&o.name]||{};return p.type||'taxi';}
 function isTaxi(o){return ownOf(o)==='taxi';}
-function planOf(o){const p=drvPass()[o&&o.name]||{};return PLANS[p.fuel||'std']||(DATA&&DATA.plan_default)||3000;}
+function planOf(o){const p=drvPass()[o&&o.name]||{};return PLAN(p.fuel||'std')||(DATA&&DATA.plan_default)||3000;}
 function saveCarNote(pl,o){const n=carNotes();n[pl]=o;try{localStorage.setItem('cars_notes',JSON.stringify(n))}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('notes',n);}
 const REASONS=['Готове авто — немає водія','Водій на вихідному','Водій захворів','Утримуємо як підмінне','Не готове до таксі / готуємо до випуску','На ремонті / ТО','ДТП / пошкоджено','Інше'];
 const OUT_OF_SERVICE=new Set(['Не готове до таксі / готуємо до випуску','На ремонті / ТО','ДТП / пошкоджено']);
@@ -1231,14 +1235,14 @@ function renderPass(){
   names.sort(function(a,b){return a.localeCompare(b,'uk');});
   if(!names.length){el.innerHTML='<div class="phint2">Спершу онови дані (Bolt/Uklon) — і тут зʼявляться водії.</div>';return;}
   var TYPE=[['taxi','Таксі'],['rent','Оренда'],['lease','Лізинг']];
-  var FUEL=[['std','Стандарт 3000'],['gas','Газ 2500'],['hybrid','Гібрид 3000']];
+  var FUEL=[['std','Стандарт '+PLAN('std')],['gas','Газ '+PLAN('gas')],['hybrid','Гібрид '+PLAN('hybrid')]];
   var html='';
   names.forEach(function(n){
     var p=pass[n]||{};var type=p.type||'taxi';var fuel=p.fuel||'std';var rentCls=(type!=='taxi')?' pp-rent':'';
     html+='<div class="passrow" data-n="'+encodeURIComponent(n)+'"><span class="pp-plate">'+n+'</span>';
     html+='<select class="pp-type">'+TYPE.map(function(t){return '<option value="'+t[0]+'"'+(t[0]===type?' selected':'')+'>'+t[1]+'</option>';}).join('')+'</select>';
     html+='<select class="pp-fuel"'+(type!=='taxi'?' disabled':'')+'>'+FUEL.map(function(f){return '<option value="'+f[0]+'"'+(f[0]===fuel?' selected':'')+'>'+f[1]+'</option>';}).join('')+'</select>';
-    html+='<span class="pp-plan'+rentCls+'">'+(type!=='taxi'?(type==='rent'?'оренда':'лізинг'):(PLANS[fuel]+' ₴'))+'</span></div>';
+    html+='<span class="pp-plan'+rentCls+'">'+(type!=='taxi'?(type==='rent'?'оренда':'лізинг'):(PLAN(fuel)+' ₴'))+'</span></div>';
   });
   el.innerHTML=html;
   el.querySelectorAll('.passrow').forEach(function(row){
@@ -1247,7 +1251,15 @@ function renderPass(){
     var fs=row.querySelector('.pp-fuel');if(fs)fs.onchange=function(e){saveDrvPass(n,{fuel:e.target.value});renderPass();if(typeof kpis==='function')kpis();if(typeof renderList==='function')renderList();};
   });
 }
-function renderCars(){renderFleet();renderPass();const notes=carNotes();const sd=standing();const os=outService();const el=document.getElementById('carsList');
+function renderSettings(){
+  var el=document.getElementById('planSettings');
+  if(el){var p=plansGet();var rows=[['std','Стандарт'],['hybrid','Гібрид'],['gas','Газ']];
+    el.innerHTML=rows.map(function(f){return '<div class="passrow"><span class="pp-plate">'+f[1]+'</span><input type="number" class="ps-in" data-f="'+f[0]+'" value="'+(p[f[0]]||3000)+'" min="0" step="100" style="width:120px"><span class="pp-plan">₴ / день</span></div>';}).join('');
+    el.querySelectorAll('.ps-in').forEach(function(inp){inp.onchange=function(e){var pp=plansGet();pp[e.target.dataset.f]=Math.max(0,parseInt(e.target.value)||0);savePlans(pp);renderPass();if(typeof kpis==='function')kpis();};});
+  }
+  renderPass();
+}
+function renderCars(){renderFleet();const notes=carNotes();const sd=standing();const os=outService();const el=document.getElementById('carsList');
 let html='';
 if(!sd.length){html+='<div class="orow"><span class="l" style="color:var(--good)">Усі авто в роботі або поза лінією.</span></div>';}
 else{const gpsN=sd.filter(c=>c.gps).length,noN=sd.length-gpsN;const byR={};sd.forEach(c=>{const r=(notes[c.plate]||{}).reason||'без причини';byR[r]=(byR[r]||0)+1;});
@@ -1454,7 +1466,7 @@ async function cloudLoadDays(){if(!supa)return;try{const r=await supa.from("app_
 async function cloudSaveDay(d){if(!supa||!d||!d.date)return;try{await supa.from("app_data").upsert({key:"day:"+d.date,value:d});}catch(e){console.error(e);}}
 async function cloudDeleteAllDays(){if(!supa)return;try{await supa.from("app_data").delete().like("key","day:%");}catch(e){console.error(e);}}
 async function cloudSaveKV(k,v){if(!supa)return;try{await supa.from("app_data").upsert({key:"kv:"+k,value:v});}catch(e){console.error(e);}}
-async function cloudLoadKV(){if(!supa)return;try{const r=await supa.from("app_data").select("key,value").in("key",["kv:fleet","kv:notes","kv:drvpass"]);if(r.error){console.error(r.error);return;}(r.data||[]).forEach(x=>{if(x.key==="kv:fleet"&&typeof x.value==="string"){try{localStorage.setItem("fleet_plates",x.value);}catch(e){}}if(x.key==="kv:notes"&&x.value){try{localStorage.setItem("cars_notes",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:drvpass"&&x.value){try{localStorage.setItem("drv_pass",JSON.stringify(x.value));}catch(e){}}});}catch(e){console.error(e);}}
+async function cloudLoadKV(){if(!supa)return;try{const r=await supa.from("app_data").select("key,value").in("key",["kv:fleet","kv:notes","kv:drvpass","kv:planfuel"]);if(r.error){console.error(r.error);return;}(r.data||[]).forEach(x=>{if(x.key==="kv:fleet"&&typeof x.value==="string"){try{localStorage.setItem("fleet_plates",x.value);}catch(e){}}if(x.key==="kv:notes"&&x.value){try{localStorage.setItem("cars_notes",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:drvpass"&&x.value){try{localStorage.setItem("drv_pass",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:planfuel"&&x.value){try{localStorage.setItem("plan_fuel",JSON.stringify(x.value));}catch(e){}}});}catch(e){console.error(e);}}
 function showLogin(b){var el=document.getElementById("login");if(el)el.style.display=b?"flex":"none";}
 function revealForm(){var l=document.getElementById("loginLoading"),f=document.getElementById("loginForm");if(l)l.style.display="none";if(f)f.style.display="block";}
 async function startCloud(){await cloudLoadDays();await cloudLoadKV();try{loadDays();}catch(e){}var ks=Object.keys(DAYS).sort();if(ks.length){DATA=DAYS[ks[ks.length-1]];boot();}else{showUploaderOnly();}}
