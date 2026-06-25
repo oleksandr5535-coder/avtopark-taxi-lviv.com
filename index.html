@@ -397,7 +397,7 @@ h4.sub3{font-size:12px;font-weight:700;color:var(--ink2);margin:16px 0 9px}
 <button id="processBtn" class="processb" disabled>Порахувати день</button></div></div></div>
 <div id="app" class="hide">
 <div class="navrow"><div class="topnav" id="topnav"><button data-v="morning" aria-pressed="false">🌅 Ранок</button><button data-v="overview" aria-pressed="true">Зведення дня</button><button data-v="drivers" aria-pressed="false">Водії</button><button data-v="cars" aria-pressed="false">Авто</button><button data-v="owner" aria-pressed="false">Власнику</button><button data-v="report" aria-pressed="false">📋 Звіт</button><button data-v="settings" aria-pressed="false">⚙ Налаштування</button></div><select id="daySel" class="daysel" style="display:none"></select><button id="logout" class="btnf" style="margin-left:auto">Вийти</button></div>
-<div id="morning" class="hide"><h1>🌅 <span class="accent">Ранок</span></h1><p class="sub">Хто ще не виїхав, хто катається без замовлень, і які авто не в ростері. Станом на останнє оновлення.</p><div id="mornBody"></div></div><div id="report" class="hide"><h1>📋 <span class="accent">Звіт</span> за день</h1><p class="sub">Натисни «Копіювати дані» під таблицею — рядки копіюються через Tab і лягають рівно по клітинках у твоїй щоденній таблиці. Копіюються лише рядки даних (без заголовків).</p><div id="reportBody"></div></div><div id="overview">
+<div id="morning" class="hide"><h1>🌅 <span class="accent">Ранок</span></h1><p class="sub">Хто ще не виїхав, хто катається без замовлень, і які авто не в ростері. Станом на останнє оновлення.</p><div id="mornBody"></div></div><div id="report" class="hide"><h1>📋 <span class="accent">Звіт</span> за день</h1><p class="sub">Натисни «Копіювати дані» під таблицею — рядки копіюються через Tab і лягають рівно по клітинках у твоїй щоденній таблиці. Копіюються заголовки + рядки даних.</p><div id="reportBody"></div></div><div id="overview">
   <div class="ovhead"><div class="ovhead-l"><p class="eyebrow">AVTO PARK Lviv · Golubkov</p><h1>День <span class="accent">водіїв</span></h1><p class="sub" id="sub"></p><button id="reload" class="btnf">↻ Завантажити / скинути файли</button> <button id="newWeek" class="btnf" style="border-color:#E7B7B0;color:var(--bad)">🗓 Новий тиждень</button></div><div id="standMini" class="ovhead-r"></div></div><div class="boltbar" id="boltbar"><span class="bb-ic">⚡</span><span class="bb-lbl">Наживо</span><input id="boltDate" type="date"><button id="allBtn" class="btnf bb-all">⚡ Оновити все</button><button id="boltBtn" class="btnf bb-go">↻ Оновити Bolt</button><button id="uklonBtn" class="btnf bb-go">↻ Оновити Uklon</button><button id="gpsBtn" class="btnf bb-go">🛰 Оновити GPS</button><span id="boltStat" class="bb-stat"></span></div><div class="daybar" id="daybar"></div><div class="kpis" id="kpis"></div><div id="fleetMini"></div><div id="dayDash"></div>
   
 </div>
@@ -1193,7 +1193,7 @@ function rptSection(title,headers,rows){
   rows.forEach(function(r){h+='<tr>';r.forEach(function(c){h+='<td>'+(c===''?'':rpt_esc(c))+'</td>';});h+='</tr>';});
   return h+'</tbody></table></div></div>';
 }
-function rptWireCopy(box,sets){box.querySelectorAll('.rpt-sec').forEach(function(sec,idx){var btn=sec.querySelector('.rpt-copy');if(btn&&sets[idx]&&sets[idx].length){btn.onclick=function(){rpt_copy(rpt_tsv(sets[idx]),btn);};}else if(btn){btn.disabled=true;btn.style.opacity='.5';}});}
+function rptWireCopy(box,sets){box.querySelectorAll('.rpt-sec').forEach(function(sec,idx){var btn=sec.querySelector('.rpt-copy');var S=sets[idx];if(btn&&S&&S.r&&S.r.length){btn.onclick=function(){rpt_copy(rpt_tsv([S.h].concat(S.r)),btn);};}else if(btn){btn.disabled=true;btn.style.opacity='.5';}});}
 
 function reportDayRender(out){
   var D=rptHy(rptDayKey)||DATA;
@@ -1201,12 +1201,15 @@ function reportDayRender(out){
   var boltRows=d.bolt.map(function(o){return [o.name,o.comp,o.net,o.cash,o.km];});
   var gpsRows=d.gps.map(function(o){return [o.grp,o.km,o.sp,o.time];});
   var uklonRows=d.uklon.map(function(o){return [o.name,o.ord,o.razom,o.cash,o.km];});
+  var bH=['Водій','Завершені поїздки','Чистий дохід|\u20b4','Отримано готівкою|\u20b4','Загальна відстань поїздки|км'];
+  var gH=['Групування','Пробіг за всіма повідомленнями','Макс. швидкість','Час у русі'];
+  var uH=['Водій','Кількість замовлень','Разом, грн','Вартість готівкою, грн','Пробіг (під замовленням), км'];
   var html='';
-  html+=rptSection('BOLT',['Водій','Завершені поїздки','Чистий дохід|\u20b4','Отримано готівкою|\u20b4','Загальна відстань поїздки|км'],boltRows);
-  html+=rptSection('GPS (Wialon)',['Групування','Пробіг за всіма повідомленнями','Макс. швидкість','Час у русі'],gpsRows);
-  html+=rptSection('UKLON',['Водій','Кількість замовлень','Разом, грн','Вартість готівкою, грн','Пробіг (під замовленням), км'],uklonRows);
+  html+=rptSection('BOLT',bH,boltRows);
+  html+=rptSection('GPS (Wialon)',gH,gpsRows);
+  html+=rptSection('UKLON',uH,uklonRows);
   out.innerHTML=html;
-  rptWireCopy(out,[boltRows,gpsRows,uklonRows]);
+  rptWireCopy(out,[{h:bH,r:boltRows},{h:gH,r:gpsRows},{h:uH,r:uklonRows}]);
 }
 function reportRangeRender(out){
   var drv=rptDriverList();
@@ -1228,7 +1231,7 @@ function reportRangeRender(out){
   html+='<tr class="rpt-tot">'+totRow.map(function(c){return '<td>'+rpt_esc(c)+'</td>';}).join('')+'</tr>';
   html+='</tbody></table></div></div>';
   out.innerHTML=html;
-  var btn=out.querySelector('.rpt-copy');if(btn)btn.onclick=function(){rpt_copy(rpt_tsv(dataRows.concat([totRow])),btn);};
+  var btn=out.querySelector('.rpt-copy');if(btn)btn.onclick=function(){rpt_copy(rpt_tsv([H].concat(dataRows,[totRow])),btn);};
 }
 function renderReportOut(){var out=document.getElementById('rptOut');if(!out)return;if(rptMode==='day')reportDayRender(out);else reportRangeRender(out);}
 function renderReport(){
