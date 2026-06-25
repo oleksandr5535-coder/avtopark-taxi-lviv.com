@@ -37,6 +37,15 @@ h1{font-size:30px;margin:0;font-weight:820;letter-spacing:-.015em}.accent{color:
   .pc-s{font-size:11.5px;color:var(--ink2);margin-top:6px}
   .ovsec{display:flex;flex-wrap:wrap;gap:6px 16px;background:rgba(0,0,0,.035);border-radius:10px;padding:10px 14px;font-size:12.5px;color:var(--ink2);margin-bottom:16px}
   .ovsec b{color:var(--ink);font-weight:600}
+  .morn{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px 16px;margin:14px 0}
+  .morn.ok{color:#1E6E42;background:#E6F2EA;border-color:#BFDCC8;font-weight:600;font-size:13.5px}
+  .morn-h{font-size:12px;color:var(--ink2);margin-bottom:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+  .mbk{margin-bottom:11px}.mbk:last-child{margin-bottom:0}
+  .mbk-l{font-size:13.5px;font-weight:700;margin-bottom:6px}
+  .mbk.red .mbk-l{color:#B23B30}.mbk.amber .mbk-l{color:#9A6B12}.mbk.gray .mbk-l{color:var(--ink2)}
+  .mbk-c{display:flex;flex-wrap:wrap;gap:6px}
+  .mchip{font-size:12.5px;background:rgba(0,0,0,.05);border-radius:999px;padding:4px 10px;white-space:nowrap}
+  .mbk.red .mchip{background:#FBEBEA}.mbk.amber .mchip{background:#FBF3E2}
   @media (max-width:700px){.ovprim{grid-template-columns:1fr 1fr}.oh-pace{max-width:none}.oh-big{font-size:34px}}
 .kpi .n{font-size:25px;font-weight:820;line-height:1}.kpi .l{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:5px}
 .kpi.alert .n{color:var(--bad)}
@@ -302,26 +311,26 @@ h4.sub3{font-size:12px;font-weight:700;color:var(--ink2);margin:16px 0 9px}
 <div id="fileList" class="filelist"></div><button id="clearFiles" class="btnf hide" style="margin-top:8px">Очистити список</button><div id="upErr" class="up-err hide"></div>
 <button id="processBtn" class="processb" disabled>Порахувати день</button></div></div></div>
 <div id="app" class="hide">
-<div class="navrow"><div class="topnav" id="topnav"><button data-v="overview" aria-pressed="true">Зведення дня</button><button data-v="cars" aria-pressed="false">Авто</button><button data-v="owner" aria-pressed="false">Власнику</button><button data-v="settings" aria-pressed="false">⚙ Налаштування</button></div><select id="daySel" class="daysel" style="display:none"></select><button id="logout" class="btnf" style="margin-left:auto">Вийти</button></div>
-<div id="overview">
+<div class="navrow"><div class="topnav" id="topnav"><button data-v="morning" aria-pressed="false">🌅 Ранок</button><button data-v="overview" aria-pressed="true">Зведення дня</button><button data-v="drivers" aria-pressed="false">Водії</button><button data-v="cars" aria-pressed="false">Авто</button><button data-v="owner" aria-pressed="false">Власнику</button><button data-v="settings" aria-pressed="false">⚙ Налаштування</button></div><select id="daySel" class="daysel" style="display:none"></select><button id="logout" class="btnf" style="margin-left:auto">Вийти</button></div>
+<div id="morning" class="hide"><h1>🌅 <span class="accent">Ранок</span></h1><p class="sub">Хто ще не виїхав, хто катається без замовлень, і які авто не в ростері. Станом на останнє оновлення.</p><div id="mornBody"></div></div><div id="overview">
   <div class="ovhead"><div class="ovhead-l"><p class="eyebrow">AVTO PARK Lviv · Golubkov</p><h1>День <span class="accent">водіїв</span></h1><p class="sub" id="sub"></p><button id="reload" class="btnf">↻ Завантажити / скинути файли</button> <button id="newWeek" class="btnf" style="border-color:#E7B7B0;color:var(--bad)">🗓 Новий тиждень</button></div><div id="standMini" class="ovhead-r"></div></div><div class="boltbar" id="boltbar"><span class="bb-ic">⚡</span><span class="bb-lbl">Наживо</span><input id="boltDate" type="date"><button id="allBtn" class="btnf bb-all">⚡ Оновити все</button><button id="boltBtn" class="btnf bb-go">↻ Оновити Bolt</button><button id="uklonBtn" class="btnf bb-go">↻ Оновити Uklon</button><button id="gpsBtn" class="btnf bb-go">🛰 Оновити GPS</button><span id="boltStat" class="bb-stat"></span></div><div class="daybar" id="daybar"></div><div class="kpis" id="kpis"></div><div id="fleetMini"></div>
-  <div class="bar2">
+  
+</div>
+<div id="drivers" class="hide"><h1>Во<span class="accent">дії</span></h1><p class="sub">Робочий список: фільтри, пошук, картки водіїв.</p><div class="bar2">
     <div class="seg" id="sort" role="group" aria-label="Сортування">
       <button data-s="attn" aria-pressed="true">Потребують уваги</button><button data-s="start" aria-pressed="false">Старт зранку</button>
       <button data-s="plan" aria-pressed="false">Темп до плану</button><button data-s="gross" aria-pressed="false">Каса</button><button data-s="unacc" aria-pressed="false">Поза агрег.</button></div>
     <div class="seg" id="statusf" role="group" aria-label="Статус">
 <button data-st="all" aria-pressed="true">Усі</button><button data-st="done" aria-pressed="false">Виконав</button><button data-st="ontrack" aria-pressed="false">Встигає</button><button data-st="behind" aria-pressed="false">Відстає</button><button data-st="nowork" aria-pressed="false">Без роботи</button></div>
 <input class="search" id="q" type="search" placeholder="Пошук…" aria-label="Пошук">
-    <div class="planset"><label>План/день</label><input id="plan" type="number" min="0" step="100"><span class="u">₴</span><span style="width:1px;height:20px;background:var(--line);margin:0 4px"></span><label>Норма/год</label><input id="hourly" type="number" min="0" step="50"><span class="u">₴</span><span style="width:1px;height:20px;background:var(--line);margin:0 4px"></span><label>Поїздок/день</label><input id="tripgoal" type="number" min="0" step="1"><span class="u">шт.</span><span style="width:1px;height:20px;background:var(--line);margin:0 4px"></span><label>Зміна до</label><input id="shiftend" type="time" value="22:00"><span style="width:1px;height:20px;background:var(--line);margin:0 4px"></span><label>День з</label><input id="daystart" type="number" min="0" max="12" step="1"><span class="u">год</span></div>
+    
   </div>
   <div class="toolrow">
     <button class="btnf" id="drvBtn" aria-haspopup="true">Водії: усі</button>
     <div id="driverPanel" class="dropdown hide"></div>
   </div>
   
-  <div class="leg">Стан за виконанням плану (<span id="legtarget"></span> ₴ чистими, зміна до <span id="legshift"></span>): <b>Виконав</b> = закрив план; <b>Встигає</b> = за своїм темпом закриє план до кінця зміни; <b>Відстає</b> = за поточним темпом не встигає; <b>Без роботи</b> = майже не возить. Норма темпу — <span id="legnorm"></span> ₴/год. Залежить від <b>темпу</b>, а не від %: за однакової каси хто заробляє швидше — встигає, повільніший — ні. Поїздки до «День з» — нічна зміна з учора (🌙), не псують старт.</div><div class="list" id="list"></div>
-</div>
-<div id="detail" class="hide"></div>
+  <div class="leg">Стан за виконанням плану (<span id="legtarget"></span> ₴ чистими, зміна до <span id="legshift"></span>): <b>Виконав</b> = закрив план; <b>Встигає</b> = за своїм темпом закриє план до кінця зміни; <b>Відстає</b> = за поточним темпом не встигає; <b>Без роботи</b> = майже не возить. Норма темпу — <span id="legnorm"></span> ₴/год. Залежить від <b>темпу</b>, а не від %: за однакової каси хто заробляє швидше — встигає, повільніший — ні. Поїздки до «День з» — нічна зміна з учора (🌙), не псують старт.</div><div class="list" id="list"></div></div><div id="detail" class="hide"></div>
 <div id="cars" class="hide">
 <p class="eyebrow">AVTO PARK Lviv · Golubkov</p><h1>Облік <span class="accent">авто</span></h1>
 <p class="sub">Які авто стоять і чому. Підпиши причину — збережеться у цьому браузері.</p>
@@ -331,7 +340,7 @@ h4.sub3{font-size:12px;font-weight:700;color:var(--ink2);margin:16px 0 9px}
 
 <div class="osect"><h3>Не працювали / простоюють</h3><div id="carsList"></div></div></div>
 <div id="owner" class="hide"></div>
-<div id="settings" class="hide"><h1>Нала<span class="accent">штування</span></h1><p class="sub">Разові налаштування парку — плани й типи водіїв.</p><div class="osect"><h3>Плани за паливом</h3><p class="sub" style="margin-top:-4px">Денний план чистими для кожного типу авто. Зміниш — застосується скрізь.</p><div id="planSettings"></div></div><div class="osect"><h3>База водіїв</h3><p class="sub" style="margin-top:-4px">Тип кожного водія. Оренда/лізинг — водій зникає зі списків і не йде в недобір.</p><div id="passList"></div></div></div>
+<div id="settings" class="hide"><h1>Нала<span class="accent">штування</span></h1><p class="sub">Разові налаштування парку — плани й типи водіїв.</p><div class="osect"><h3>Параметри плану й зміни</h3><p class="sub" style="margin-top:-4px">Денний план, норма темпу, ціль поїздок, межі зміни.</p><div class="planset"><label>План/день</label><input id="plan" type="number" min="0" step="100"><span class="u">₴</span><span style="width:1px;height:20px;background:var(--line);margin:0 4px"></span><label>Норма/год</label><input id="hourly" type="number" min="0" step="50"><span class="u">₴</span><span style="width:1px;height:20px;background:var(--line);margin:0 4px"></span><label>Поїздок/день</label><input id="tripgoal" type="number" min="0" step="1"><span class="u">шт.</span><span style="width:1px;height:20px;background:var(--line);margin:0 4px"></span><label>Зміна до</label><input id="shiftend" type="time" value="22:00"><span style="width:1px;height:20px;background:var(--line);margin:0 4px"></span><label>День з</label><input id="daystart" type="number" min="0" max="12" step="1"><span class="u">год</span></div></div><div class="osect"><h3>Плани за паливом</h3><p class="sub" style="margin-top:-4px">Денний план чистими для кожного типу авто. Зміниш — застосується скрізь.</p><div id="planSettings"></div></div><div class="osect"><h3>База водіїв</h3><p class="sub" style="margin-top:-4px">Тип кожного водія. Оренда/лізинг — водій зникає зі списків і не йде в недобір.</p><div id="passList"></div></div></div>
 </div></div>
 <script>/** @license
  *
@@ -866,7 +875,7 @@ function buildData(parts){
   // GPS attach + deadhead
   const active=new Set();
   drivers.forEach(o=>{const plk=o.plate_norm;const act=(o.online||0)>0||(o.orders||0)>0;
-    const gt=vT[plk]||[],gs=vS[plk]||[];o.has_gps=!!(gt.length||gs.length);
+    const gt=vT[plk]||[],gs=vS[plk]||[];o.has_gps=!!(gt.length||gs.length);if(o.has_gps&&o.span!=null){var _sS=(o.start_h!=null)?o.start_h*60:null,_sE=(_sS!=null)?_sS+o.span*60:null,_mv=0;gt.forEach(function(t){if(t.gs0==null)return;var a=t.gs0,b=(t.gs1!=null?t.gs1:t.gs0);if(_sS!=null){a=Math.max(a,_sS);b=Math.min(b,_sE);}if(b>a)_mv+=(b-a);});_mv=Math.min(_mv,o.span*60);o.move=Math.round(_mv/60*10)/10;o.empty=Math.max(Math.round((_mv-(o.work||0)*60)/60*10)/10,0);o.idle=Math.max(Math.round((o.span*60-_mv)/60*10)/10,0);o.gps_idle=true;}
     const pmins=o.trips.filter(t=>t.st==='ok'&&t.t).map(t=>tmin(t.t)).sort((a,b)=>a-b);
     if(o.has_gps){const gkm=Math.round(gt.reduce((s,t)=>s+t.km,0)*10)/10;o.gps_maxspeed=Math.max(0,...gt.map(t=>t.sp||0))||null;o.gps_over=gt.filter(t=>(t.sp||0)>70).length;o.gps_penalty=Math.round(gt.reduce((s,t)=>s+(t.pen||0),0));let unacc=[];
       gt.forEach(t=>{if(t.gs0==null||t.km<1)return;const matched=pmins.some(T=>t.gs0-15<=T&&T<=(t.gs1||t.gs0)+12);
@@ -935,22 +944,22 @@ let DATA=null,A,M,TARGET,NOW,HOURLY=300,TRIPGOAL=20,SHIFTEND=22*60;
 const gv=v=>v==null?"—":Math.round(v).toLocaleString("uk-UA");
 const H=v=>v==null?"—":v.toFixed(0);const H1n=v=>v==null?"—":v.toFixed(1);
 const STt={nowork:"Без роботи",low:"Майже не виходив",behind:"Відстає від плану",ontrack:"Встигає до плану",done:"Виконав план"};
-function planEta(o){const rem=TARGET-(o.net||0);if(rem<=0)return -1;return o.pace_net>0?NOW+rem/o.pace_net*60:1e9;}
+function planEta(o){const rem=planOf(o)-(o.net||0);if(rem<=0)return -1;return o.pace_net>0?NOW+rem/o.pace_net*60:1e9;}
 function statusOf(o){const on=o.online||0;
  if((o.online==null||on<0.3)&&o.b_offer>0&&o.b_comp===0)return 'nowork';
  if(on>=2&&(o.orders||0)<=1&&(o.util==null||o.util<0.12))return 'nowork';
  if(on>0&&on<1.5&&(o.gross||0)<(M.gross||0)*0.4)return 'low';
  if(o.pace_net==null)return 'low';
- if((o.net||0)>=TARGET)return 'done';
+ if((o.net||0)>=planOf(o))return 'done';
  return planEta(o)<=SHIFTEND?'ontrack':'behind';}
-function dayMessage(o,st){const on=o.online||0,g=o.gross||0,dayq=DATA.dayq,pct=Math.round((o.net||0)/TARGET*100);
+function dayMessage(o,st){const on=o.online||0,g=o.gross||0,dayq=DATA.dayq,pct=Math.round((o.net||0)/planOf(o)*100);
  const early=o.start_h!=null&&o.start_h>=5&&o.start_h<8.5;const em=(early&&g>0)?' Молодець, що рано почав.':'';
  const eta=planEta(o);
  if(st=='nowork'){if((o.online==null||on<0.3)&&o.b_offer>0&&o.b_comp===0)return `Привіт! Сьогодні бачив замовлення в Bolt, але жодного не виконав. Попит ${dayq}, робота є — виходь на лінію і приймай.`;return `Привіт! Ти на лінії ${on.toFixed(0)} год, а замовлень майже не брав. Попит ${dayq} — не стій, тримайся центру і вокзалу.`;}
- if(st=='low')return `Сьогодні ти майже не виходив (${on.toFixed(0)} год). День робочий, попит ${dayq} — є сенс відпрацювати зміну й піти до плану ${gv(TARGET)} ₴.`;
+ if(st=='low')return `Сьогодні ти майже не виходив (${on.toFixed(0)} год). День робочий, попит ${dayq} — є сенс відпрацювати зміну й піти до плану ${gv(planOf(o))} ₴.`;
  if(st=='done')return `Молодець — план закрив! Уже ${gv(o.net)} ₴ чистими (${pct}%). Далі все понад план.`;
  if(st=='ontrack')return `Гарно йдеш — ${gv(o.net)} ₴ чистими, це ${pct}% плану, темп ${o.pace_net!=null?Math.round(o.pace_net):'—'} ₴/год. За таким темпом закриєш план ~до ${clock(eta)}. Тримай!${em}`;
- return `Ти на ${pct}% плану (${gv(o.net)} з ${gv(TARGET)} ₴), темп ${o.pace_net!=null?Math.round(o.pace_net):'—'} ₴/год. За цим темпом закриваєш аж ~${clock(eta)} — пізно. Піднажми: бери більше замовлень, менше простою. Лишилось ${gv(Math.max(0,TARGET-(o.net||0)))} ₴.${em}`;}
+ return `Ти на ${pct}% плану (${gv(o.net)} з ${gv(planOf(o))} ₴), темп ${o.pace_net!=null?Math.round(o.pace_net):'—'} ₴/год. За цим темпом закриваєш аж ~${clock(eta)} — пізно. Піднажми: бери більше замовлень, менше простою. Лишилось ${gv(Math.max(0,planOf(o)-(o.net||0)))} ₴.${em}`;}
 function tripQ(pk){if(pk==null||!M.real_pk)return null;if(pk>=M.real_pk*1.15)return"good";if(pk<=M.real_pk*0.85)return"low";return"avg";}
 const H0=5,Hx=23;
 const CYR={'А':'A','В':'B','Е':'E','І':'I','Ї':'I','Є':'E','Ґ':'G','К':'K','М':'M','Н':'H','О':'O','Р':'P','С':'C','Т':'T','У':'U','Х':'X'};
@@ -958,20 +967,20 @@ const NORM=p=>(p||'').replace(/\s/g,'').toUpperCase().replace(/[А-ЯІЇЄҐ]/g
 let ACT=new Set();
 let selDrivers=new Set();
 const clock=m=>{m=Math.round(m);if(m>=24*60)return"завтра";return String(Math.floor(m/60)).padStart(2,'0')+":"+String(m%60).padStart(2,'0');};
-function plan(o){const net=o.net||0,pace=o.pace_net,pw=o.pace_work;const pct=TARGET>0?net/TARGET:0;
-const done=net>=TARGET;const rem=Math.max(0,TARGET-net);
+function plan(o){const net=o.net||0,pace=o.pace_net,pw=o.pace_work;const tg=planOf(o);const pct=tg>0?net/tg:0;
+const done=net>=tg;const rem=Math.max(0,tg-net);
 const hLeft=pace?rem/pace:null, hWork=pw?rem/pw:null;
 const onTrack=pace!=null&&pace>=HOURLY;const etaNorm=HOURLY>0?NOW+rem/HOURLY*60:null;const etaPace=pace>0?NOW+rem/pace*60:null;
-return{net,pace,pw,pct,done,rem,hLeft,hWork,onTrack,etaNorm,etaPace,eta:hLeft!=null?NOW+hLeft*60:null};}
+return{net,pace,pw,pct,done,rem,tg,hLeft,hWork,onTrack,etaNorm,etaPace,eta:hLeft!=null?NOW+hLeft*60:null};}
 function projSentence(p){if(p.done)return ' День закрив денний план — далі все понад нього.';
-if(p.pace>0&&p.onTrack)return ` Ти в темпі — ${Math.round(p.pace)} ₴/год чистими (норма ${HOURLY}). Продовжуй рух, і орієнтовно до ${clock(p.etaPace)} закриєш денний план ${gv(TARGET)} ₴.`;
+if(p.pace>0&&p.onTrack)return ` Ти в темпі — ${Math.round(p.pace)} ₴/год чистими (норма ${HOURLY}). Продовжуй рух, і орієнтовно до ${clock(p.etaPace)} закриєш денний план ${gv(p.tg||TARGET)} ₴.`;
 return ` Зараз ${p.pace!=null?Math.round(p.pace):'—'} ₴/год чистими — нижче норми ${HOURLY}. Піднажми: на нормі закриєш план ~до ${clock(p.etaNorm)}. Лишилось добрати ${gv(p.rem)} ₴.`;}
 
 function shortDur(d){if(!d)return'';const m=/(\d+):(\d+):(\d+)\s*$/.exec(d);if(!m)return d;const h=+m[1],mi=+m[2];return (h?h+' год ':'')+(mi?mi+' хв':(h?'':'<1 хв'));}
 function fleetMiss(){const S=shown();const fs=fleetStats();
  const act=S.filter(o=>(o.online||0)>0||(o.orders||0)>0);
  const net=S.reduce((s,o)=>s+(o.net||0),0);
- const shortList=act.filter(o=>(o.net||0)<TARGET).map(o=>({n:o.name,d:Math.round(TARGET-(o.net||0))})).sort((a,b)=>b.d-a.d);
+ const shortList=act.filter(o=>(o.net||0)<planOf(o)).map(o=>({n:o.name,d:Math.round(planOf(o)-(o.net||0))})).sort((a,b)=>b.d-a.d);
  const actShort=shortList.reduce((s,x)=>s+x.d,0);
  const JUST=new Set(['Утримуємо як підмінне','На ремонті / ТО','ДТП / пошкоджено','Водій на вихідному','Водій захворів']);
  const notes=(typeof carNotes==='function'?carNotes():{});const idleAll=standing();const just=[],recov=[];
@@ -982,7 +991,7 @@ function renderFleetMini(){const el=document.getElementById('fleetMini');if(!el)
  if((m.actShort||0)<=0&&(m.idleShort||0)<=0){el.innerHTML='';return;}
  el.innerHTML=`<div class="fleetmini"><span class="fm-l">Недобір до плану:</span> <b class="bad">−${gv(m.actShort)} ₴</b><span class="fm-sep">·</span><span class="fm-l">простій без причини:</span> <b>${m.recov.length}</b> авто <b class="bad">−${gv(m.idleShort)} ₴</b><span class="fm-sep">·</span><span class="fm-l">разом</span> <b class="bad">≈ ${gv(m.total)} ₴</b></div>`;}
 function ownerStats(){const S=shown();const k=S.reduce((s,o)=>s+(o.gross||0),0),net=S.reduce((s,o)=>s+(o.net||0),0);
-const done=S.filter(o=>(o.net||0)>=TARGET).length;const nw=S.filter(o=>statusOf(o)=='nowork'||statusOf(o)=='low');
+const done=S.filter(o=>(o.net||0)>=planOf(o)).length;const nw=S.filter(o=>statusOf(o)=='nowork'||statusOf(o)=='low');
 const pv=S.map(o=>o.pace_net).filter(x=>x!=null).sort((a,b)=>a-b);const mp=pv.length?Math.round(pv[Math.floor(pv.length/2)]):null;
 const off=S.reduce((s,o)=>s+(o.net_unexplained||0),0);const cashG=S.reduce((s,o)=>s+(o.cash_g||0),0),cardG=S.reduce((s,o)=>s+(o.card_g||0),0);
 const cashShare=Math.round(cashG/Math.max(cashG+cardG,1)*100);
@@ -1017,7 +1026,7 @@ const sec=(title,html)=>html?`<div class="osect"><h3>${title}</h3>${html}</div>`
 const orow=(l,r,bad)=>`<div class="orow"><span class="l">${l}</span><span class="rv ${bad?'bad':''}">${r}</span></div>`;
 const cs=o=>Math.round((o.cash_g||0)/Math.max((o.cash_g||0)+(o.card_g||0),1)*100);
 const stcol=o=>{const st=statusOf(o);return (st=='good'||st=='ontrack'||st=='done')?['var(--good-bg)','var(--good)']:st=='behind'?['var(--warn-bg)','var(--warn)']:['var(--bad-bg)','var(--bad)'];};
-const rows=[...t.S].sort((a,b)=>(b.net||0)-(a.net||0)).map(o=>{const c=stcol(o);return `<tr><td>${o.name}</td><td>${stDisp(o)}</td><td class="r">${o.online!=null?Math.round(o.online):'—'}</td><td class="r">${o.idle!=null?Math.round(o.idle):'—'}</td><td class="r">${gv(o.gross)}</td><td class="r">${gv(o.net)}</td><td class="r">${o.pace_net!=null?Math.round(o.pace_net):'—'}</td><td class="r">${o.net!=null?Math.round((o.net||0)/TARGET*100):0}%</td><td class="r">${o.orders||0}</td><td class="r">${cs(o)}%</td><td class="r">${o.net_unexplained?Math.round(o.net_unexplained):0}</td><td><span class="ost" style="background:${c[0]};color:${c[1]}">${STt[statusOf(o)]}</span></td></tr>`;}).join('');
+const rows=[...t.S].sort((a,b)=>(b.net||0)-(a.net||0)).map(o=>{const c=stcol(o);return `<tr><td>${o.name}</td><td>${stDisp(o)}</td><td class="r">${o.online!=null?Math.round(o.online):'—'}</td><td class="r">${o.idle!=null?Math.round(o.idle):'—'}</td><td class="r">${gv(o.gross)}</td><td class="r">${gv(o.net)}</td><td class="r">${o.pace_net!=null?Math.round(o.pace_net):'—'}</td><td class="r">${o.net!=null?Math.round((o.net||0)/planOf(o)*100):0}%</td><td class="r">${o.orders||0}</td><td class="r">${cs(o)}%</td><td class="r">${o.net_unexplained?Math.round(o.net_unexplained):0}</td><td><span class="ost" style="background:${c[0]};color:${c[1]}">${STt[statusOf(o)]}</span></td></tr>`;}).join('');
 const totrow=`<tr class="tot"><td>Разом (${t.tot})</td><td></td><td></td><td></td><td class="r">${gv(t.k)}</td><td class="r">${gv(t.net)}</td><td class="r">${t.mp==null?'—':t.mp}</td><td class="r">${t.done}/${t.tot}</td><td class="r">${t.orders}</td><td class="r">${t.cashShare}%</td><td class="r">${Math.round(t.off)}</td><td></td></tr>`;
 const table=`<div style="overflow-x:auto"><table class="otable"><thead><tr><th>Водій</th><th>Старт</th><th class="r">Онл</th><th class="r">Прост</th><th class="r">Каса</th><th class="r">Чист</th><th class="r">₴/год</th><th class="r">% пл.</th><th class="r">Поїзд</th><th class="r">Готів</th><th class="r">Поза км</th><th>Статус</th></tr></thead><tbody>${rows}${totrow}</tbody></table></div>`;
 const attnH=t.nw.map(o=>orow(o.name+' <span class="flagchip" style="background:var(--bad-bg);color:var(--bad)">без роботи</span>',(o.online!=null?Math.round(o.online)+' год на лінії':'—'),true)).join('')+t.highCash.map(o=>orow(o.name+' <span class="flagchip" style="background:var(--warn-bg);color:var(--warn)">готівка</span>',cs(o)+'% готівкою',true)).join('');
@@ -1051,11 +1060,37 @@ try{const blob=pdf.output('blob');const file=new File([blob],fname,{type:'applic
 }catch(e){if(e&&e.name!=='AbortError'){try{pdf.save(fname);}catch(_){}}}
 }catch(err){console.error(err);alert('Не вдалося згенерувати PDF у цьому перегляді. Відкрий файл локально (подвійним кліком) — тоді кнопка створить PDF. Як запасний варіант відкрию системний друк.');try{window.print();}catch(e){}}
 finally{hide.forEach(x=>x&&(x.style.visibility=''));b.textContent='Зберегти / надіслати PDF';}};}
-function showView(v){view=v;document.getElementById('overview').classList.toggle('hide',v!=='overview');document.getElementById('owner').classList.toggle('hide',v!=='owner');document.getElementById('cars').classList.toggle('hide',v!=='cars');document.getElementById('settings').classList.toggle('hide',v!=='settings');document.getElementById('detail').classList.add('hide');if(v==='cars')renderCars();if(v==='settings')renderSettings();if(v==='overview')renderStandingMini();[...document.getElementById('topnav').children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v));if(v==='owner')renderOwner();window.scrollTo(0,0);}
+function showView(v){view=v;document.getElementById('overview').classList.toggle('hide',v!=='overview');document.getElementById('owner').classList.toggle('hide',v!=='owner');document.getElementById('cars').classList.toggle('hide',v!=='cars');document.getElementById('settings').classList.toggle('hide',v!=='settings');document.getElementById('morning').classList.toggle('hide',v!=='morning');document.getElementById('drivers').classList.toggle('hide',v!=='drivers');document.getElementById('detail').classList.add('hide');if(v==='cars')renderCars();if(v==='settings')renderSettings();if(v==='morning')renderMorning();if(v==='drivers')renderDrivers();if(v==='overview')renderStandingMini();[...document.getElementById('topnav').children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v));if(v==='owner')renderOwner();window.scrollTo(0,0);}
 function daybar(){const S=shown();const pv=S.map(o=>o.pace_net).filter(x=>x!=null).sort((a,b)=>a-b);const np=pv.length?Math.round(pv[Math.floor(pv.length/2)]):null;const ok=np!=null&&np>=HOURLY;const col=np==null?'var(--amber)':(ok?'var(--good)':'var(--bad)');
 document.getElementById('daybar').innerHTML=`<span class="dot" style="background:${col}"></span><div>Середній темп по парку — <b>${np==null?'—':np+' ₴/год чистими'}</b> (норма ${HOURLY} ₴/год). `+(ok?'Парк тримає норму — гарний день, тисніть.':'Темп нижче норми — варто підганяти водіїв.')+`</div>`;}
 function shown(){var base=A.filter(o=>isTaxi(o));return selDrivers.size?base.filter(o=>selDrivers.has(o.name)):base;}
-function kpis(){const S=shown();const k=S.reduce((s,o)=>s+(o.gross||0),0),done=S.filter(o=>(o.net||0)>=TARGET).length,nw=S.filter(o=>statusOf(o)=='nowork'||statusOf(o)=='low').length;
+function lastDriverByPlate(){var map={};try{var ks=Object.keys(DAYS||{}).sort();ks.forEach(function(k){var d=DAYS[k];var drv=(d&&d.drivers)||[];drv.forEach(function(o){if(o&&o.plate_norm&&o.name)map[o.plate_norm]=o.name;});});}catch(e){}(A||[]).forEach(function(o){if(o&&o.plate_norm&&o.name)map[o.plate_norm]=o.name;});return map;}
+function renderDrivers(){if(typeof renderList==='function')renderList();}
+function renderMorning(){var el=document.getElementById('mornBody');if(el)el.innerHTML=morningPanel();}
+function morningPanel(){
+  if(!DATA)return '';
+  var fleet=(typeof getFleet==='function')?getFleet():[];
+  if(!fleet.length)return '<div class="morn ok">Додай номери авто в Налаштуваннях (ростер) — і тут буде видно, хто ще не виїхав.</div>';
+  var gc=DATA.gps_cars||{},nameOf=lastDriverByPlate();
+  var noGo=[],roaming=[],working=0;
+  fleet.forEach(function(pl){
+    if(typeof isOOS==='function'&&isOOS(pl))return;
+    if(ACT.has(pl)){working++;return;}
+    var g=gc[pl];
+    if(g&&(g.km||0)>=5)roaming.push({plate:pl,km:g.km,name:nameOf[pl]});
+    else noGo.push({plate:pl,name:nameOf[pl]});
+  });
+  var fset=new Set(fleet),unmarked=[],seenU=new Set();
+  (A||[]).forEach(function(o){var pl=o.plate_norm;if(pl&&!fset.has(pl)&&((o.orders||0)>0||(o.online||0)>0)&&!seenU.has(pl)){seenU.add(pl);unmarked.push({plate:pl,name:o.name});}});
+  if(!noGo.length&&!roaming.length&&!unmarked.length)return '<div class="morn ok">🟢 Усі авто з ростера на лінії ('+working+'). Невідмічених нема.</div>';
+  var chip=function(x){return '<span class="mchip">'+(x.name?x.name+' · ':'')+x.plate+(x.km?' · '+x.km+' км':'')+'</span>';};
+  var html='<div class="morn"><div class="morn-h">Ранковий контроль · '+working+' працює</div>';
+  if(noGo.length)html+='<div class="mbk red"><div class="mbk-l">🔴 Не виїхали — подзвонити ('+noGo.length+')</div><div class="mbk-c">'+noGo.map(chip).join('')+'</div></div>';
+  if(roaming.length)html+='<div class="mbk amber"><div class="mbk-l">🟡 Виїхали, але без замовлень ('+roaming.length+')</div><div class="mbk-c">'+roaming.map(chip).join('')+'</div></div>';
+  if(unmarked.length)html+='<div class="mbk gray"><div class="mbk-l">⚪ Невідмічені авто — додай у ростер ('+unmarked.length+')</div><div class="mbk-c">'+unmarked.map(chip).join('')+'</div></div>';
+  html+='</div>';return html;
+}
+function kpis(){const S=shown();const k=S.reduce((s,o)=>s+(o.gross||0),0),done=S.filter(o=>(o.net||0)>=planOf(o)).length,nw=S.filter(o=>statusOf(o)=='nowork'||statusOf(o)=='low').length;
 const stt=S.map(o=>effStartMin(o)).filter(x=>x!=null).sort((a,b)=>a-b);const sh=stt.length?stt[Math.floor(stt.length/2)]:null;
 const sm=hm(sh);
 const uk=S.reduce((s,o)=>s+(o.unacc_km||0),0);const fl=fleetStats();
@@ -1065,10 +1100,10 @@ for(let h=H0;h<=Hx;h++){const v=hourly[h];const ht=v?Math.max(big?6:3,v/mx*100):
 function row(o){const p=plan(o);
 const eta=planEta(o);const okp=eta>=0&&eta<=SHIFTEND;const mark=p.done?'':(okp?'<span style="color:var(--good)">▲ </span>':'<span style="color:var(--bad)">▼ </span>');const phint=p.done?`<span class="phint done">✓ план виконано</span>`:`<span class="phint">${mark}ще <b>${gv(p.rem)} ₴</b> · закриє ~<b style="color:${okp?'var(--good)':'var(--bad)'}">${eta>=0?clock(eta):'—'}</b></span>`;
 return `<button class="rowc ${statusOf(o)}" data-i="${o._i}">
-<div><span class="pill ${statusOf(o)}">${STt[statusOf(o)]} · ${Math.round((o.net||0)/TARGET*100)}%</span></div>
+<div><span class="pill ${statusOf(o)}">${STt[statusOf(o)]} · ${Math.round((o.net||0)/planOf(o)*100)}%</span></div>
 <div class="who"><div class="nm">${o.name}</div><div class="det">${[o.car,o.plate,o.plats.join(' + ')].filter(Boolean).join(' · ')}${nightTail(o).n>0?' · 🌙 нічна':''}${o.unacc_km>=8?` · <span class="gpsflag">⚑ ${H(o.unacc_km)} км поза агрег.</span>`:''}</div></div>
 <div class="start"><div class="t">${stDisp(o)}</div><div class="l">старт${o.end?` · до ${o.end}`:''}</div>${o.online!=null?`<div class="span">${H(o.online)} год · ${H(o.idle)} простій</div>`:''}</div>
-<div class="plan"><div class="pnet">${gv(p.net)} <b>/ ${gv(TARGET)} ₴ чист.</b></div><div class="pbar"><i class="${p.done?'done':''}" style="width:${Math.min(100,p.pct*100)}%"></i></div>${phint}</div>
+<div class="plan"><div class="pnet">${gv(p.net)} <b>/ ${gv(planOf(o))} ₴ чист.</b></div><div class="pbar"><i class="${p.done?'done':''}" style="width:${Math.min(100,p.pct*100)}%"></i></div>${phint}</div>
 <div class="money"><div class="g">${gv(o.gross)} ₴</div><div class="s">${o.pace_net==null?'':Math.round(o.pace_net)+' ₴/год чист.'}${o.orders?' · '+o.orders+'/'+TRIPGOAL+' п.':''}</div></div>
 <span class="chev">›</span></button>`;}
 let sort='attn',q='',statusF='all',view='overview',DAYSTART=5;let DAYS={};
@@ -1082,7 +1117,8 @@ function loadDays(){try{Object.assign(DAYS,JSON.parse(localStorage.getItem('days
 function registerDay(d){if(d&&d.date){DAYS[d.date]=d;saveDays();if(typeof cloudSaveDay==='function')cloudSaveDay(d);}}
 function fillDaySel(){const sel=document.getElementById('daySel');if(!sel)return;const ks=Object.keys(DAYS).sort().reverse();
 sel.innerHTML=ks.map(k=>`<option value="${k}" ${DATA&&DATA.date===k?'selected':''}>${(DAYS[k].date_label||k)}</option>`).join('');sel.style.display=ks.length>1?'':'none';}
-function setDay(date){if(DAYS[date]){DATA=DAYS[date];boot();}}const rank={nowork:0,low:1,behind:2,ontrack:3,done:4};
+function hydrate(day){if(!day||!day._parts||typeof PROC==='undefined'||!PROC.buildData)return day;try{var D=PROC.buildData(day._parts);D._parts=day._parts;D.date=day.date||D.date;D.date_label=day.date_label||D.date_label;if(D.demand===undefined&&day.demand!==undefined)D.demand=day.demand;return D;}catch(e){console.error('hydrate',e);return day;}}
+function setDay(date){if(DAYS[date]){DATA=hydrate(DAYS[date]);boot();}}const rank={nowork:0,low:1,behind:2,ontrack:3,done:4};
 function renderList(){let L=A.filter(o=>isTaxi(o)&&o.name.toLowerCase().includes(q)&&(selDrivers.size===0||selDrivers.has(o.name))&&(statusF=='all'||statusOf(o)==statusF||(statusF=='nowork'&&statusOf(o)=='low')));
 const key={attn:o=>[rank[statusOf(o)],-(o.idle||0)],start:o=>[o.start_h==null?99:o.start_h],plan:o=>{const p=plan(o);return p.done?[0,-(o.net||0)]:(p.hLeft!=null?[1,p.hLeft]:[2,0]);},gross:o=>[-(o.gross||0)],unacc:o=>[-(o.unacc_km||0)]}[sort];
 L.sort((a,b)=>{const ka=key(a),kb=key(b);for(let j=0;j<ka.length;j++)if(ka[j]!=kb[j])return ka[j]-kb[j];return 0;});
@@ -1091,7 +1127,7 @@ function ubar(u){if(u==null)return'';const mx=Math.max(u,M.util)*1.4||1;return `
 function durToMin(s){if(!s)return 0;const p=String(s).split(':').map(Number);if(p.length===3)return p[0]*60+p[1]+(p[2]||0)/60;if(p.length===2)return p[0]*60+p[1];return 0;}
 function durFmt(m){m=Math.round(m);const h=Math.floor(m/60),mm=m%60;return h?`${h} год ${mm} хв`:`${mm} хв`;}
 function prodBlock(o){
-  const onl=o.online||0,wrk=o.work||0,idle=Math.max(0,onl-wrk);
+  const onl=o.online||0,wrk=o.work||0,idle=(o.idle!=null?o.idle:Math.max(0,onl-wrk));
   const util=onl>0?wrk/onl:0;
   const perOnline=onl>0?Math.round((o.net||0)/onl):0;
   const perWork=wrk>0?Math.round((o.net||0)/wrk):0;
@@ -1118,23 +1154,23 @@ const disc=off?`<div class="discbar"><i class="disc-ok" style="width:${c/tot*100
 <div class="disclg"><span><b class="disc-ok"></b>прийнято ${c}</span><span><b class="disc-c"></b>відмінив ${o.b_cancel}</span><span><b class="disc-n"></b>не відповів ${o.b_noans}</span></div>`:'<p style="color:var(--muted);font-size:12.5px">Немає даних Bolt.</p>';
 const QL={good:['вигідна','q-good'],avg:['середня','q-avg'],low:['невигідна','q-low']};
 const TIERL={econ:'Економ',std:'Стандарт',premium:'Комфорт',deliv:'Доставка'};
-const trips=o.trips.filter(t=>t.t).map(t=>{const q=t.st=='ok'?tripQ(t.pk):null;const ql=QL[q]||['—',''];const pp=(t.st=='ok'&&t.net&&TARGET>0)?(t.net/TARGET*100):null;return `<tr><td>${t.t}</td><td><span class="pl">${t.plat}</span></td><td>${TIERL[t.tier]||'—'}</td><td class="r">${t.km?t.km.toFixed(1):'—'}</td><td class="r">${t.fare?gv(t.fare):'—'}</td><td class="r">${t.net!=null?gv(t.net):'—'}</td><td class="r">${t.pk!=null?t.pk.toFixed(0):'—'}</td><td>${q?`<span class="badge ${ql[1]}">${ql[0]}</span>`:'—'}</td><td class="r">${pp!=null?pp.toFixed(1)+'%':'—'}</td><td>${t.st=='ok'?(t.pay=='cash'?'<span class="badge q-low">готівка</span>':t.pay=='mix'?'<span class="badge q-avg">змішана</span>':'<span class="badge q-good">картка</span>'):'—'}</td><td><span class="badge ${t.st}">${t.st=='ok'?'викон.':'скас.'}</span></td></tr>`;}).join('');
+const trips=o.trips.filter(t=>t.t).map(t=>{const q=t.st=='ok'?tripQ(t.pk):null;const ql=QL[q]||['—',''];const pp=(t.st=='ok'&&t.net&&planOf(o)>0)?(t.net/planOf(o)*100):null;return `<tr><td>${t.t}</td><td><span class="pl">${t.plat}</span></td><td>${TIERL[t.tier]||'—'}</td><td class="r">${t.km?t.km.toFixed(1):'—'}</td><td class="r">${t.fare?gv(t.fare):'—'}</td><td class="r">${t.net!=null?gv(t.net):'—'}</td><td class="r">${t.pk!=null?t.pk.toFixed(0):'—'}</td><td>${q?`<span class="badge ${ql[1]}">${ql[0]}</span>`:'—'}</td><td class="r">${pp!=null?pp.toFixed(1)+'%':'—'}</td><td>${t.st=='ok'?(t.pay=='cash'?'<span class="badge q-low">готівка</span>':t.pay=='mix'?'<span class="badge q-avg">змішана</span>':'<span class="badge q-good">картка</span>'):'—'}</td><td><span class="badge ${t.st}">${t.st=='ok'?'викон.':'скас.'}</span></td></tr>`;}).join('');
 const dir=p.onTrack?`<b style="color:var(--good)">вище норми</b>`:`<b style="color:var(--bad)">нижче норми</b>`;
-const planNeed=p.done?`<div class="need" style="color:var(--good);font-weight:750">✓ План виконано — чистими ${gv(p.net)} ₴ (+${gv(p.net-TARGET)} ₴ понад план).</div>`
+const planNeed=p.done?`<div class="need" style="color:var(--good);font-weight:750">✓ План виконано — чистими ${gv(p.net)} ₴ (+${gv(p.net-planOf(o))} ₴ понад план).</div>`
 :(p.pace>0?`<div class="need">Лишилось до плану: <b style="font-size:18px">${gv(p.rem)} ₴</b> чистими.</div>
 <div class="sub2">Темп <b>${Math.round(p.pace)} ₴/год</b> — ${dir} ${HOURLY} ₴/год. За цим темпом закриєш ~до <b>${clock(p.etaPace)}</b>; за нормою ${HOURLY} — до <b>${clock(p.etaNorm)}</b>. ${p.etaPace<=SHIFTEND?`<b style="color:var(--good)">Встигаєш до кінця зміни (${clock(SHIFTEND)}).</b>`:`<b style="color:var(--bad)">Це вже після зміни (${clock(SHIFTEND)}) — за цим темпом не встигаєш.</b>`}</div>`
 :`<div class="need">Лишилось до плану <b>${gv(p.rem)} ₴</b>. Заробітку ще майже нема — щоб порахувати темп, треба почати виконувати замовлення.</div>`);
 return `<button class="back" id="back">‹ До зведення дня</button>
 <div class="dhead"><div><div class="nm">${o.name}</div>
-<div class="det"><span class="pill ${statusOf(o)}">${STt[statusOf(o)]} · ${Math.round((o.net||0)/TARGET*100)}%</span>${[o.car,o.plate].filter(Boolean).map(x=>`<span class="chip">${x}</span>`).join('')}${o.plats.map(x=>`<span class="chip">${x}</span>`).join('')}<span class="chip">категорія —</span></div></div>
+<div class="det"><span class="pill ${statusOf(o)}">${STt[statusOf(o)]} · ${Math.round((o.net||0)/planOf(o)*100)}%</span>${[o.car,o.plate].filter(Boolean).map(x=>`<span class="chip">${x}</span>`).join('')}${o.plats.map(x=>`<span class="chip">${x}</span>`).join('')}<span class="chip">категорія —</span></div></div>
 <div style="text-align:right"><div style="font-size:25px;font-weight:820">${gv(o.gross)} ₴</div><div style="font-size:12px;color:var(--muted)">каса · чистими ${gv(o.net)} ₴</div></div></div>
 <div class="shift">
 <div class="c"><div class="v">${stDisp(o)}</div><div class="l">старт</div></div>
 <div class="c"><div class="v">${o.end||'—'}</div><div class="l">останнє</div></div>
 <div class="c"><div class="v">${o.span==null?'—':o.span+' год'}</div><div class="l">зміна</div></div>
-<div class="c"><div class="v">${H(Math.max((o.online||0)-(o.idle||0),0))} год</div><div class="l">у поїздках</div></div>
-<div class="c"><div class="v warn">${H(o.idle)} год</div><div class="l">простій</div></div></div>
-<div class="planbox"><div class="top"><span class="lab">План на день</span><span class="big">${gv(p.net)} <b>/ ${gv(TARGET)} ₴</b></span></div>
+<div class="c"><div class="v">${H(o.work)} год</div><div class="l">з пасажиром</div></div>${o.gps_idle?`<div class="c"><div class="v">${H(o.empty)} год</div><div class="l">порожнем</div></div>`:''}
+<div class="c"><div class="v warn">${H(o.idle)} год</div><div class="l">${o.gps_idle?'стояв · GPS':'простій'}</div></div></div>
+<div class="planbox"><div class="top"><span class="lab">План на день</span><span class="big">${gv(p.net)} <b>/ ${gv(planOf(o))} ₴</b></span></div>
 <div class="pbar2"><i class="${p.done?'done':''}" style="width:${Math.min(100,p.pct*100)}%"></i></div>${planNeed}</div>
 ${prodBlock(o)}<div class="sect"><h3>Ритм дня · поїздки за годину</h3><div class="tlbig">${spark(o.hourly,true)}</div>
 <div class="tlxb">${Array.from({length:Hx-H0+1},(_,k)=>`<b>${H0+k}</b>`).join('')}</div></div>
@@ -1180,8 +1216,8 @@ ${(function(){const comp=o.trips.filter(t=>t.st=='ok'&&t.net!=null);const g=comp
 const avg=comp.length?comp.reduce((s,t)=>s+t.net,0)/comp.length:null;const toPlan=(avg&&p.rem>0)?Math.ceil(p.rem/avg):0;const tot=Math.max(comp.length,1);
 return `<div class="sect"><h3>Якість поїздок</h3>
 <div class="qbar"><i class="q-g" style="width:${g/tot*100}%"></i><i class="q-a" style="width:${a/tot*100}%"></i><i class="q-l" style="width:${l/tot*100}%"></i></div>
-<div class="qsum">Вигідних <b>${g}</b> · середніх <b>${a}</b> · невигідних <b>${l}</b> з ${comp.length}. Середня чиста поїздка <b>${avg?gv(avg):'—'} ₴</b> (${(avg&&TARGET?(avg/TARGET*100).toFixed(1):'—')}% плану кожна). ${p.done?'План уже закрито.':`Щоб закрити план — ще <b>~${toPlan}</b> таких поїздок.`} Поїздок сьогодні: <b>${o.orders||0} / ${TRIPGOAL}</b>${(o.orders||0)>=TRIPGOAL?' ✓':` (ще ${Math.max(0,TRIPGOAL-(o.orders||0))})`}.</div></div>`;})()}
-${(function(){const ks=Object.keys(DAYS);if(ks.length<2)return '';const h=ks.sort().map(k=>{const dd=DAYS[k];const x=(dd.drivers||[]).find(z=>z.name===o.name);return x?{lab:dd.date_label||k,net:x.net,pace:x.pace_net,ord:x.orders,pct:Math.round((x.net||0)/TARGET*100)}:null;}).filter(Boolean);if(h.length<2)return '';
+<div class="qsum">Вигідних <b>${g}</b> · середніх <b>${a}</b> · невигідних <b>${l}</b> з ${comp.length}. Середня чиста поїздка <b>${avg?gv(avg):'—'} ₴</b> (${(avg&&planOf(o)?(avg/planOf(o)*100).toFixed(1):'—')}% плану кожна). ${p.done?'План уже закрито.':`Щоб закрити план — ще <b>~${toPlan}</b> таких поїздок.`} Поїздок сьогодні: <b>${o.orders||0} / ${TRIPGOAL}</b>${(o.orders||0)>=TRIPGOAL?' ✓':` (ще ${Math.max(0,TRIPGOAL-(o.orders||0))})`}.</div></div>`;})()}
+${(function(){const ks=Object.keys(DAYS);if(ks.length<2)return '';const h=ks.sort().map(k=>{const dd=DAYS[k];const x=(dd.drivers||[]).find(z=>z.name===o.name);return x?{lab:dd.date_label||k,net:x.net,pace:x.pace_net,ord:x.orders,pct:Math.round((x.net||0)/planOf(x)*100)}:null;}).filter(Boolean);if(h.length<2)return '';
 return `<div class="sect"><h3>Динаміка по днях</h3><table class="otable"><thead><tr><th>День</th><th class="r">Чистими</th><th class="r">₴/год</th><th class="r">Поїзд</th><th class="r">% плану</th></tr></thead><tbody>${h.map(r=>`<tr><td>${r.lab}</td><td class="r">${gv(r.net)}</td><td class="r">${r.pace!=null?Math.round(r.pace):'—'}</td><td class="r">${r.ord||0}</td><td class="r">${r.pct}%</td></tr>`).join('')}</tbody></table></div>`;})()}
 <div class="sect"><h3>Журнал поїздок (${o.trips.filter(t=>t.t).length})</h3>
 <table class="log"><thead><tr><th>Час</th><th>Платф.</th><th>Клас</th><th class="r">км</th><th class="r">Сума</th><th class="r">Чисте</th><th class="r">₴/км</th><th>Якість</th><th class="r">% плану</th><th>Оплата</th><th>Статус</th></tr></thead>
@@ -1242,7 +1278,7 @@ function drvPass(){try{return JSON.parse(localStorage.getItem('drv_pass')||'{}')
 function saveDrvPass(name,patch){const m=drvPass();m[name]=Object.assign({},m[name],patch);try{localStorage.setItem('drv_pass',JSON.stringify(m))}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('drvpass',m);}
 function ownOf(o){const p=drvPass()[o&&o.name]||{};return p.type||'taxi';}
 function isTaxi(o){return ownOf(o)==='taxi';}
-function planOf(o){const p=drvPass()[o&&o.name]||{};return PLAN(p.fuel||'std')||(DATA&&DATA.plan_default)||3000;}
+function planOf(o){const p=drvPass()[o&&o.name]||{};var f=p.fuel;if(f==='gas')return PLAN('gas');if(f==='hybrid')return PLAN('hybrid');return (typeof TARGET!=='undefined'&&TARGET)||(DATA&&DATA.plan_default)||3000;}
 function saveCarNote(pl,o){const n=carNotes();n[pl]=o;try{localStorage.setItem('cars_notes',JSON.stringify(n))}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('notes',n);}
 const REASONS=['Готове авто — немає водія','Водій на вихідному','Водій захворів','Утримуємо як підмінне','Не готове до таксі / готуємо до випуску','На ремонті / ТО','ДТП / пошкоджено','Інше'];
 const OUT_OF_SERVICE=new Set(['Не готове до таксі / готуємо до випуску','На ремонті / ТО','ДТП / пошкоджено']);
@@ -1259,7 +1295,7 @@ function renderPass(){
   names.sort(function(a,b){return a.localeCompare(b,'uk');});
   if(!names.length){el.innerHTML='<div class="phint2">Спершу онови дані (Bolt/Uklon) — і тут зʼявляться водії.</div>';return;}
   var TYPE=[['taxi','Таксі'],['rent','Оренда'],['lease','Лізинг']];
-  var FUEL=[['std','Стандарт '+PLAN('std')],['gas','Газ '+PLAN('gas')],['hybrid','Гібрид '+PLAN('hybrid')]];
+  var FUEL=[['std','Стандарт '+((typeof TARGET!=='undefined'&&TARGET)||3000)],['gas','Газ '+PLAN('gas')],['hybrid','Гібрид '+PLAN('hybrid')]];
   var html='';
   names.forEach(function(n){
     var p=pass[n]||{};var type=p.type||'taxi';var fuel=p.fuel||'std';var rentCls=(type!=='taxi')?' pp-rent':'';
@@ -1277,8 +1313,10 @@ function renderPass(){
 }
 function renderSettings(){
   var el=document.getElementById('planSettings');
-  if(el){var p=plansGet();var rows=[['std','Стандарт'],['hybrid','Гібрид'],['gas','Газ']];
-    el.innerHTML=rows.map(function(f){return '<div class="passrow"><span class="pp-plate">'+f[1]+'</span><input type="number" class="ps-in" data-f="'+f[0]+'" value="'+(p[f[0]]||3000)+'" min="0" step="100" style="width:120px"><span class="pp-plan">₴ / день</span></div>';}).join('');
+  if(el){var p=plansGet();var std=(typeof TARGET!=='undefined'&&TARGET)||3000;
+    var html='<div class="passrow"><span class="pp-plate">Стандарт (Бензин)</span><span class="pp-plan" style="min-width:90px">'+std+' ₴</span><span class="pc-s" style="margin:0">= «План/день»</span></div>';
+    [['hybrid','Гібрид'],['gas','Газ']].forEach(function(f){html+='<div class="passrow"><span class="pp-plate">'+f[1]+'</span><input type="number" class="ps-in" data-f="'+f[0]+'" value="'+(p[f[0]]||3000)+'" min="0" step="100" style="width:120px"><span class="pp-plan">₴ / день</span></div>';});
+    el.innerHTML=html;
     el.querySelectorAll('.ps-in').forEach(function(inp){inp.onchange=function(e){var pp=plansGet();pp[e.target.dataset.f]=Math.max(0,parseInt(e.target.value)||0);savePlans(pp);renderPass();if(typeof kpis==='function')kpis();};});
   }
   renderPass();
@@ -1493,8 +1531,8 @@ async function cloudSaveKV(k,v){if(!supa)return;try{await supa.from("app_data").
 async function cloudLoadKV(){if(!supa)return;try{const r=await supa.from("app_data").select("key,value").in("key",["kv:fleet","kv:notes","kv:drvpass","kv:planfuel"]);if(r.error){console.error(r.error);return;}(r.data||[]).forEach(x=>{if(x.key==="kv:fleet"&&typeof x.value==="string"){try{localStorage.setItem("fleet_plates",x.value);}catch(e){}}if(x.key==="kv:notes"&&x.value){try{localStorage.setItem("cars_notes",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:drvpass"&&x.value){try{localStorage.setItem("drv_pass",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:planfuel"&&x.value){try{localStorage.setItem("plan_fuel",JSON.stringify(x.value));}catch(e){}}});}catch(e){console.error(e);}}
 function showLogin(b){var el=document.getElementById("login");if(el)el.style.display=b?"flex":"none";}
 function revealForm(){var l=document.getElementById("loginLoading"),f=document.getElementById("loginForm");if(l)l.style.display="none";if(f)f.style.display="block";}
-async function startCloud(){await cloudLoadDays();await cloudLoadKV();try{loadDays();}catch(e){}var ks=Object.keys(DAYS).sort();if(ks.length){DATA=DAYS[ks[ks.length-1]];boot();}else{showUploaderOnly();}}
-function startLocal(){try{loadDays();var ks=Object.keys(DAYS).sort();if(ks.length){DATA=DAYS[ks[ks.length-1]];boot();}else{showUploaderOnly();}}catch(e){console.error(e);}}
+async function startCloud(){await cloudLoadDays();await cloudLoadKV();try{loadDays();}catch(e){}var ks=Object.keys(DAYS).sort();if(ks.length){DATA=hydrate(DAYS[ks[ks.length-1]]);boot();}else{showUploaderOnly();}}
+function startLocal(){try{loadDays();var ks=Object.keys(DAYS).sort();if(ks.length){DATA=hydrate(DAYS[ks[ks.length-1]]);boot();}else{showUploaderOnly();}}catch(e){console.error(e);}}
 async function checkAuth(){if(!supa){showLogin(false);startLocal();return;}try{const sx=await supa.auth.getSession();if(sx&&sx.data&&sx.data.session){showLogin(false);startCloud();}else{showLogin(true);revealForm();}}catch(e){console.error(e);showLogin(true);revealForm();}}
 (function(){var lb=document.getElementById("loginBtn");
  if(lb)lb.onclick=async function(){var em=(document.getElementById("loginEmail").value||"").trim();var pw=document.getElementById("loginPass").value||"";var er=document.getElementById("loginErr");if(er)er.textContent="";
