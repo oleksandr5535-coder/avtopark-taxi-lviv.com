@@ -32,6 +32,7 @@ function reportToAgg(items) {
       'Водій': ((d.first_name || '') + ' ' + (d.last_name || '')).trim(),
       'Вартість (Вся), грн': uah(p.order).toFixed(2),
       'Разом, грн': uah(p.total).toFixed(2),
+      'Вартість готівкою, грн': uah(p.cash || p.cash_amount || p.cash_collected).toFixed(2),
       'Чайові, грн': uah(it.tips).toFixed(2),
       'Кількість замовлень': String(it.total_orders_count || 0),
       'Тривалість замовлень, год': hoursStr(it.total_executing_time),
