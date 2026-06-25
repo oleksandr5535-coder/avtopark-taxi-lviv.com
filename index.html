@@ -912,7 +912,7 @@ function buildData(parts,dayCut){dayCut=(typeof dayCut==='number'&&dayCut>=0)?da
     if(done&&mn!=null)d.hourly[Math.floor(mn/60)]++;
     const uti=tier(r['Тип продукту']);if(done)d.tier[uti]++;const me=r['Метод']||'';if(done&&me)d.meth[me]=(d.meth[me]||0)+1;
     const ukm=F(r['Відст. за маршрутом, км']);if(done&&mn!=null&&ukm>0){const h=Math.floor(mn/60);priceFare[h]+=F(r['Вартість замовлення, грн']);priceKm[h]+=ukm;}
-    d.trips.push({t:t||'',plat:'Uklon',km:ukm,fare:F(r['Вартість замовлення, грн']),st:done?'ok':'cancel',pay:payClass(r['Тип оплати']),tier:uti});});
+    if(done){d._u_km_t=(d._u_km_t||0)+ukm;if(payClass(r['Тип оплати'])==='cash')d._u_cash_t=(d._u_cash_t||0)+F(r['Вартість замовлення, грн']);}d.trips.push({t:t||'',plat:'Uklon',km:ukm,fare:F(r['Вартість замовлення, грн']),st:done?'ok':'cancel',pay:payClass(r['Тип оплати']),tier:uti});});
 
   // GPS
   const vT={},vS={},vMODEL={};
@@ -944,7 +944,7 @@ function buildData(parts,dayCut){dayCut=(typeof dayCut==='number'&&dayCut>=0)?da
     let km=0;trips.forEach(t=>{if(t.st==='ok'&&t.fare){const r=t.plat==='Bolt'?rb:ru;t.net=r?Math.round(t.fare*r*10)/10:null;t.pk=(t.net&&t.km)?Math.round(t.net/t.km*10)/10:null;km+=t.km;}else{t.net=null;t.pk=null;}});
     let cash_n=0,cash_g=0,card_n=0,card_g=0,mix_n=0,mix_g=0;trips.forEach(t=>{if(t.st!=='ok')return;const g=t.fare||0;if(t.pay==='cash'){cash_n++;cash_g+=g;}else if(t.pay==='mix'){mix_n++;mix_g+=g;}else{card_n++;card_g+=g;}});
     const o={name:d.name,plats:[...d.plats].sort(),plate:d.plate,car:d.car,online,work:work||null,idle,util,gross,net,tips,revph,orders:orders||null,
-      b_gross:d.b_gross||null,b_net:d.b_net||null,u_gross:d.u_gross||null,u_net:d.u_net||null,u_orders:d.u_orders||null,b_comp:d.b_comp,b_cancel:d.b_cancel,b_noans:d.b_noans,b_offer:d.b_offer,b_cash:d.b_cash||null,b_km:d.b_km||null,b_hasinc:!!d.b_hasinc,u_cash:d.u_cash||null,u_km:d.u_km||null,
+      b_gross:d.b_gross||null,b_net:d.b_net||null,u_gross:d.u_gross||null,u_net:d.u_net||null,u_orders:d.u_orders||null,b_comp:d.b_comp,b_cancel:d.b_cancel,b_noans:d.b_noans,b_offer:d.b_offer,b_cash:d.b_cash||null,b_km:d.b_km||null,b_hasinc:!!d.b_hasinc,u_cash:d.u_cash||d._u_cash_t||null,u_km:d.u_km||d._u_km_t||null,
       start,end,span,start_h,hourly:d.hourly,trips,km_total:km?Math.round(km*10)/10:null,
       real_pk:(net&&km)?Math.round(net/km*10)/10:null,gross_pk:(gross&&km)?Math.round(gross/km*10)/10:null,
       pace_net:(net&&online)?Math.round(net/online*10)/10:null,pace_work:(net&&work)?Math.round(net/work*10)/10:null,plate_norm:NPL(d.plate),cash_n:cash_n,cash_g:Math.round(cash_g),card_n:card_n,card_g:Math.round(card_g),mix_n:mix_n,mix_g:Math.round(mix_g),
@@ -1152,7 +1152,7 @@ function rpt_C(n){if(n==null||n==='')return '';return (Math.round(n*100)/100).to
 function rpt_num(n){if(n==null||n==='')return '';var r=Math.round(n*100)/100;return r===Math.round(r)?String(Math.round(r)):String(r).replace('.',',');}
 function rpt_toks(n){return (n||'').toLowerCase().replace(/[\u2019'`]/g,'').split(/\s+/).filter(Boolean).sort();}
 function rpt_flMap(D){D=D||DATA;var m={};var src=[].concat((D&&D._parts&&D._parts.bolt_income)||[],(D&&D._parts&&D._parts.bolt_hist)||[]);src.forEach(function(r){var v=r&&r['Водій'];if(v)m[rpt_toks(v).join('|')]=v;});return m;}
-function rpt_name(name,fl){var k=rpt_toks(name).join('|');if(fl[k])return fl[k];var p=(name||'').trim().split(/\s+/);if(p.length===2)return p[1]+' '+p[0];return name;}
+function rpt_name(name,fl,lastFirst){var k=rpt_toks(name).join('|');if(fl[k])return fl[k];var p=(name||'').trim().split(/\s+/);if(p.length===2&&lastFirst!==false)return p[1]+' '+p[0];return name;}function rpt_uklonLF(D){if(!D||!D._parts)return true;var bolt=[].concat(D._parts.bolt_income||[],D._parts.bolt_hist||[]),bmap={};bolt.forEach(function(r){var v=r&&r['Водій'];if(v){var p=v.trim().split(/\s+/);if(p.length===2)bmap[rpt_toks(v).join('|')]=p;}});var agg=D._parts.uklon_agg||[];for(var i=0;i<agg.length;i++){var v=agg[i]&&agg[i]['Водій'];if(!v)continue;var bp=bmap[rpt_toks(v).join('|')];if(!bp)continue;var up=v.trim().split(/\s+/);if(up.length!==2)continue;var u0=up[0].toLowerCase();if(u0===bp[1].toLowerCase())return true;if(u0===bp[0].toLowerCase())return false;}return true;}function rptGlobalLF(){var ks=rptDates();for(var i=0;i<ks.length;i++){var H=rptHy(ks[i]);if(!H||!H._parts)continue;var lf=rpt_uklonLF(H);var b=[].concat(H._parts.bolt_income||[],H._parts.bolt_hist||[]),bmap={};b.forEach(function(r){var v=r&&r['Водій'];if(v){var p=v.trim().split(/\s+/);if(p.length===2)bmap[rpt_toks(v).join('|')]=p;}});var agg=H._parts.uklon_agg||[];for(var j=0;j<agg.length;j++){var v=agg[j]&&agg[j]['Водій'];if(!v)continue;var bp=bmap[rpt_toks(v).join('|')];if(!bp)continue;var up=v.trim().split(/\s+/);if(up.length!==2)continue;var u0=up[0].toLowerCase();if(u0===bp[1].toLowerCase())return true;if(u0===bp[0].toLowerCase())return false;}}return true;}
 // ===== ЗВІТ: стан і кеш =====
 var rptMode='day', rptDayKey=null, rptDrvKey=null, rptFrom='', rptTo='';
 var _rptHy={};
@@ -1160,18 +1160,18 @@ function rptHy(k){ if(_rptHy[k])return _rptHy[k]; var d=(typeof DAYS!=='undefine
 function rptDates(){ return (typeof DAYS!=='undefined')?Object.keys(DAYS).sort():[]; }
 function rptLabel(k){ var d=(typeof DAYS!=='undefined')?DAYS[k]:null; return (d&&d.date_label)||k; }
 function rptGlobalFl(){ var m={}; rptDates().forEach(function(k){ var H=rptHy(k); if(!H||!H._parts)return; var src=[].concat(H._parts.bolt_income||[],H._parts.bolt_hist||[]); src.forEach(function(r){var v=r&&r['Водій'];if(v)m[rpt_toks(v).join('|')]=v;}); }); return m; }
-function rptDriverList(){ var fl=rptGlobalFl(),seen={},out=[]; rptDates().forEach(function(k){ var H=rptHy(k); if(!H||!H.drivers)return; H.drivers.forEach(function(o){ if((o.b_comp||0)>0||o.b_hasinc||(o.u_orders||0)>0){ var key=rpt_toks(o.name).join('|'); if(!seen[key]){seen[key]=1; out.push({key:key,name:rpt_name(o.name,fl)});} } }); }); out.sort(function(a,b){return a.name.localeCompare(b.name,'uk');}); return out; }
+function rptDriverList(){ var fl=rptGlobalFl(),lf=rptGlobalLF(),seen={},out=[]; rptDates().forEach(function(k){ var H=rptHy(k); if(!H||!H.drivers)return; H.drivers.forEach(function(o){ if((o.b_comp||0)>0||o.b_hasinc||(o.u_orders||0)>0){ var key=rpt_toks(o.name).join('|'); if(!seen[key]){seen[key]=1; out.push({key:key,name:rpt_name(o.name,fl,lf)});} } }); }); out.sort(function(a,b){return a.name.localeCompare(b.name,'uk');}); return out; }
 function rptRangeRows(driverKey,from,to){ var rows=[],dates=rptDates().filter(function(k){return (!from||k>=from)&&(!to||k<=to);}); dates.forEach(function(k){ var H=rptHy(k); if(!H||!H.drivers)return; var o=null; for(var i=0;i<H.drivers.length;i++){ if(rpt_toks(H.drivers[i].name).join('|')===driverKey){o=H.drivers[i];break;} } if(!o)return; var hasB=(o.b_comp||0)>0||o.b_hasinc,hasU=(o.u_orders||0)>0; if(!hasB&&!hasU)return; rows.push({date:k,bComp:o.b_comp||0,bNet:o.b_net||0,bCash:o.b_cash||0,bKm:o.b_km||0,uOrd:o.u_orders||0,uNet:o.u_net||0,uCash:o.u_cash||0,uKm:o.u_km||0,hasB:hasB}); }); return rows; }
 
 function reportData(D){
   D=D||DATA;
   if(!D)return {bolt:[],gps:[],uklon:[]};
-  var A2=D.drivers||[],fl=rpt_flMap(D);
+  var A2=D.drivers||[],fl=rpt_flMap(D),lf=rpt_uklonLF(D);
   var bolt=A2.filter(function(o){return (o.b_comp||0)>0||o.b_hasinc;}).map(function(o){
     return {name:rpt_name(o.name,fl),comp:o.b_comp||0,net:o.b_hasinc?rpt_C(o.b_net||0):'',cash:o.b_hasinc?rpt_C(o.b_cash||0):'',km:rpt_C(o.b_km||0)};
   }).sort(function(a,b){return a.name.localeCompare(b.name,'uk');});
   var uklon=A2.filter(function(o){return (o.u_orders||0)>0;}).map(function(o){
-    return {name:rpt_name(o.name,fl),ord:o.u_orders||0,razom:rpt_C(o.u_net||0),cash:(o.u_cash&&o.u_cash>0)?rpt_num(o.u_cash):'',km:rpt_C(o.u_km||0)};
+    return {name:rpt_name(o.name,fl,lf),ord:o.u_orders||0,razom:rpt_C(o.u_net||0),cash:(o.u_cash&&o.u_cash>0)?rpt_num(o.u_cash):'',km:rpt_C(o.u_km||0)};
   }).sort(function(a,b){return a.name.localeCompare(b.name,'uk');});
   var gmap={},rows=(D._parts&&D._parts.wialon_trips_rows)||[];
   rows.forEach(function(r){var no=String(r['№']||'');if(no.indexOf('.')<0)return;var g=(r['Групування']||'').replace(/\s+/g,' ').trim();if(!g)return;
