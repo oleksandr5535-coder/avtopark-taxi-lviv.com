@@ -83,6 +83,34 @@ async function fetchAllOrders(fleetId, from, to, H) {
   return all;
 }
 
+// звіт по водіях з пагінацією (cursor -> offset fallback), дедуплікація по водію
+async function fetchAllReport(fleetId, from, to, H) {
+  const base = BASE + '/api/fleets/reports/' + fleetId + '/drivers-orders?dateFrom=' + from + '&dateTo=' + to;
+  const all = []; const seen = new Set();
+  let cursor = null, offset = 0, useOffset = false, guard = 0;
+  do {
+    let url = base;
+    if (cursor) url += '&cursor=' + encodeURIComponent(cursor);
+    else if (useOffset) url += '&offset=' + offset;
+    const r = await fetch(url, { headers: H });
+    const j = await r.json();
+    const items = (j && j.items) ? j.items : [];
+    let added = 0;
+    for (const it of items) {
+      const d = it.driver || {};
+      const key = (d.id != null ? String(d.id) : ((d.first_name || '') + '|' + (d.last_name || '')));
+      if (seen.has(key)) continue;
+      seen.add(key); all.push(it); added++;
+    }
+    const more = !!(j && (j.has_more_items || j.has_more || j.hasMore));
+    cursor = (j && (j.cursor || j.next_cursor || j.nextCursor || j.next || (j.paging && j.paging.cursor) || (j.pagination && j.pagination.cursor))) || null;
+    if (more && !cursor) { useOffset = true; offset += items.length; }
+    if (!more || added === 0 || items.length === 0) { cursor = null; useOffset = false; }
+    guard++;
+  } while ((cursor || useOffset) && guard < 60);
+  return all;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   try {
@@ -103,9 +131,7 @@ export default async function handler(req, res) {
     const token = await auth(id, secret);
     const H = { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json' };
 
-    const rRep = await fetch(BASE + '/api/fleets/reports/' + fleetId + '/drivers-orders?dateFrom=' + from + '&dateTo=' + to, { headers: H });
-    const jRep = await rRep.json();
-    const aggItems = (jRep && jRep.items) ? jRep.items : [];
+    const aggItems = await fetchAllReport(fleetId, from, to, H);
 
     const ordItems = await fetchAllOrders(fleetId, from, to, H);
 
