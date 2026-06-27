@@ -135,10 +135,9 @@ export default async function handler(req, res) {
 
     const token = await getToken();
 
-    // ПОРТАЛ відносить поїздки до дня за моментом остаточного підтвердження ціни (price_review).
-    // Тому це режим за замовчуванням — щоб дашборд збігався з порталом копійка в копійку.
-    // ?trt=none (або ?trt=created) -> старий режим (за часом створення); ?trt=X -> інший фільтр.
-    let trt = 'price_review';
+    // ЗА ЗАМОВЧУВАННЯМ — звичайний режим (за часом створення), як було раніше: без нічних хвостів.
+    // ?trt=price_review -> як рахує портал (точніше по чистому, але тягне нічні хвости попередньої доби).
+    let trt = null;
     if (req.query && req.query.trt !== undefined) {
       const q = String(req.query.trt);
       trt = (q === 'none' || q === 'created' || q === '') ? null : q;
