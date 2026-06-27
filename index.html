@@ -20,6 +20,12 @@
 .st-call{display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:50%;background:var(--good);color:#fff;font-size:20px;text-decoration:none}
 .st-noph{font-size:11px;color:var(--ink2);max-width:70px;text-align:center;line-height:1.2}
 .st-empty{margin-top:34px;text-align:center;color:var(--ink2);font-size:15px}
+.st-ord{color:var(--ink2);font-weight:600}
+.st-h2{margin:26px 0 10px;font-size:17px;font-weight:800;color:var(--ink)}
+.sp-list{display:flex;flex-direction:column;gap:8px}
+.sp-row{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:10px 13px}
+.sp-addr{font-weight:600;font-size:14px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sp-meta{margin-top:2px;font-size:12.5px;color:var(--ink2)}
 .standcard,[data-theme=dark] .planbox,[data-theme=dark] .idlebox{background:var(--soft);border-color:var(--line)}
 *{box-sizing:border-box}html,body{margin:0}
 body{background:var(--paper);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
@@ -1028,7 +1034,11 @@ function buildData(parts,dayCut){dayCut=(typeof dayCut==='number'&&dayCut>=0)?da
     if(_last&&(_last.m0!=null)&&(_last.m0>=_lastTripEnd)){_standSince=_last.m0;_standAddr=_last.addr||'';
       const _na=function(x){return (x||'').toLowerCase().replace(/[\s,]+/g,' ').trim();};const _key=_na(_standAddr);
       _standFreq=_key?(vS[pl]||[]).filter(x=>_na(x.addr)===_key).length:0;}
-    gps_cars[pl]={car:vMODEL[pl]||'',km:km,day_km:Math.round((vT[pl]||[]).reduce((s,t)=>s+((t.gs0!=null&&t.gs0>=dayCut)?t.km:0),0)*10)/10,addr:top?top.addr:'',dur:top?top.dur:'',maxspeed:mx||null,stand_since:_standSince,stand_addr:_standAddr,stand_freq:_standFreq,worked:(vT[pl]||[]).length>0};});
+    gps_cars[pl]={car:vMODEL[pl]||'',km:km,day_km:Math.round((vT[pl]||[]).reduce((s,t)=>s+((t.gs0!=null&&t.gs0>=dayCut)?t.km:0),0)*10)/10,addr:top?top.addr:'',dur:top?top.dur:'',maxspeed:mx||null,stand_since:_standSince,stand_addr:_standAddr,stand_freq:_standFreq,worked:(vT[pl]||[]).length>0,drove_today:(vT[pl]||[]).some(t=>t.gs0!=null&&t.gs0>=dayCut)};});
+  // часті локації стоянок по парку
+  const _spotMap={};
+  allV.forEach(pl=>{(vS[pl]||[]).forEach(stp=>{if(!stp.addr)return;const key=stp.addr.toLowerCase().replace(/[\s,]+/g,' ').trim();if(!key)return;const sec=durSec(stp.dur);const e=_spotMap[key]||(_spotMap[key]={addr:stp.addr,n:0,sec:0,cars:{}});e.n++;e.sec+=sec;e.cars[pl]=1;});});
+  const stop_spots=Object.keys(_spotMap).map(k=>{const e=_spotMap[k];return {addr:e.addr,n:e.n,min:Math.round(e.sec/60),cars:Object.keys(e.cars).length};}).sort((a,b)=>(b.n-a.n)||(b.min-a.min)).slice(0,12);
   // messages
   const gv=x=>x==null?'—':Math.round(x).toLocaleString('uk-UA');
   drivers.forEach(o=>o.msg=mkMsg(o,M,dayq,gv));
@@ -1039,7 +1049,7 @@ function buildData(parts,dayCut){dayCut=(typeof dayCut==='number'&&dayCut>=0)?da
   try{var _np=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());var _gg=function(t){return _np.find(function(x){return x.type===t}).value};var _today=_gg('year')+'-'+_gg('month')+'-'+_gg('day');var _nowMin=(+_gg('hour'))*60+(+_gg('minute'));if(date===_today&&maxT>_nowMin)maxT=_nowMin;}catch(e){}
 let dlabel='';if(date){const mo=+date.slice(5,7)-1,dy=+date.slice(8,10);dlabel=dy+' '+(MONTHS[mo]||'');}
 const win=(dlabel?dlabel+' · ':'')+`станом на ~${fmtM(maxT)}`;
-  return {drivers,med:M,dayq,fleet_revph:Math.round(fleet),window:win,date:date,date_label:dlabel,now_min:maxT,active_plates:[...active].sort(),plan_default:3000,idle_cars:idle_cars,price_by_hour:priceFare.map((f,i)=>priceKm[i]>0?Math.round(f/priceKm[i]*10)/10:null),gps_km_by_plate:gps_km_by_plate,gps_cars:gps_cars};
+  return {drivers,med:M,dayq,fleet_revph:Math.round(fleet),window:win,date:date,date_label:dlabel,now_min:maxT,active_plates:[...active].sort(),plan_default:3000,idle_cars:idle_cars,price_by_hour:priceFare.map((f,i)=>priceKm[i]>0?Math.round(f/priceKm[i]*10)/10:null),gps_km_by_plate:gps_km_by_plate,gps_cars:gps_cars,stop_spots:stop_spots};
 }
 function fmtM(m){m=Math.round(m);return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');}
 function mkMsg(o,M,dayq,gv){
@@ -1656,36 +1666,43 @@ return out.filter(c=>!isOOS(c.plate)).sort((a,b)=>(a.gps_km||0)-(b.gps_km||0));}
 function carStat(c){return c.gps?((c.gps_km||0)>=5?`проїхало ${c.gps_km} км${c.addr?` · стояло на ${c.addr}`:''}`:`стоїть ${shortDur(c.dur)}${c.addr?' · '+c.addr:''}`):'не виходило сьогодні (немає GPS)';}
 function renderStandingMini(){const el=document.getElementById('standMini');if(!el)return;el.innerHTML='';return;const sd=standing();const notes=(typeof carNotes==='function'?carNotes():{});if(!sd.length){el.innerHTML='';return;}el.innerHTML=`<div class="standcard"><div class="standhd"><span>⏸ Простоюють авто · ${sd.length}</span><span class="standmore" onclick="showView('cars')">усі та причини →</span></div><div class="standchips">${sd.map(c=>{const n=notes[c.plate]||{};const why=n.reason||(c.gps?((c.gps_km||0)>=5?c.gps_km+' км':'стоїть'):'не виходило');return `<span class="standchip"><b>${c.plate}</b> · ${why}</span>`;}).join('')}</div></div>`;}
 function renderStanding(){var el=document.getElementById('standing');if(!el)return;
-  if(typeof DATA==='undefined'||!DATA){el.innerHTML='<h1>\ud83c\udd7f\ufe0f <span class="accent">\u0421\u0442\u043e\u044f\u0442\u044c</span> \u0437\u0430\u0440\u0430\u0437</h1><p class="sub">\u0429\u0435 \u043d\u0435\u043c\u0430 \u0434\u0430\u043d\u0438\u0445.</p>';return;}
+  if(typeof DATA==='undefined'||!DATA){el.innerHTML='<h1>\ud83c\udd7f\ufe0f <span class="accent">Стоять</span> зараз</h1><p class="sub">Ще нема даних.</p>';return;}
   var gc=DATA.gps_cars||{},now=DATA.now_min||0,TH=90;
+  var dayCut=(typeof dayCutMin==='function')?dayCutMin():300;
   var nm=(typeof lastDriverByPlate==='function')?lastDriverByPlate():{};
   var pp=(typeof drvPass==='function')?drvPass():{};
-  function _hm(m){m=Math.max(0,Math.round(m));var h=Math.floor(m/60),x=m%60;return h?(h+' \u0433\u043e\u0434 '+(x<10?'0':'')+x+' \u0445\u0432'):(x+' \u0445\u0432');}
+  var ordMap={};(DATA.drivers||[]).forEach(function(o){if(o&&o.plate_norm){ordMap[o.plate_norm]=(ordMap[o.plate_norm]||0)+((o.b_comp||0)+(o.u_orders||0));}});
+  function _hm(m){m=Math.max(0,Math.round(m));var h=Math.floor(m/60),x=m%60;return h?(h+' год '+(x<10?'0':'')+x+' хв'):(x+' хв');}
   function _hhmm(m){m=Math.max(0,Math.round(m));var h=Math.floor(m/60),x=m%60;return (h<10?'0':'')+h+':'+(x<10?'0':'')+x;}
   function _esc(s){return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   var rows=[];
-  Object.keys(gc).forEach(function(pl){var c=gc[pl];if(!c||!c.worked||c.stand_since==null)return;
+  Object.keys(gc).forEach(function(pl){var c=gc[pl];if(!c||!c.drove_today||c.stand_since==null)return;
+    if(c.stand_since<dayCut)return;
     if(typeof plateIsTaxi==='function'&&!plateIsTaxi(pl,nm,pp))return;
     if(typeof isOOS==='function'&&isOOS(pl))return;
     var mins=now-c.stand_since;if(mins<TH)return;
     var drv=nm[pl]||'';if(drv&&typeof isHidden==='function'&&isHidden(drv))return;
     var ph=(drv&&pp[drv]&&pp[drv].phone)?pp[drv].phone:'';
-    rows.push({plate:pl,car:c.car||'',drv:drv,phone:ph,mins:mins,addr:c.stand_addr||'',freq:c.stand_freq||0,since:c.stand_since});});
+    rows.push({plate:pl,car:c.car||'',drv:drv,phone:ph,mins:mins,addr:c.stand_addr||'',freq:c.stand_freq||0,since:c.stand_since,ord:ordMap[pl]||0});});
   rows.sort(function(a,b){return b.mins-a.mins;});
-  var head='<h1>\ud83c\udd7f\ufe0f <span class="accent">\u0421\u0442\u043e\u044f\u0442\u044c</span> \u0437\u0430\u0440\u0430\u0437</h1><p class="sub">\u0410\u0432\u0442\u043e, \u0449\u043e \u0441\u044c\u043e\u0433\u043e\u0434\u043d\u0456 \u0457\u0437\u0434\u0438\u043b\u0438 \u0439 \u0441\u0442\u043e\u044f\u0442\u044c \u043f\u043e\u043d\u0430\u0434 '+TH+' \u0445\u0432 \u00b7 \u0441\u0442\u0430\u043d\u043e\u043c \u043d\u0430 ~'+_hhmm(now)+'</p>';
-  if(!rows.length){el.innerHTML=head+'<div class="st-empty">\u0417\u0430\u0440\u0430\u0437 \u043d\u0456\u0445\u0442\u043e \u043d\u0435 \u0441\u0442\u043e\u0457\u0442\u044c \u0434\u043e\u0432\u0448\u0435 '+TH+' \u0445\u0432 \ud83d\udc4d</div>';return;}
+  var head='<h1>\ud83c\udd7f\ufe0f <span class="accent">Стоять</span> зараз</h1><p class="sub">Авто, що сьогодні працювали й зупинились понад '+TH+' хв · станом на ~'+_hhmm(now)+'</p>';
   var body=rows.map(function(r){
-    var freq=r.freq>=2?'<span class="st-freq">\ud83d\udd01 \u0447\u0430\u0441\u0442\u0430 \u0441\u0442\u043e\u044f\u043d\u043a\u0430 \u00b7 '+r.freq+'\u00d7</span>':'';
-    var call=r.phone?('<a class="st-call" href="tel:'+r.phone.replace(/[^+\d]/g,'')+'">\ud83d\udcde</a>'):'<span class="st-noph">\u043d\u0435\u043c\u0430\u0454 \u043d\u043e\u043c\u0435\u0440\u0430</span>';
+    var freq=r.freq>=2?'<span class="st-freq">\ud83d\udd01 часта стоянка · '+r.freq+'×</span>':'';
+    var call=r.phone?('<a class="st-call" href="tel:'+r.phone.replace(/[^+\d]/g,'')+'">\ud83d\udcde</a>'):'<span class="st-noph">немає номера</span>';
     var dn=r.drv?(typeof nameFor==='function'?nameFor(r.drv):r.drv):'';
-    var who=dn?('<span class="st-drv">'+_esc(dn)+'</span>'):'<span class="st-drv st-nodrv">\u0432\u043e\u0434\u0456\u0439 ?</span>';
+    var who=dn?('<span class="st-drv">'+_esc(dn)+'</span>'):'<span class="st-drv st-nodrv">водій ?</span>';
+    var ordTxt=r.ord?(' · <span class="st-ord">'+r.ord+' поїздок</span>'):'';
     var addr=r.addr?('<span class="st-addr">\ud83d\udccd '+_esc(r.addr)+'</span>'):'';
     return '<div class="st-row'+(r.mins>=180?' st-hot':'')+'"><div class="st-main">'
       +'<div class="st-top"><span class="st-plate">'+_esc(r.plate)+'</span>'+(r.car?'<span class="st-car">'+_esc(r.car)+'</span>':'')+freq+'</div>'
-      +'<div class="st-mid">'+who+' \u00b7 <span class="st-dur">\u0441\u0442\u043e\u0457\u0442\u044c '+_hm(r.mins)+'</span> <span class="st-since">(\u0437 '+_hhmm(r.since)+')</span></div>'
+      +'<div class="st-mid">'+who+ordTxt+' · <span class="st-dur">стоїть '+_hm(r.mins)+'</span> <span class="st-since">(з '+_hhmm(r.since)+')</span></div>'
       +(addr?'<div class="st-bot">'+addr+'</div>':'')+'</div><div class="st-act">'+call+'</div></div>';
   }).join('');
-  el.innerHTML=head+'<div class="st-list">'+body+'</div>';}
+  var listHtml=rows.length?('<div class="st-list">'+body+'</div>'):('<div class="st-empty">Зараз ніхто з тих, хто працював, не стоїть довше '+TH+' хв \ud83d\udc4d</div>');
+  var spots=DATA.stop_spots||[];var spotHtml='';
+  if(spots.length){spotHtml='<h2 class="st-h2">\ud83d\udccd Часті локації стоянок</h2><div class="sp-list">'
+    +spots.map(function(s){return '<div class="sp-row"><div class="sp-addr">'+_esc(s.addr)+'</div><div class="sp-meta"><b>'+s.n+'</b> стоянок · '+s.cars+' авто · '+_hm(s.min)+' загалом</div></div>';}).join('')+'</div>';}
+  el.innerHTML=head+listHtml+spotHtml;}
 function driverAutoPlate(name){try{if(typeof A!=='undefined'&&A){for(var i=0;i<A.length;i++){if(A[i]&&A[i].name===name&&A[i].plate_norm)return A[i].plate_norm;}}var KS=Object.keys((typeof DAYS!=='undefined'&&DAYS)||{}).sort();for(var j=KS.length-1;j>=0;j--){var dr=(DAYS[KS[j]]&&DAYS[KS[j]].drivers)||[];for(var q=0;q<dr.length;q++){if(dr[q]&&dr[q].name===name&&dr[q].plate_norm)return dr[q].plate_norm;}}}catch(e){}return '';}
 function isHidden(name){try{var pz=drvPass()[name];return !!(pz&&pz.hidden);}catch(e){return false;}}
 function plateIsTaxi(pl,nm,pp){pp=pp||((typeof drvPass==='function')?drvPass():{});nm=nm||{};for(var k in pp){if(pp[k]&&pp[k].plate===pl&&!pp[k].hidden){return ((pp[k].type||'taxi')==='taxi');}}var lp=nm[pl];if(lp){var e=pp[lp]||{};if(e.hidden)return true;return ((e.type||'taxi')==='taxi');}return true;}
