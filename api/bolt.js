@@ -1,4 +1,4 @@
-ʼ// /api/bolt.js — тягне поїздки Bolt за день (getFleetOrders) з ПАГІНАЦІЄЮ.
+// /api/bolt.js — тягне поїздки Bolt за день (getFleetOrders) з ПАГІНАЦІЄЮ.
 //   /api/bolt?date=YYYY-MM-DD            -> сирі поїздки (як було, але всі сторінки)
 //   /api/bolt?date=YYYY-MM-DD&summary=1  -> таблиця чистого по водіях (сума net_earnings)
 //   ...&summary=1&json=1                 -> те саме у JSON
@@ -7,6 +7,20 @@
 const COMPANY_ID = 25859;
 const API = 'https://node.bolt.eu/fleet-integration-gateway/fleetIntegration/v1';
 
+// дозволити функції працювати довше за дефолтні 10 c (щоб не падала на холодному старті)
+export const maxDuration = 60;
+
+// fetch із таймаутом, щоб завислий запит не валив усю функцію
+async function fetchT(url, opts, ms) {
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), ms || 12000);
+  try {
+    return await fetch(url, Object.assign({}, opts, { signal: ac.signal }));
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 async function getToken() {
   const id = process.env.BOLT_CLIENT_ID, secret = process.env.BOLT_CLIENT_SECRET;
   if (!id || !secret) throw new Error('Немає BOLT_CLIENT_ID або BOLT_CLIENT_SECRET');
@@ -14,11 +28,11 @@ async function getToken() {
     client_id: id, client_secret: secret,
     grant_type: 'client_credentials', scope: 'fleet-integration:api',
   });
-  const r = await fetch('https://oidc.bolt.eu/token', {
+  const r = await fetchT('https://oidc.bolt.eu/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
-  });
+  }, 12000);
   const j = await r.json();
   if (!j.access_token) throw new Error('Токен не отримано: ' + JSON.stringify(j).slice(0, 200));
   return j.access_token;
@@ -33,15 +47,17 @@ function kyivOffsetSec(date) {
 }
 
 async function fetchPage(token, start_ts, end_ts, offset, limit) {
-  const r = await fetch(API + '/getFleetOrders', {
+  const r = await fetchT(API + '/getFleetOrders', {
     method: 'POST',
     headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       company_ids: [COMPANY_ID], company_id: COMPANY_ID,
       start_ts, end_ts, offset, limit,
     }),
-  });
-  return r.json();
+  }, 15000);
+  const txt = await r.text();
+  try { return JSON.parse(txt); }
+  catch (e) { throw new Error('Bolt відповів не-JSON (' + r.status + '): ' + txt.slice(0, 160)); }
 }
 
 async function fetchAll(token, start_ts, end_ts) {
