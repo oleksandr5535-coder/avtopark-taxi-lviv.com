@@ -1010,6 +1010,7 @@ function buildData(parts,dayCut){dayCut=(typeof dayCut==='number'&&dayCut>=0)?da
   drivers.sort((a,b)=>rank[a.state]-rank[b.state]||(b.idle||0)-(a.idle||0));
   // window
   let date='';let best=-1;for(const k in dateCount){if(dateCount[k]>best){best=dateCount[k];date=k;}}
+  try{var _np=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());var _gg=function(t){return _np.find(function(x){return x.type===t}).value};var _today=_gg('year')+'-'+_gg('month')+'-'+_gg('day');var _nowMin=(+_gg('hour'))*60+(+_gg('minute'));if(date===_today&&maxT>_nowMin)maxT=_nowMin;}catch(e){}
 let dlabel='';if(date){const mo=+date.slice(5,7)-1,dy=+date.slice(8,10);dlabel=dy+' '+(MONTHS[mo]||'');}
 const win=(dlabel?dlabel+' · ':'')+`станом на ~${fmtM(maxT)}`;
   return {drivers,med:M,dayq,fleet_revph:Math.round(fleet),window:win,date:date,date_label:dlabel,now_min:maxT,active_plates:[...active].sort(),plan_default:3000,idle_cars:idle_cars,price_by_hour:priceFare.map((f,i)=>priceKm[i]>0?Math.round(f/priceKm[i]*10)/10:null),gps_km_by_plate:gps_km_by_plate,gps_cars:gps_cars};
@@ -1175,7 +1176,7 @@ function reportData(D){
   if(!D)return {bolt:[],gps:[],uklon:[]};
   var A2=D.drivers||[],fl=rpt_flMap(D),lf=rpt_uklonLF(D);
   var bolt=A2.filter(function(o){return (o.b_comp||0)>0||o.b_hasinc;}).map(function(o){
-    return {name:rpt_name(o.name,fl),comp:o.b_comp||0,net:o.b_hasinc?rpt_C(o.b_net||0):'',cash:o.b_hasinc?rpt_C(o.b_cash||0):'',km:rpt_C(o.b_km||0)};
+    return {name:rpt_name(o.name,fl,lf),comp:o.b_comp||0,net:o.b_hasinc?rpt_C(o.b_net||0):'',cash:o.b_hasinc?rpt_C(o.b_cash||0):'',km:rpt_C(o.b_km||0)};
   }).sort(function(a,b){return a.name.localeCompare(b.name,'uk');});
   var uklon=A2.filter(function(o){return (o.u_orders||0)>0;}).map(function(o){
     return {name:rpt_name(o.name,fl,lf),ord:o.u_orders||0,razom:rpt_C(o.u_net||0),cash:(o.u_cash&&o.u_cash>0)?rpt_num(o.u_cash):'',km:rpt_C(o.u_km||0)};
@@ -1285,7 +1286,9 @@ function weekAgg(mon){var keys=weekKeys(mon);var present=keys.filter(function(k)
 
 function renderWeek(){var el=document.getElementById('week');if(!el)return;
  if(!DAYS||!Object.keys(DAYS).length){el.innerHTML='<h1>Аналіз за <span class="accent">тиждень</span></h1><p class="sub">Ще нема даних.</p>';return;}
- if(!weekMon){var ak=Object.keys(DAYS).sort();weekMon=weekStartOf(ak[ak.length-1]);}
+  if(weekMon&&!/^\d{4}-\d{2}-\d{2}$/.test(weekMon))weekMon=null;
+ if(!weekMon){var ak=Object.keys(DAYS).filter(function(k){return /^\d{4}-\d{2}-\d{2}$/.test(k);}).sort();if(ak.length)weekMon=weekStartOf(ak[ak.length-1]);}
+ if(!weekMon){el.innerHTML='<h1>Аналіз за <span class="accent">тиждень</span></h1><p class="sub">Ще нема даних.</p>';return;}
  var A=weekAgg(weekMon),mon=A.keys[0],sun=A.keys[6],DL=['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
  var head='<h1>Аналіз за <span class="accent">тиждень</span></h1>'
   +'<div class="wk-nav"><button class="wk-arrow" onclick="weekStep(-1)">\u2039</button>'
@@ -1320,7 +1323,9 @@ function weekDriverData(name,mon){var _nk=rpt_toks(name).join('|');var keys=week
  T.avgNet=T.days>0?Math.round(T.net/T.days):null;T.acceptPct=T.bOffer>0?Math.round(T.bComp/T.bOffer*100):null;T.util=T.online>0?T.utilW/T.online:null;T.grossPk=T.kmTotal>0?T.gross/T.kmTotal:null;T.netPk=T.kmTotal>0?T.net/T.kmTotal:null;T.premShare=(T.tEcon+T.tStd+T.tPrem+T.tDeliv)>0?Math.round(T.tPrem/(T.tEcon+T.tStd+T.tPrem+T.tDeliv)*100):null;T.deadhead=T.dhN>0?Math.round(T.dhW/T.dhN):null;T.ordPerH=T.online>0?(T.orders/T.online):null;return {days:days,T:T};}
 
 function renderWeekDriver(name){var el=document.getElementById('week');if(!el)return;
- if(!weekMon){var ak=Object.keys(DAYS).sort();weekMon=weekStartOf(ak[ak.length-1]);}
+  if(weekMon&&!/^\d{4}-\d{2}-\d{2}$/.test(weekMon))weekMon=null;
+ if(!weekMon){var ak=Object.keys(DAYS).filter(function(k){return /^\d{4}-\d{2}-\d{2}$/.test(k);}).sort();if(ak.length)weekMon=weekStartOf(ak[ak.length-1]);}
+ if(!weekMon){el.innerHTML='<h1>Аналіз за <span class="accent">тиждень</span></h1><p class="sub">Ще нема даних.</p>';return;}
  var W=weekDriverData(name,weekMon),T=W.T,keys=weekKeys(weekMon),DL=['Пн','Вт','Ср','Чт','Пт','Сб','Нд'],monL=_wkLab(keys[0]),sunL=_wkLab(keys[6]);
  var dayRows=W.days.map(function(r,i){if(!r.has)return '<tr class="wk-off"><td>'+DL[i]+' '+_wkLab(r.date)+'</td><td class="r">\u2014</td><td class="r">\u2014</td><td class="r">\u2014</td><td class="r">\u2014</td><td class="r">\u2014</td><td>не виходив</td></tr>';
   return '<tr><td>'+DL[i]+' '+_wkLab(r.date)+'</td><td class="r"><b>'+gv(r.net)+'</b></td><td class="r">'+gv(r.gross)+'</td><td class="r">'+r.orders+'</td><td class="r">'+H(r.online)+'</td><td class="r">'+(r.pace==null?'\u2014':r.pace)+'</td><td>'+(r.done?'<span class="badge q-good">план \u2713</span>':'<span class="badge q-low">недобір</span>')+'</td></tr>';}).join('');
@@ -1467,7 +1472,10 @@ function effStartMin(o){const ds=DAYSTART*60;const ts=(o.trips||[]).filter(t=>t.
 function nightTail(o){const ds=DAYSTART*60;const tr=(o.trips||[]).filter(t=>t.t&&t.st=='ok'&&T2(t.t)!=null&&T2(t.t)<ds);return {n:tr.length,g:Math.round(tr.reduce((s,t)=>s+(t.fare||0),0))};}
 function stDisp(o){return hm(effStartMin(o));}
 function saveDays(){try{localStorage.setItem('days_store',JSON.stringify(DAYS))}catch(e){}}
-function loadDays(){try{Object.assign(DAYS,JSON.parse(localStorage.getItem('days_store')||'{}'))}catch(e){}}
+function loadDays(){try{Object.assign(DAYS,JSON.parse(localStorage.getItem('days_store')||'{}'))}catch(e){} cleanDays(); }
+function isoDateLabel(date){if(!/^\d{4}-\d{2}-\d{2}$/.test(date||''))return date||'';var _M=['\u0441\u0456\u0447\u043d\u044f','\u043b\u044e\u0442\u043e\u0433\u043e','\u0431\u0435\u0440\u0435\u0437\u043d\u044f','\u043a\u0432\u0456\u0442\u043d\u044f','\u0442\u0440\u0430\u0432\u043d\u044f','\u0447\u0435\u0440\u0432\u043d\u044f','\u043b\u0438\u043f\u043d\u044f','\u0441\u0435\u0440\u043f\u043d\u044f','\u0432\u0435\u0440\u0435\u0441\u043d\u044f','\u0436\u043e\u0432\u0442\u043d\u044f','\u043b\u0438\u0441\u0442\u043e\u043f\u0430\u0434\u0430','\u0433\u0440\u0443\u0434\u043d\u044f'];var mo=+date.slice(5,7)-1,dy=+date.slice(8,10);return _M[mo]?(dy+' '+_M[mo]):date;}
+async function cloudDeleteDay(k){if(typeof supa==='undefined'||!supa)return;try{await supa.from("app_data").delete().eq("key","day:"+k);}catch(e){console.error('cloudDeleteDay',e);}}
+function cleanDays(){var bad=[];Object.keys(DAYS).forEach(function(k){var okKey=/^\d{4}-\d{2}-\d{2}$/.test(k);var d=DAYS[k];var p=(d&&d._parts)||{};var hasData=((p.bolt_hist||[]).length||(p.bolt_income||[]).length||(p.uklon_trips||[]).length||(p.uklon_agg||[]).length||(p.wialon_trips_rows||[]).length);if(!okKey||!hasData){bad.push(k);}else if(d){d.date=k;d.date_label=isoDateLabel(k);}});bad.forEach(function(k){delete DAYS[k];cloudDeleteDay(k);});if(bad.length){try{localStorage.setItem('days_store',JSON.stringify(DAYS));}catch(e){}}return bad;}
 function registerDay(d){if(d&&d.date){DAYS[d.date]=d;saveDays();if(typeof cloudSaveDay==='function')cloudSaveDay(d);}}
 function fillDaySel(){const sel=document.getElementById('daySel');if(!sel)return;const ks=Object.keys(DAYS).sort().reverse();
 sel.innerHTML=ks.map(k=>`<option value="${k}" ${DATA&&DATA.date===k?'selected':''}>${(DAYS[k].date_label||k)}</option>`).join('');sel.style.display=ks.length>1?'':'none';}
@@ -1817,7 +1825,7 @@ async function updateBolt(){
     var ex=DAYS[date];var base=(ex&&ex._parts)?Object.assign({},ex._parts):{bolt_income:[],bolt_hist:[],uklon_agg:[],uklon_trips:[],wialon_trips_rows:[],wialon_stops_rows:[]};
     base.bolt_income=bp.bolt_income;base.bolt_hist=bp.bolt_hist;
     var D=PROC.buildData(base,dayCutMin());if(!D.drivers.length)throw new Error('немає водіїв у відповіді');
-    D._parts=base;if(!D.date)D.date=date;if(!D.date_label)D.date_label=D.date;
+    D._parts=base;D.date=date;D.date_label=isoDateLabel(date);
     DATA=D;registerDay(D);
     document.getElementById('uploader').classList.add('hide');document.getElementById('app').classList.remove('hide');
     boot();
@@ -1860,7 +1868,7 @@ async function updateUklon(){
     var base=Object.assign({},ex._parts);
     base.uklon_agg=agg;base.uklon_trips=j.uklon_trips||[];
     var D=PROC.buildData(base,dayCutMin());D._parts=base;
-    if(!D.date)D.date=date;if(!D.date_label)D.date_label=D.date;
+    D.date=date;D.date_label=isoDateLabel(date);
     DATA=D;registerDay(D);boot();
     stat.textContent='✓ Uklon '+date+': '+agg.length+' водіїв · '+(j.count_orders||0)+' поїздок';stat.className='bb-stat ok';
   }catch(err){stat.textContent='Помилка Uklon: '+err.message;stat.className='bb-stat bad';}
@@ -1895,7 +1903,7 @@ async function updateGPS(){
     var base=Object.assign({},ex._parts);
     base.wialon_trips_rows=trips;base.wialon_stops_rows=stops;
     var D=PROC.buildData(base,dayCutMin());D._parts=base;
-    if(!D.date)D.date=date;if(!D.date_label)D.date_label=D.date;
+    D.date=date;D.date_label=isoDateLabel(date);
     DATA=D;registerDay(D);boot();
     stat.textContent='✓ GPS '+date+': '+trips.length+' поїздок · '+stops.length+' стоянок';stat.className='bb-stat ok';
   }catch(err){stat.textContent='Помилка GPS: '+err.message;stat.className='bb-stat bad';}
@@ -1912,7 +1920,7 @@ const SUPA_KEY="sb_publishable_NydeHBpAcKE5M6y8G8hwSg_qkEn7XwC";
 let supa=null;
 try{if(window.supabase&&window.supabase.createClient){supa=window.supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});}}catch(e){console.error("supa init",e);}
 function showUploaderOnly(){var up=document.getElementById("uploader"),ap=document.getElementById("app");if(up)up.classList.remove("hide");if(ap)ap.classList.add("hide");showLogin(false);}
-async function cloudLoadDays(){if(!supa)return;try{const r=await supa.from("app_data").select("key,value").like("key","day:%");if(r.error){console.error(r.error);return;}DAYS={};(r.data||[]).forEach(x=>{const d=x.value;if(d&&d.date)DAYS[d.date]=d;});try{localStorage.setItem("days_store",JSON.stringify(DAYS));}catch(e){}}catch(e){console.error(e);}}
+async function cloudLoadDays(){if(!supa)return;try{const r=await supa.from("app_data").select("key,value").like("key","day:%");if(r.error){console.error(r.error);return;}DAYS={};(r.data||[]).forEach(x=>{const d=x.value;if(d&&d.date)DAYS[d.date]=d;});cleanDays();try{localStorage.setItem("days_store",JSON.stringify(DAYS));}catch(e){}}catch(e){console.error(e);}}
 async function cloudSaveDay(d){if(!supa||!d||!d.date)return;try{await supa.from("app_data").upsert({key:"day:"+d.date,value:d});}catch(e){console.error(e);}}
 async function cloudDeleteAllDays(){if(!supa)return;try{await supa.from("app_data").delete().like("key","day:%");}catch(e){console.error(e);}}
 async function cloudSaveKV(k,v){if(!supa)return;try{await supa.from("app_data").upsert({key:"kv:"+k,value:v});}catch(e){console.error(e);}}
