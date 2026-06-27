@@ -1474,13 +1474,14 @@ function stDisp(o){return hm(effStartMin(o));}
 function saveDays(){try{localStorage.setItem('days_store',JSON.stringify(DAYS))}catch(e){}}
 function loadDays(){try{Object.assign(DAYS,JSON.parse(localStorage.getItem('days_store')||'{}'))}catch(e){} cleanDays(); }
 function isoDateLabel(date){if(!/^\d{4}-\d{2}-\d{2}$/.test(date||''))return date||'';var _M=['\u0441\u0456\u0447\u043d\u044f','\u043b\u044e\u0442\u043e\u0433\u043e','\u0431\u0435\u0440\u0435\u0437\u043d\u044f','\u043a\u0432\u0456\u0442\u043d\u044f','\u0442\u0440\u0430\u0432\u043d\u044f','\u0447\u0435\u0440\u0432\u043d\u044f','\u043b\u0438\u043f\u043d\u044f','\u0441\u0435\u0440\u043f\u043d\u044f','\u0432\u0435\u0440\u0435\u0441\u043d\u044f','\u0436\u043e\u0432\u0442\u043d\u044f','\u043b\u0438\u0441\u0442\u043e\u043f\u0430\u0434\u0430','\u0433\u0440\u0443\u0434\u043d\u044f'];var mo=+date.slice(5,7)-1,dy=+date.slice(8,10);return _M[mo]?(dy+' '+_M[mo]):date;}
+function buildWin(date,nowMin){var m=nowMin||0;try{var np=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());var g=function(t){return np.find(function(x){return x.type===t}).value};var today=g('year')+'-'+g('month')+'-'+g('day');var cur=(+g('hour'))*60+(+g('minute'));if(date===today&&m>cur)m=cur;}catch(e){}var h=Math.floor(m/60),mm=m%60;var hhmm=(h<10?'0':'')+h+':'+(mm<10?'0':'')+mm;var lbl=isoDateLabel(date);return (lbl?lbl+' \u00b7 ':'')+'\u0441\u0442\u0430\u043d\u043e\u043c \u043d\u0430 ~'+hhmm;}
 async function cloudDeleteDay(k){if(typeof supa==='undefined'||!supa)return;try{await supa.from("app_data").delete().eq("key","day:"+k);}catch(e){console.error('cloudDeleteDay',e);}}
 function cleanDays(){var bad=[];Object.keys(DAYS).forEach(function(k){var okKey=/^\d{4}-\d{2}-\d{2}$/.test(k);var d=DAYS[k];var p=(d&&d._parts)||{};var hasData=((p.bolt_hist||[]).length||(p.bolt_income||[]).length||(p.uklon_trips||[]).length||(p.uklon_agg||[]).length||(p.wialon_trips_rows||[]).length);if(!okKey||!hasData){bad.push(k);}else if(d){d.date=k;d.date_label=isoDateLabel(k);}});bad.forEach(function(k){delete DAYS[k];cloudDeleteDay(k);});if(bad.length){try{localStorage.setItem('days_store',JSON.stringify(DAYS));}catch(e){}}return bad;}
 function registerDay(d){if(d&&d.date){DAYS[d.date]=d;saveDays();if(typeof cloudSaveDay==='function')cloudSaveDay(d);}}
 function fillDaySel(){const sel=document.getElementById('daySel');if(!sel)return;const ks=Object.keys(DAYS).sort().reverse();
 sel.innerHTML=ks.map(k=>`<option value="${k}" ${DATA&&DATA.date===k?'selected':''}>${(DAYS[k].date_label||k)}</option>`).join('');sel.style.display=ks.length>1?'':'none';}
 function dayCutMin(){return Math.round((typeof DAYSTART!=='undefined'&&DAYSTART!=null?DAYSTART:5)*60);}
-function hydrate(day){if(!day||!day._parts||typeof PROC==='undefined'||!PROC.buildData)return day;try{var D=PROC.buildData(day._parts,dayCutMin());D._parts=day._parts;D.date=day.date||D.date;D.date_label=day.date_label||D.date_label;if(D.demand===undefined&&day.demand!==undefined)D.demand=day.demand;return D;}catch(e){console.error('hydrate',e);return day;}}
+function hydrate(day){if(!day||!day._parts||typeof PROC==='undefined'||!PROC.buildData)return day;try{var D=PROC.buildData(day._parts,dayCutMin());D._parts=day._parts;D.date=day.date||D.date;D.date_label=day.date_label||D.date_label;D.window=buildWin(D.date,D.now_min);if(D.demand===undefined&&day.demand!==undefined)D.demand=day.demand;return D;}catch(e){console.error('hydrate',e);return day;}}
 function setDay(date){if(DAYS[date]){DATA=hydrate(DAYS[date]);boot();}}const rank={nowork:0,low:1,behind:2,ontrack:3,done:4};
 function renderList(){let L=A.filter(o=>isTaxi(o)&&o.name.toLowerCase().includes(q)&&(selDrivers.size===0||selDrivers.has(o.name))&&(statusF=='all'||statusOf(o)==statusF||(statusF=='nowork'&&statusOf(o)=='low')));
 const key={attn:o=>[rank[statusOf(o)],-(o.idle||0)],start:o=>[o.start_h==null?99:o.start_h],plan:o=>{const p=plan(o);return p.done?[0,-(o.net||0)]:(p.hLeft!=null?[1,p.hLeft]:[2,0]);},gross:o=>[-(o.gross||0)],unacc:o=>[-(o.unacc_km||0)]}[sort];
@@ -1825,7 +1826,7 @@ async function updateBolt(){
     var ex=DAYS[date];var base=(ex&&ex._parts)?Object.assign({},ex._parts):{bolt_income:[],bolt_hist:[],uklon_agg:[],uklon_trips:[],wialon_trips_rows:[],wialon_stops_rows:[]};
     base.bolt_income=bp.bolt_income;base.bolt_hist=bp.bolt_hist;
     var D=PROC.buildData(base,dayCutMin());if(!D.drivers.length)throw new Error('немає водіїв у відповіді');
-    D._parts=base;D.date=date;D.date_label=isoDateLabel(date);
+    D._parts=base;D.date=date;D.date_label=isoDateLabel(date);D.window=buildWin(date,D.now_min);
     DATA=D;registerDay(D);
     document.getElementById('uploader').classList.add('hide');document.getElementById('app').classList.remove('hide');
     boot();
@@ -1868,7 +1869,7 @@ async function updateUklon(){
     var base=Object.assign({},ex._parts);
     base.uklon_agg=agg;base.uklon_trips=j.uklon_trips||[];
     var D=PROC.buildData(base,dayCutMin());D._parts=base;
-    D.date=date;D.date_label=isoDateLabel(date);
+    D.date=date;D.date_label=isoDateLabel(date);D.window=buildWin(date,D.now_min);
     DATA=D;registerDay(D);boot();
     stat.textContent='✓ Uklon '+date+': '+agg.length+' водіїв · '+(j.count_orders||0)+' поїздок';stat.className='bb-stat ok';
   }catch(err){stat.textContent='Помилка Uklon: '+err.message;stat.className='bb-stat bad';}
@@ -1903,7 +1904,7 @@ async function updateGPS(){
     var base=Object.assign({},ex._parts);
     base.wialon_trips_rows=trips;base.wialon_stops_rows=stops;
     var D=PROC.buildData(base,dayCutMin());D._parts=base;
-    D.date=date;D.date_label=isoDateLabel(date);
+    D.date=date;D.date_label=isoDateLabel(date);D.window=buildWin(date,D.now_min);
     DATA=D;registerDay(D);boot();
     stat.textContent='✓ GPS '+date+': '+trips.length+' поїздок · '+stops.length+' стоянок';stat.className='bb-stat ok';
   }catch(err){stat.textContent='Помилка GPS: '+err.message;stat.className='bb-stat bad';}
