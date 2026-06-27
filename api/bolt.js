@@ -134,6 +134,28 @@ export default async function handler(req, res) {
     const end_ts = start_ts + 86400;
 
     const token = await getToken();
+
+    // УНІВЕРСАЛЬНИЙ ПРОБНИК: ?call=getCompanies | getVehicles | getFleetStateLogs | getDrivers
+    // показує сиру відповідь будь-якого публічного ендпойнта (щоб перевірити, чи є там промо/гроші)
+    if (req.query && req.query.call) {
+      const call = String(req.query.call).replace(/[^a-zA-Z]/g, '');
+      const method = (call === 'getCompanies') ? 'GET' : 'POST';
+      const opts = { method, headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } };
+      if (method === 'POST') {
+        opts.body = JSON.stringify({
+          company_ids: [COMPANY_ID], company_id: COMPANY_ID,
+          start_ts, end_ts, offset: 0, limit: 100,
+        });
+      }
+      let url = API + '/' + call;
+      if (method === 'GET') url += '?company_id=' + COMPANY_ID;
+      const rr = await fetchT(url, opts, 15000);
+      const tt = await rr.text();
+      let parsed; try { parsed = JSON.parse(tt); } catch (e) { parsed = { raw: tt.slice(0, 4000) }; }
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      return res.status(200).send(JSON.stringify({ ok: true, call: call, http_status: rr.status, data: parsed }, null, 1));
+    }
+
     // ПОРТАЛ відносить поїздки до дня за моментом остаточного підтвердження ціни (price_review).
     // Тому це режим за замовчуванням — щоб дашборд збігався з порталом копійка в копійку.
     // ?trt=none (або ?trt=created) -> старий режим (за часом створення); ?trt=X -> інший фільтр.
