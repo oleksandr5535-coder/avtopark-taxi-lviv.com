@@ -46,25 +46,27 @@ function kyivOffsetSec(date) {
   return (asUTC - date.getTime()) / 1000;
 }
 
-async function fetchPage(token, start_ts, end_ts, offset, limit) {
+async function fetchPage(token, start_ts, end_ts, offset, limit, trt) {
+  const reqBody = {
+    company_ids: [COMPANY_ID], company_id: COMPANY_ID,
+    start_ts, end_ts, offset, limit,
+  };
+  if (trt) reqBody.time_range_filter_type = trt;   // напр. "price_review"
   const r = await fetchT(API + '/getFleetOrders', {
     method: 'POST',
     headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      company_ids: [COMPANY_ID], company_id: COMPANY_ID,
-      start_ts, end_ts, offset, limit,
-    }),
+    body: JSON.stringify(reqBody),
   }, 15000);
   const txt = await r.text();
   try { return JSON.parse(txt); }
   catch (e) { throw new Error('Bolt відповів не-JSON (' + r.status + '): ' + txt.slice(0, 160)); }
 }
 
-async function fetchAll(token, start_ts, end_ts) {
+async function fetchAll(token, start_ts, end_ts, trt) {
   const limit = 1000;
   let offset = 0, all = [], meta = {}, total = null;
   for (let guard = 0; guard < 50; guard++) {
-    const j = await fetchPage(token, start_ts, end_ts, offset, limit);
+    const j = await fetchPage(token, start_ts, end_ts, offset, limit, trt);
     const d = (j && j.data) ? j.data : {};
     const arr = Array.isArray(d.orders) ? d.orders : [];
     if (offset === 0) {
@@ -132,7 +134,8 @@ export default async function handler(req, res) {
     const end_ts = start_ts + 86400;
 
     const token = await getToken();
-    const { meta, orders } = await fetchAll(token, start_ts, end_ts);
+    const trt = (req.query && req.query.trt) ? String(req.query.trt) : null;
+    const { meta, orders } = await fetchAll(token, start_ts, end_ts, trt);
 
     if (req.query && req.query.summary) {
       const sum = summarize(orders);
