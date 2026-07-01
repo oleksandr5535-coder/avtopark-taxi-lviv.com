@@ -94,7 +94,7 @@ function summarize(orders) {
     if (op.commission != null) d.comm += op.commission;
     if (op.in_app_discount != null) d.disc += op.in_app_discount;
     if (op.cash_discount != null) d.cdisc += op.cash_discount;
-    if (o.payment_method === 'cash' && op.ride_price != null) d.cash += op.ride_price;
+    if (o.payment_method === 'cash' && op.ride_price != null && op.ride_price > 0) d.cash += op.ride_price;
   }
   const rows = Object.values(by).map(d => ({
     name: d.name, orders: d.orders,
