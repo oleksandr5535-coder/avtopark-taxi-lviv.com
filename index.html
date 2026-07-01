@@ -42,6 +42,8 @@
 .pct-usd-out{margin-top:8px}
 .pct-line.pct-usd-big{margin-top:4px;padding-top:8px;border-top:1px solid var(--line);font-size:16px}
 .pct-line.pct-usd-big b{color:var(--good);font-size:20px}
+.pct-line.pct-usd-big.pct-pay-in b{color:var(--bad)}
+.pct-line.pct-usd-big.pct-pay-in span:after{content:' ↩'}
 .st-ord{color:var(--ink2);font-weight:600}
 .st-h2{margin:26px 0 10px;font-size:17px;font-weight:800;color:var(--ink)}
 .sp-list{display:flex;flex-direction:column;gap:8px}
@@ -1314,9 +1316,10 @@ function pctResHtml(baseAmt,p,ded,left,base){var lbl=base==='net'?'Чистий'
   return '<div class="pct-line"><span>'+lbl+'</span><b>'+_pctFmt(baseAmt)+' ₴</b></div>'
     +'<div class="pct-line pct-ded"><span>Відсоток парку '+(p||0)+'%</span><b>−'+_pctFmt(ded)+' ₴</b></div>'
     +'<div class="pct-line pct-left"><span>Лишається водію</span><b>'+_pctFmt(left)+' ₴</b></div>';}
-function pctUsdHtml(card,lease,rate){var toPay=card-lease;var usd=(rate>0)?(toPay/rate):null;
-  return '<div class="pct-line"><span>Залишок − лізинг</span><b>'+_pctFmt(toPay)+' ₴</b></div>'
-    +'<div class="pct-line pct-usd-big"><span>До сплати нам</span><b>'+(usd!=null?('$'+_pctFmt(usd)):'— (курс?)')+'</b></div>';}
+function pctUsdHtml(left,leaseUsd,rate){var leaseUah=(leaseUsd||0)*(rate||0);var diff=left-leaseUah;
+  var lbl=diff>=0?'Виплатити водію':'Водій доплачує нам';var cls=diff>=0?'pct-pay-out':'pct-pay-in';
+  return '<div class="pct-line"><span>Лізинг '+_pctFmt(leaseUsd||0)+' $ × '+_pctFmt(rate||0)+'</span><b>−'+_pctFmt(leaseUah)+' ₴</b></div>'
+    +'<div class="pct-line pct-usd-big '+cls+'"><span>'+lbl+'</span><b>'+_pctFmt(Math.abs(diff))+' ₴</b></div>';}
 function pctPanelHtml(net,cash,st){var card=net-cash;var pct=(st&&st.pct!=null&&st.pct!=='')?st.pct:'';var base=(st&&st.base)||'card';var lease=(st&&st.lease!=null&&st.lease!=='')?st.lease:'';
   var baseAmt=base==='net'?net:card;var p=parseFloat(pct)||0;var ded=baseAmt*p/100;var left=baseAmt-ded;
   var rate=window._usdRate||'';var lz=parseFloat(lease)||0;var rt=parseFloat(rate)||0;
@@ -1326,12 +1329,12 @@ function pctPanelHtml(net,cash,st){var card=net-cash;var pct=(st&&st.pct!=null&&
       +'<button class="pct-btn'+(base==='net'?' on':'')+'" onclick="pctSetBase(&quot;net&quot;,this)">від чистого</button>'
     +'</div><div class="pct-inp"><input id="pctVal" type="number" inputmode="decimal" min="0" max="100" step="0.5" value="'+pct+'" oninput="pctRecalc()" placeholder="%"><span>%</span></div></div>'
     +'<div class="pct-res" id="pctResult">'+pctResHtml(baseAmt,p,ded,left,base)+'</div>'
-    +'<div class="pct-usd"><div class="pct-row2"><span>Лізинг, ₴</span><input id="pctLease" type="number" inputmode="decimal" min="0" step="1" value="'+lease+'" oninput="pctRecalc()" placeholder="0"></div>'
+    +'<div class="pct-usd"><div class="pct-row2"><span>Лізинг, $</span><input id="pctLease" type="number" inputmode="decimal" min="0" step="1" value="'+lease+'" oninput="pctRecalc()" placeholder="0"></div>'
       +'<div class="pct-row2"><span>Курс купівлі $</span><input id="pctRate" type="number" inputmode="decimal" step="0.01" value="'+rate+'" oninput="pctRecalc()" placeholder="авто"></div>'
-      +'<div class="pct-usd-out" id="pctUsd">'+pctUsdHtml(card,lz,rt)+'</div></div>'
-    +'<div class="pct-hint">Залишок на карті = чисте − готівка. $ до сплати = (залишок − лізинг) ÷ курс купівлі.</div></div>';}
+      +'<div class="pct-usd-out" id="pctUsd">'+pctUsdHtml(left,lz,rt)+'</div></div>'
+    +'<div class="pct-hint">Лізинг у $ множиться на курс. Різниця = (лишається водію) − лізинг. Плюс → виплатити водію, мінус → водій доплачує.</div></div>';}
 function pctRecalc(){var d=window._pctData;if(!d)return;var inp=document.getElementById('pctVal');var p=parseFloat(inp&&inp.value)||0;var base=window._pctBase||'card';var baseAmt=base==='net'?d.net:(d.net-d.cash);var ded=baseAmt*p/100;var left=baseAmt-ded;var r=document.getElementById('pctResult');if(r)r.innerHTML=pctResHtml(baseAmt,p,ded,left,base);
-  var leaseEl=document.getElementById('pctLease');var lease=parseFloat(leaseEl&&leaseEl.value)||0;var rateEl=document.getElementById('pctRate');var rate=parseFloat(rateEl&&rateEl.value)||0;var card=d.net-d.cash;var uo=document.getElementById('pctUsd');if(uo)uo.innerHTML=pctUsdHtml(card,lease,rate);
+  var leaseEl=document.getElementById('pctLease');var lease=parseFloat(leaseEl&&leaseEl.value)||0;var rateEl=document.getElementById('pctRate');var rate=parseFloat(rateEl&&rateEl.value)||0;var uo=document.getElementById('pctUsd');if(uo)uo.innerHTML=pctUsdHtml(left,lease,rate);
   var st=pctSettings();st[d.token]={pct:(inp&&inp.value)||'',base:base,lease:(leaseEl&&leaseEl.value)||''};setPctSettings(st);}
 function pctSetBase(b,btn){window._pctBase=b;if(btn&&btn.parentNode){var bs=btn.parentNode.querySelectorAll('.pct-btn');bs.forEach(function(x){x.classList.remove('on');});btn.classList.add('on');}pctRecalc();}
 function renderReport(){
