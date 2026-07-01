@@ -1289,7 +1289,7 @@ function rptDates(){ return (typeof DAYS!=='undefined')?Object.keys(DAYS).sort()
 function rptLabel(k){ var d=(typeof DAYS!=='undefined')?DAYS[k]:null; return (d&&d.date_label)||k; }
 function rptGlobalFl(){ var m={}; rptDates().forEach(function(k){ var H=rptHy(k); if(!H||!H._parts)return; var src=[].concat(H._parts.bolt_income||[],H._parts.bolt_hist||[]); src.forEach(function(r){var v=r&&r['Водій'];if(v)m[rpt_toks(v).join('|')]=v;}); }); return m; }
 function rptDriverList(){ var fl=rptGlobalFl(),lf=rptGlobalLF(),seen={},out=[]; rptDates().forEach(function(k){ var H=rptHy(k); if(!H||!H.drivers)return; H.drivers.forEach(function(o){ if((o.b_comp||0)>0||o.b_hasinc||(o.u_orders||0)>0){ var key=rpt_toks(o.name).join('|'); if(!seen[key]){seen[key]=1; out.push({key:key,name:rpt_name(o.name,fl,lf)});} } }); }); out.sort(function(a,b){return a.name.localeCompare(b.name,'uk');}); return out; }
-function rptRangeRows(driverKey,from,to){ var rows=[],dates=rptDates().filter(function(k){return (!from||k>=from)&&(!to||k<=to);}); dates.forEach(function(k){ var H=rptHy(k); if(!H||!H.drivers)return; var o=null; for(var i=0;i<H.drivers.length;i++){ if(rpt_toks(H.drivers[i].name).join('|')===driverKey){o=H.drivers[i];break;} } if(!o)return; var hasB=(o.b_comp||0)>0||o.b_hasinc,hasU=(o.u_orders||0)>0; if(!hasB&&!hasU)return; rows.push({date:k,bComp:o.b_comp||0,bNet:o.b_net||0,bCash:o.b_cash||0,bKm:o.b_km||0,uOrd:o.u_orders||0,uNet:o.u_net||0,uCash:o.u_cash||0,uKm:o.u_km||0,hasB:hasB}); }); return rows; }
+function rptRangeRows(driverKey,from,to){ var rows=[],dates=rptDates().filter(function(k){return (!from||k>=from)&&(!to||k<=to);}); dates.forEach(function(k){ var H=rptHy(k); if(!H||!H.drivers)return; var o=null; for(var i=0;i<H.drivers.length;i++){ if(rpt_toks(H.drivers[i].name).join('|')===driverKey){o=H.drivers[i];break;} } if(!o)return; var hasB=(o.b_comp||0)>0||o.b_hasinc,hasU=(o.u_orders||0)>0; if(!hasB&&!hasU)return; rows.push({date:k,bComp:o.b_comp||0,bGross:o.b_gross||0,bNet:o.b_net||0,bCash:o.b_cash||0,bKm:o.b_km||0,uOrd:o.u_orders||0,uNet:o.u_net||0,uCash:o.u_cash||0,uKm:o.u_km||0,hasB:hasB}); }); return rows; }
 
 function reportData(D){
   D=D||DATA;
@@ -1344,8 +1344,8 @@ function reportRangeRender(out){
   if(!drv.length){out.innerHTML='<div class="rpt-empty">Немає водіїв у збережених днях.</div>';return;}
   var sel=null;for(var i=0;i<drv.length;i++){if(drv[i].key===rptDrvKey){sel=drv[i];break;}}if(!sel){sel=drv[0];rptDrvKey=sel.key;}
   var rows=rptRangeRows(rptDrvKey,rptFrom,rptTo);
-  var T={bComp:0,bNet:0,bCash:0,bKm:0,uOrd:0,uNet:0,uCash:0,uKm:0};
-  rows.forEach(function(r){T.bComp+=r.bComp;T.bNet+=r.bNet;T.bCash+=r.bCash;T.bKm+=r.bKm;T.uOrd+=r.uOrd;T.uNet+=r.uNet;T.uCash+=r.uCash;T.uKm+=r.uKm;});
+  var T={bComp:0,bGross:0,bNet:0,bCash:0,bKm:0,uOrd:0,uNet:0,uCash:0,uKm:0};
+  rows.forEach(function(r){T.bComp+=r.bComp;T.bGross+=(r.bGross||0);T.bNet+=r.bNet;T.bCash+=r.bCash;T.bKm+=r.bKm;T.uOrd+=r.uOrd;T.uNet+=r.uNet;T.uCash+=r.uCash;T.uKm+=r.uKm;});
   var sumNet=T.bNet+T.uNet,sumCash=T.bCash+T.uCash,sumKm=T.bKm+T.uKm,sumTrips=T.bComp+T.uOrd;
   var head='<div class="rpt-summary"><div class="rpt-sumname">'+rpt_esc(sel.name)+'</div><div class="rpt-sumsub">'+rptLabel(rptFrom)+' \u2013 '+rptLabel(rptTo)+' \u00b7 '+rows.length+' \u0434\u043d\u0456\u0432 \u0437 \u0434\u0430\u043d\u0438\u043c\u0438</div>'
     +'<div class="rpt-sumgrid"><div><span>'+rpt_C(sumNet)+'</span>\u03a3 \u0434\u043e\u0445\u0456\u0434 (Bolt+Uklon), \u20b4</div><div><span>'+rpt_C(sumCash)+'</span>\u03a3 \u0433\u043e\u0442\u0456\u0432\u043a\u0430, \u20b4</div><div><span>'+rpt_C(sumKm)+'</span>\u03a3 \u043a\u043c</div><div><span>'+sumTrips+'</span>\u03a3 \u043f\u043e\u0457\u0437\u0434\u043e\u043a</div></div></div>';
