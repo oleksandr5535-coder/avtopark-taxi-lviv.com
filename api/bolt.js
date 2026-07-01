@@ -135,15 +135,34 @@ export default async function handler(req, res) {
 
     const token = await getToken();
 
-    // ЗА ЗАМОВЧУВАННЯМ — price_review (день за моментом підтвердження ціни, як рахує портал Bolt).
-    // Разом із датою поїздки за payment_confirmed_timestamp у дашборді це усуває нічні хвости.
-    // ?trt=none (або ?trt=created) -> старий режим за часом створення.
-    let trt = 'price_review';
+    // ЗА ЗАМОВЧУВАННЯМ — звичайний режим (за часом замовлення): точні денні суми, зі скасуваннями.
+    // ?trt=price_review -> режим порталу (для звірки), але може відкидати скасування.
+    let trt = null;
     if (req.query && req.query.trt !== undefined) {
       const q = String(req.query.trt);
       trt = (q === 'none' || q === 'created' || q === '') ? null : q;
     }
     const { meta, orders } = await fetchAll(token, start_ts, end_ts, trt);
+
+    if (req.query && req.query.driver) {
+      const q = String(req.query.driver).toLowerCase();
+      const list = orders.filter(o => (o.driver_name || '').toLowerCase().indexOf(q) >= 0)
+        .sort((a, b) => (a.order_created_timestamp || 0) - (b.order_created_timestamp || 0));
+      const fmtT = ts => ts ? new Date(ts * 1000).toLocaleString('uk-UA', { timeZone: 'Europe/Kyiv', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+      const n = v => (v == null) ? '' : (Math.round(v * 100) / 100).toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      let sumNet = 0, cnt = 0;
+      const rows = list.map(o => {
+        const p = o.order_price || {};
+        if (p.net_earnings != null) { sumNet += p.net_earnings; cnt++; }
+        return '<tr><td>' + fmtT(o.order_created_timestamp) + '</td><td>' + fmtT(o.payment_confirmed_timestamp) + '</td><td>' + (o.order_status || '') + '</td><td>' + ((o.category_info && o.category_info.name) || '') + '</td><td class=r>' + n(p.ride_price) + '</td><td class=r>' + n(p.commission) + '</td><td class=r><b>' + n(p.net_earnings) + '</b></td><td class=r>' + n(p.in_app_discount) + '</td><td class=r>' + n(p.booking_fee) + '</td><td class=r>' + n(p.cancellation_fee) + '</td><td class=r>' + n(p.tip) + '</td><td>' + (o.payment_method || '') + '</td></tr>';
+      }).join('');
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.status(200).send('<!doctype html><meta charset=utf-8><title>' + q + ' ' + dateStr + '</title>'
+        + '<style>body{font:12px/1.4 system-ui;margin:16px}h2{margin:0 0 8px}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:4px 7px;white-space:nowrap}.r{text-align:right;font-variant-numeric:tabular-nums}thead th{background:#f3f3f3;font-size:11px}tfoot td{font-weight:700;border-top:2px solid #999}</style>'
+        + '<h2>' + list.length + ' замовлень · ' + dateStr + ' · чисте (net!=null): ' + n(sumNet) + ' у ' + cnt + ' записах</h2>'
+        + '<table><thead><tr><th>Створено</th><th>Підтв.ціни</th><th>Статус</th><th>Категорія</th><th class=r>Ціна</th><th class=r>Комісія</th><th class=r>Чисте</th><th class=r>Знижка(дод)</th><th class=r>Бронь</th><th class=r>Скасув.</th><th class=r>Чайові</th><th>Оплата</th></tr></thead><tbody>'
+        + rows + '</tbody><tfoot><tr><td colspan=6>РАЗОМ чисте</td><td class=r>' + n(sumNet) + '</td><td colspan=5></td></tr></tfoot></table>');
+    }
 
     if (req.query && req.query.summary) {
       const sum = summarize(orders);
