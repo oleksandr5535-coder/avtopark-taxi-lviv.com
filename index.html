@@ -32,6 +32,11 @@
 .pct-res{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px}
 .pct-line{display:flex;justify-content:space-between;align-items:center;font-size:14px;padding:3px 0;color:var(--ink)}
 .pct-line.pct-ded b{color:var(--bad)}
+.pct-line.pct-brand b{color:var(--good)}
+.pct-brandrow{border-top:1px dashed var(--line);padding-top:10px!important;margin-top:6px}
+.pct-brandbox{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin:2px 0 4px}
+.pct-brandinfo{font-size:11.5px;color:var(--ink2);margin-bottom:6px;line-height:1.5}
+.pct-brandinfo b{color:var(--ink)}
 .pct-line.pct-left{margin-top:4px;padding-top:8px;border-top:1px solid var(--line);font-size:16px}
 .pct-line.pct-left b{color:var(--good);font-size:18px}
 .rpt-upd{display:flex;align-items:center;gap:10px;margin-left:auto}
@@ -69,6 +74,13 @@
 .hi-method{margin-top:8px;display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink2)}
 .hi-mbtn{border:1px solid var(--line);background:var(--panel);color:var(--ink2);font-size:12.5px;font-weight:700;padding:5px 11px;border-radius:8px;cursor:pointer}
 .hi-mbtn.on{background:var(--amber);color:#3a2c00;border-color:var(--amber)}
+.hi-pay{margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--ink2)}
+.hi-paylbl{font-weight:700}
+.hi-payf{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--ink2)}
+.hi-payin{width:82px;padding:5px 7px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);font-size:13.5px;font-weight:700;text-align:right}
+.hi-paysum{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:20px}
+.hi-paysum.ok{color:var(--good);background:rgba(31,157,85,.12)}
+.hi-paysum.warn{color:#b9770f;background:rgba(230,162,60,.16)}
 .hi-actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
 .hi-copy,.hi-settle{border:1px solid var(--line);background:var(--paper);color:var(--ink);font-size:13px;font-weight:700;padding:8px 13px;border-radius:9px;cursor:pointer}
 .hi-copy{background:var(--panel)}
@@ -1340,7 +1352,7 @@ function reportRangeRender(out){
   var H=['Дата','Bolt поїздки','Bolt чистий|\u20b4','Bolt готівка|\u20b4','Bolt км','Uklon замов.','Uklon разом|\u20b4','Uklon готівка|\u20b4','Uklon км'];
   var dataRows=rows.map(function(r){return [rptLabel(r.date),r.bComp||'',r.hasB?rpt_C(r.bNet):'',r.hasB?rpt_C(r.bCash):'',r.bKm?rpt_C(r.bKm):'',r.uOrd||'',r.uOrd?rpt_C(r.uNet):'',(r.uCash>0)?rpt_num(r.uCash):'',r.uKm?rpt_C(r.uKm):''];});
   var totRow=['ПІДСУМОК',T.bComp,rpt_C(T.bNet),rpt_C(T.bCash),rpt_C(T.bKm),T.uOrd,rpt_C(T.uNet),rpt_num(T.uCash),rpt_C(T.uKm)];
-  var _ptok=rpt_toks(sel.name).join('|');var _pst=pctSettings()[_ptok]||{pct:'',base:'card'};window._pctData={net:sumNet,cash:sumCash,token:_ptok,name:sel.name};window._pctBase=_pst.base||'card';
+  var _ptok=rpt_toks(sel.name).join('|');var _pst=pctSettings()[_ptok]||{pct:'',base:'card'};window._pctData={net:sumNet,cash:sumCash,token:_ptok,name:sel.name,bGross:T.bGross||0,bComp:T.bComp||0,uOrd:T.uOrd||0};window._pctBase=_pst.base||'card';
   var html=head+pctPanelHtml(sumNet,sumCash,_pst)+'<div class="rpt-sec"><div class="rpt-head"><div class="rpt-title">'+rpt_esc(sel.name)+' \u00b7 \u0449\u043e\u0434\u0435\u043d\u043d\u043e</div><button class="rpt-copy">Копіювати дані</button></div>';
   if(!dataRows.length){html+='<div class="rpt-empty">У цього водія немає даних за вибраний період.</div></div>';out.innerHTML=html;return;}
   html+='<div class="rpt-tablewrap"><table class="rpt-table"><thead><tr>'+H.map(function(c){return '<th>'+c+'</th>';}).join('')+'</tr></thead><tbody>';
@@ -1356,34 +1368,51 @@ function setPctSettings(o){try{localStorage.setItem('pct_cuts',JSON.stringify(o)
 function _pctFmt(n){return (Math.round(n*100)/100).toLocaleString('uk-UA',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function _curRate(){var u=window._usd||{};return (window._pctRType==='buy')?(u.buy||0):(u.sale||0);}
 function fetchUsdRate(){try{fetch('/api/rate').then(function(r){return r.json();}).then(function(j){if(j&&j.ok){window._usd={buy:j.usd_buy,sale:j.usd_sale};var el=document.getElementById('pctRate');if(el&&!el.value){el.value=_curRate();}if(typeof pctRecalc==='function')pctRecalc();}}).catch(function(){});}catch(e){}}
-function pctResHtml(baseAmt,p,ded,left,base){var lbl=base==='net'?'Чистий':'Залишок на карті';
-  return '<div class="pct-line"><span>'+lbl+'</span><b>'+_pctFmt(baseAmt)+' \u20b4</b></div>'
-    +'<div class="pct-line pct-ded"><span>Відсоток парку '+(p||0)+'%</span><b>\u2212'+_pctFmt(ded)+' \u20b4</b></div>'
-    +'<div class="pct-line pct-left"><span>Лишається водію</span><b>'+_pctFmt(left)+' \u20b4</b></div>';}
+function boltBrandPct(orders){orders=orders||0;if(orders>=140)return 6;if(orders>=120)return 5;if(orders>=90)return 4;if(orders>=60)return 3;return 0;}
+function uklonBrandAmt(orders){orders=orders||0;if(orders>=185)return 1500;if(orders>=150)return 1125;if(orders>=125)return 875;if(orders>=100)return 625;return 0;}
+function calcBrand(d){var bp=boltBrandPct(d.bComp);var bolt=(d.bGross||0)*bp/100;var uklon=uklonBrandAmt(d.uOrd);return {boltPct:bp,bolt:bolt,uklon:uklon,total:bolt+uklon};}
+function _brandAmt(d,st){if(!st||!st.brandOn)return 0;if(st.brandManual!=null&&st.brandManual!==''){return parseFloat(st.brandManual)||0;}return calcBrand(d).total;}
+function pctResHtml(card,brand,baseAmt,p,ded,left,base){var lbl=base==='net'?'Чистий':'Залишок на карті';
+  var out='<div class="pct-line"><span>'+lbl+'</span><b>'+_pctFmt(card)+' ₴</b></div>';
+  if(brand>0)out+='<div class="pct-line pct-brand"><span>Брендування</span><b>+'+_pctFmt(brand)+' ₴</b></div>';
+  out+='<div class="pct-line pct-ded"><span>Відсоток парку '+(p||0)+'%</span><b>−'+_pctFmt(ded)+' ₴</b></div>'
+    +'<div class="pct-line pct-left"><span>Лишається водію</span><b>'+_pctFmt(left)+' ₴</b></div>';
+  return out;}
 function pctPayHtml(left,leaseAmt,cur,rate){var leaseUah=(cur==='usd')?((leaseAmt||0)*(rate||0)):(leaseAmt||0);var diff=left-leaseUah;
   var lbl=diff>=0?'Виплатити водію':'Водій доплачує нам';var cls=diff>=0?'':' pct-pay-in';
   var ll=(cur==='usd')?('Лізинг '+_pctFmt(leaseAmt||0)+' $ \u00d7 '+_pctFmt(rate||0)):'Лізинг';
-  return '<div class="pct-line"><span>'+ll+'</span><b>\u2212'+_pctFmt(leaseUah)+' \u20b4</b></div>'
-    +'<div class="pct-line pct-usd-big'+cls+'"><span>'+lbl+'</span><b>'+_pctFmt(Math.abs(diff))+' \u20b4</b></div>';}
-function pctPanelHtml(net,cash,st){var card=net-cash;var pct=(st&&st.pct!=null&&st.pct!=='')?st.pct:'';var base=(st&&st.base)||'card';var lease=(st&&st.lease!=null&&st.lease!=='')?st.lease:'';
+  return '<div class="pct-line"><span>'+ll+'</span><b>\u2212'+_pctFmt(leaseUah)+' ₴</b></div>'
+    +'<div class="pct-line pct-usd-big'+cls+'"><span>'+lbl+'</span><b>'+_pctFmt(Math.abs(diff))+' ₴</b></div>';}
+function pctPanelHtml(net,cash,st){var d=window._pctData||{net:net,cash:cash,bGross:0,bComp:0,uOrd:0};
+  var card=net-cash;var pct=(st&&st.pct!=null&&st.pct!=='')?st.pct:'';var base=(st&&st.base)||'card';var lease=(st&&st.lease!=null&&st.lease!=='')?st.lease:'';
   var cur=(st&&st.cur)||'usd';var rtype=(st&&st.rtype)||'sale';window._pctCur=cur;window._pctRType=rtype;
-  var baseAmt=base==='net'?net:card;var p=parseFloat(pct)||0;var ded=baseAmt*p/100;var left=baseAmt-ded;
+  var brandOn=!!(st&&st.brandOn);window._pctBrandOn=brandOn;var brandManual=(st&&st.brandManual!=null)?st.brandManual:'';
+  var brand=_brandAmt(d,st);var auto=calcBrand(d);
+  var baseAmt=(base==='net'?net:card)+brand;var p=parseFloat(pct)||0;var ded=baseAmt*p/100;var left=baseAmt-ded;
   var rate=(_curRate()||'');var lz=parseFloat(lease)||0;var rt=parseFloat(rate)||0;
+  var brandBody=brandOn?('<div class="pct-brandbox"><div class="pct-brandinfo">Bolt '+auto.boltPct+'% \u00d7 '+_pctFmt(d.bGross)+' = <b>'+_pctFmt(auto.bolt)+'</b> \u00b7 Uklon (<b>'+d.uOrd+'</b> зам.) = <b>'+_pctFmt(auto.uklon)+'</b> \u00b7 авто: <b>'+_pctFmt(auto.total)+' ₴</b></div>'
+    +'<div class="pct-row2"><span>Сума брендування, ₴</span><input id="pctBrand" type="number" inputmode="decimal" step="1" value="'+brandManual+'" oninput="pctRecalc()" placeholder="'+_pctFmt(auto.total)+' (авто)"></div></div>'):'';
   var rateRow=(cur==='usd')?('<div class="pct-row2"><span>Курс</span><span class="pct-rtoggle"><button class="pct-btn2'+(rtype==='sale'?' on':'')+'" onclick="pctSetRType(&quot;sale&quot;,this)">продаж</button><button class="pct-btn2'+(rtype==='buy'?' on':'')+'" onclick="pctSetRType(&quot;buy&quot;,this)">купівля</button><input id="pctRate" type="number" inputmode="decimal" step="0.01" value="'+rate+'" oninput="pctRecalc()"></span></div>'):('<input id="pctRate" type="hidden" value="'+rate+'">');
   return '<div class="pct-panel"><div class="pct-h">\ud83d\udcb0 Розрахунок з водієм</div>'
     +'<div class="pct-ctl"><div class="pct-toggle"><button class="pct-btn'+(base==='card'?' on':'')+'" onclick="pctSetBase(&quot;card&quot;,this)">від залишку на карті</button><button class="pct-btn'+(base==='net'?' on':'')+'" onclick="pctSetBase(&quot;net&quot;,this)">від чистого</button></div><div class="pct-inp"><input id="pctVal" type="number" inputmode="decimal" min="0" max="100" step="0.5" value="'+pct+'" oninput="pctRecalc()" placeholder="%"><span>%</span></div></div>'
-    +'<div class="pct-res" id="pctResult">'+pctResHtml(baseAmt,p,ded,left,base)+'</div>'
+    +'<div class="pct-row2 pct-brandrow"><span>\ud83c\udff7 Брендування</span><span class="pct-rtoggle"><button class="pct-btn2'+(!brandOn?' on':'')+'" onclick="pctSetBrand(false)">вимк</button><button class="pct-btn2'+(brandOn?' on':'')+'" onclick="pctSetBrand(true)">увімк</button></span></div>'
+    +brandBody
+    +'<div class="pct-res" id="pctResult">'+pctResHtml(base==='net'?net:card,brand,baseAmt,p,ded,left,base)+'</div>'
     +'<div class="pct-usd">'
       +'<div class="pct-row2"><span>Валюта лізингу</span><span class="pct-rtoggle"><button class="pct-btn2'+(cur==='uah'?' on':'')+'" onclick="pctSetCur(&quot;uah&quot;,this)">\u20b4</button><button class="pct-btn2'+(cur==='usd'?' on':'')+'" onclick="pctSetCur(&quot;usd&quot;,this)">$</button></span></div>'
       +rateRow
       +'<div class="pct-row2"><span>Лізинг, '+(cur==='usd'?'$':'\u20b4')+'</span><input id="pctLease" type="number" inputmode="decimal" min="0" step="1" value="'+lease+'" oninput="pctRecalc()" placeholder="0"></div>'
       +'<div class="pct-usd-out" id="pctUsd">'+pctPayHtml(left,lz,cur,rt)+'</div>'
-      +'<button id="pctSaveBtn" class="pct-save" onclick="pctSaveRecord()">💾 Зберегти розрахунок</button></div>'
-    +'<div class="pct-hint">Лізинг у обраній валюті. Для $ множиться на курс. Різниця = (лишається водію) \u2212 лізинг. Плюс \u2192 виплатити водію, мінус \u2192 водій доплачує.</div></div>';}
-function pctRecalc(){var d=window._pctData;if(!d)return;var inp=document.getElementById('pctVal');var p=parseFloat(inp&&inp.value)||0;var base=window._pctBase||'card';var baseAmt=base==='net'?d.net:(d.net-d.cash);var ded=baseAmt*p/100;var left=baseAmt-ded;var r=document.getElementById('pctResult');if(r)r.innerHTML=pctResHtml(baseAmt,p,ded,left,base);
+      +'<button id="pctSaveBtn" class="pct-save" onclick="pctSaveRecord()">\ud83d\udcbe Зберегти розрахунок</button></div>'
+    +'<div class="pct-hint">Брендування = картковий дохід, з нього теж береться % парку. Лізинг у обраній валюті. Різниця = (лишається водію) \u2212 лізинг.</div></div>';}
+function pctRecalc(){var d=window._pctData;if(!d)return;var st=pctSettings()[d.token]||{};st.brandOn=!!window._pctBrandOn;var bm=document.getElementById('pctBrand');if(bm)st.brandManual=bm.value;
+  var inp=document.getElementById('pctVal');var p=parseFloat(inp&&inp.value)||0;var base=window._pctBase||'card';var brand=_brandAmt(d,st);
+  var card0=(base==='net'?d.net:(d.net-d.cash));var baseAmt=card0+brand;var ded=baseAmt*p/100;var left=baseAmt-ded;
+  var r=document.getElementById('pctResult');if(r)r.innerHTML=pctResHtml(card0,brand,baseAmt,p,ded,left,base);
   var cur=window._pctCur||'usd';var leaseEl=document.getElementById('pctLease');var lease=parseFloat(leaseEl&&leaseEl.value)||0;var rateEl=document.getElementById('pctRate');var rate=parseFloat(rateEl&&rateEl.value)||0;var uo=document.getElementById('pctUsd');if(uo)uo.innerHTML=pctPayHtml(left,lease,cur,rate);
-  var st=pctSettings();st[d.token]={pct:(inp&&inp.value)||'',base:base,lease:(leaseEl&&leaseEl.value)||'',cur:cur,rtype:window._pctRType||'sale'};setPctSettings(st);}
+  var all=pctSettings();all[d.token]={pct:(inp&&inp.value)||'',base:base,lease:(leaseEl&&leaseEl.value)||'',cur:cur,rtype:window._pctRType||'sale',brandOn:!!window._pctBrandOn,brandManual:(bm&&bm.value)||''};setPctSettings(all);}
 function pctRerender(){var d=window._pctData;if(!d)return;var el=document.querySelector('.pct-panel');if(!el)return;var st=pctSettings()[d.token]||{};st.cur=window._pctCur;st.rtype=window._pctRType;el.outerHTML=pctPanelHtml(d.net,d.cash,st);}
+function pctSetBrand(on){window._pctBrandOn=!!on;var d=window._pctData;if(d){var st=pctSettings();st[d.token]=st[d.token]||{};st[d.token].brandOn=!!on;setPctSettings(st);}pctRerender();}
 function pctSetBase(b,btn){window._pctBase=b;if(btn&&btn.parentNode){var bs=btn.parentNode.querySelectorAll('.pct-btn');bs.forEach(function(x){x.classList.remove('on');});btn.classList.add('on');}pctRecalc();}
 function pctSetCur(c,btn){window._pctCur=c;var d=window._pctData;if(d){var st=pctSettings();st[d.token]=st[d.token]||{};st[d.token].cur=c;setPctSettings(st);}pctRerender();}
 function pctSetRType(t,btn){window._pctRType=t;var el=document.getElementById('pctRate');if(el)el.value=_curRate();var d=window._pctData;if(d){var st=pctSettings();st[d.token]=st[d.token]||{};st[d.token].rtype=t;setPctSettings(st);}pctRecalc();if(btn&&btn.parentNode){var bs=btn.parentNode.querySelectorAll('.pct-btn2');}pctRerender();}
@@ -1421,17 +1450,20 @@ function isoWeek(ds){if(!ds)return null;var date=new Date(ds+'T00:00:00');var d=
 function payCalcUpdate(id,patch){var list=payCalcLocal();var found=false;list.forEach(function(x){if(x.id===id){Object.keys(patch).forEach(function(k){x[k]=patch[k];});found=true;}});if(found){payCalcSaveLocal(list);payCalcCloudSave(list);if(typeof renderHistory==='function')renderHistory();}}
 function payCalcToggleSettled(id){var r=payCalcLocal().filter(function(x){return x.id===id;})[0];if(!r)return;payCalcUpdate(id,{settled:!r.settled,settledAt:(!r.settled?Date.now():null)});}
 function payCalcSetMethod(id,m){payCalcUpdate(id,{payMethod:m});}
+function payCalcSetPay(id,field,val){var list=payCalcLocal();list.forEach(function(x){if(x.id===id)x[field]=val;});payCalcSaveLocal(list);payCalcCloudSave(list);}
 function _pcFmt(n){return (Math.round((n||0)*100)/100).toLocaleString('uk-UA',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function payCalcCopy(id){var r=payCalcLocal().filter(function(x){return x.id===id;})[0];if(!r)return;
   var wk=r.week?(' (тиждень '+r.week+')'):'';
   var lease=(r.cur==='usd')?(_pcFmt(r.lease)+' $ \u00d7 '+_pcFmt(r.rate)+' = '+_pcFmt(r.leaseUah)+' \u20b4'):(_pcFmt(r.lease)+' \u20b4');
   var mtxt=r.payMethod?(' ('+(r.payMethod==='cash'?'готівкою':'на картку')+')'):'';
-  var res=(r.dir==='out')?('Виплатити водію: '+_pcFmt(Math.abs(r.diff))+' \u20b4'+mtxt):('Водій доплачує нам: '+_pcFmt(Math.abs(r.diff))+' \u20b4'+mtxt);
+  var splitTxt='';var _pc=parseFloat(r.payCash)||0,_pk=parseFloat(r.payCard)||0;
+  if(_pc>0||_pk>0){splitTxt='\n'+((r.dir==='out')?'Виплачено':'Отримано')+': готівкою '+_pcFmt(_pc)+' \u20b4 + на картку '+_pcFmt(_pk)+' \u20b4';}
+  var res=(r.dir==='out')?('Виплатити водію: '+_pcFmt(Math.abs(r.diff))+' \u20b4'+mtxt+splitTxt):('Водій доплачує нам: '+_pcFmt(Math.abs(r.diff))+' \u20b4'+mtxt+splitTxt);
   var txt='Розрахунок \u2014 '+(r.driver||'')+'\n'
     +'Період: '+(r.from||'')+' \u2013 '+(r.to||'')+wk+'\n'
     +'Чистий дохід: '+_pcFmt(r.net)+' \u20b4\n'
     +'Готівка на руки: '+_pcFmt(r.cash)+' \u20b4\n'
-    +'Залишок на карті: '+_pcFmt(r.card)+' \u20b4\n'
+    +'Залишок на карті: '+_pcFmt(r.card)+' \u20b4\n'+((r.brand>0)?('Брендування: +'+_pcFmt(r.brand)+' \u20b4\n'):'')
     +'Відсоток парку '+_pcFmt(r.pct)+'%: \u2212'+_pcFmt((r.base==='net'?r.net:r.card)*(r.pct||0)/100)+' \u20b4\n'
     +'Лишається водію: '+_pcFmt(r.left)+' \u20b4\n'
     +'Лізинг: '+lease+'\n'
@@ -1442,13 +1474,14 @@ function payCalcCopy(id){var r=payCalcLocal().filter(function(x){return x.id===i
   try{var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);done(b);}catch(e){}}
 function pctSaveRecord(){var d=window._pctData;if(!d){return;}
   var inp=document.getElementById('pctVal');var p=parseFloat(inp&&inp.value)||0;var base=window._pctBase||'card';
-  var baseAmt=base==='net'?d.net:(d.net-d.cash);var ded=baseAmt*p/100;var left=baseAmt-ded;
+  var st=pctSettings()[d.token]||{};st.brandOn=!!window._pctBrandOn;var bmEl=document.getElementById('pctBrand');if(bmEl)st.brandManual=bmEl.value;var brand=_brandAmt(d,st);
+  var card0=base==='net'?d.net:(d.net-d.cash);var baseAmt=card0+brand;var ded=baseAmt*p/100;var left=baseAmt-ded;
   var cur=window._pctCur||'usd';var leaseEl=document.getElementById('pctLease');var lease=parseFloat(leaseEl&&leaseEl.value)||0;
   var rateEl=document.getElementById('pctRate');var rate=parseFloat(rateEl&&rateEl.value)||0;
   var leaseUah=(cur==='usd')?(lease*rate):lease;var diff=left-leaseUah;
   var rec={driver:d.name||'',token:d.token||'',from:(typeof rptFrom!=='undefined'?rptFrom:''),to:(typeof rptTo!=='undefined'?rptTo:''),week:isoWeek(typeof rptFrom!=='undefined'?rptFrom:''),
     net:d.net,cash:d.cash,card:(d.net-d.cash),pct:p,base:base,left:left,lease:lease,cur:cur,rate:rate,rtype:window._pctRType||'sale',
-    leaseUah:leaseUah,diff:diff,dir:(diff>=0?'out':'in'),settled:false,settledAt:null,payMethod:''};
+    brand:brand,leaseUah:leaseUah,diff:diff,dir:(diff>=0?'out':'in'),settled:false,settledAt:null,payMethod:''};
   payCalcAdd(rec);
   var btn=document.getElementById('pctSaveBtn');if(btn){var t=btn.textContent;btn.textContent='✓ Збережено';btn.disabled=true;setTimeout(function(){btn.textContent=t;btn.disabled=false;},1800);}
 }
@@ -1905,15 +1938,21 @@ function renderHistory(){var el=document.getElementById('history');if(!el)return
       var period=(r.from&&r.to)?(r.from+' – '+r.to):(r.from||r.to||'—');
       var wk=r.week?('<span class="hi-wk">тижд. '+r.week+'</span>'):'';
       var dt=new Date(r.ts||0);var saved=isNaN(dt.getTime())?'':(dt.toLocaleDateString('uk-UA')+' '+dt.toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'}));
-      var ded=(r.base==='net'?r.net:r.card)*(r.pct||0)/100;
+      var brand=r.brand||0;var ded=((r.base==='net'?r.net:r.card)+brand)*(r.pct||0)/100;
       var dirTxt=(r.dir==='out')?('Виплатити водію '+f(Math.abs(r.diff))+' ₴'):('Водій доплачує нам '+f(Math.abs(r.diff))+' ₴');
       var dirCls=(r.dir==='out')?'hi-out':'hi-in';
       var leaseShort=(r.cur==='usd')?(f0(r.lease)+'$ · '+f0(r.leaseUah)+'₴'):(f0(r.lease)+'₴');
       var settledTxt=r.settled?('✓ Розраховано'+(r.settledAt?(' '+new Date(r.settledAt).toLocaleDateString('uk-UA')):'')):'Позначити розрахованим';
       var mLabel=(r.dir==='out')?'Виплатили':'Отримали';
-      var methodRow='<div class="hi-method"><span>'+mLabel+':</span><button class="hi-mbtn'+(r.payMethod==='cash'?' on':'')+'" onclick="payCalcSetMethod(&quot;'+r.id+'&quot;,&quot;cash&quot;)">готівкою</button><button class="hi-mbtn'+(r.payMethod==='card'?' on':'')+'" onclick="payCalcSetMethod(&quot;'+r.id+'&quot;,&quot;card&quot;)">на картку</button></div>';
+      var _pc=(r.payCash!=null?r.payCash:'');var _pk=(r.payCard!=null?r.payCard:'');
+      var _sum=(parseFloat(_pc)||0)+(parseFloat(_pk)||0);var _tot=Math.abs(r.diff||0);
+      var _chk=(_sum>0)?('<span class="hi-paysum'+(Math.abs(_sum-_tot)<0.5?' ok':' warn')+'">'+f(_sum)+' / '+f(_tot)+' ₴</span>'):'';
+      var methodRow='<div class="hi-pay"><span class="hi-paylbl">'+mLabel+':</span>'
+        +'<label class="hi-payf">готівкою <input type="number" inputmode="decimal" class="hi-payin" value="'+_pc+'" oninput="payCalcSetPay(&quot;'+r.id+'&quot;,&quot;payCash&quot;,this.value)" placeholder="0"> ₴</label>'
+        +'<label class="hi-payf">на картку <input type="number" inputmode="decimal" class="hi-payin" value="'+_pk+'" oninput="payCalcSetPay(&quot;'+r.id+'&quot;,&quot;payCard&quot;,this.value)" placeholder="0"> ₴</label>'
+        +_chk+'</div>';
       return '<div class="hi-rec'+(r.settled?' hi-done':'')+'"><div class="hi-top"><span class="hi-period">'+esc(period)+'</span>'+wk+'<span class="hi-saved">'+saved+'</span><button class="hi-del" title="Видалити" onclick="payCalcDelete(&quot;'+r.id+'&quot;)">\u2715</button></div>'
-        +'<div class="hi-grid"><span>Чисте <b>'+f(r.net)+'</b></span><span>Готівка <b>'+f(r.cash)+'</b></span><span>Залишок <b>'+f(r.card)+'</b></span>'
+        +'<div class="hi-grid"><span>Чисте <b>'+f(r.net)+'</b></span><span>Готівка <b>'+f(r.cash)+'</b></span><span>Залишок <b>'+f(r.card)+'</b></span>'+(brand>0?'<span>Брендування <b>+'+f(brand)+'</b></span>':'')
         +'<span>Парк '+f(r.pct)+'% <b>\u2212'+f(ded)+'</b></span><span>Лишається <b>'+f(r.left)+'</b></span><span>Лізинг <b>'+leaseShort+'</b></span></div>'
         +'<div class="hi-res '+dirCls+'">'+dirTxt+'</div>'
         +methodRow
