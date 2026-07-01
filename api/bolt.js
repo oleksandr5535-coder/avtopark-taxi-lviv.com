@@ -135,9 +135,10 @@ export default async function handler(req, res) {
 
     const token = await getToken();
 
-    // ЗА ЗАМОВЧУВАННЯМ — звичайний режим (за часом створення), як було раніше: без нічних хвостів.
-    // ?trt=price_review -> як рахує портал (точніше по чистому, але тягне нічні хвости попередньої доби).
-    let trt = null;
+    // ЗА ЗАМОВЧУВАННЯМ — price_review (день за моментом підтвердження ціни, як рахує портал Bolt).
+    // Разом із датою поїздки за payment_confirmed_timestamp у дашборді це усуває нічні хвости.
+    // ?trt=none (або ?trt=created) -> старий режим за часом створення.
+    let trt = 'price_review';
     if (req.query && req.query.trt !== undefined) {
       const q = String(req.query.trt);
       trt = (q === 'none' || q === 'created' || q === '') ? null : q;
