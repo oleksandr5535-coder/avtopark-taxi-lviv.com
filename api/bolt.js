@@ -88,16 +88,18 @@ function summarize(orders) {
   for (const o of orders) {
     const op = o.order_price || {};
     const name = o.driver_name || '—';
-    const d = by[name] || (by[name] = { name, net: 0, gross: 0, cash: 0, disc: 0, comm: 0, orders: 0 });
+    const d = by[name] || (by[name] = { name, net: 0, gross: 0, cash: 0, disc: 0, cdisc: 0, comm: 0, orders: 0 });
     if (op.net_earnings != null) { d.net += op.net_earnings; d.orders += 1; }
     if (op.ride_price != null) d.gross += op.ride_price;
     if (op.commission != null) d.comm += op.commission;
     if (op.in_app_discount != null) d.disc += op.in_app_discount;
+    if (op.cash_discount != null) d.cdisc += op.cash_discount;
     if (o.payment_method === 'cash' && op.ride_price != null) d.cash += op.ride_price;
   }
   const rows = Object.values(by).map(d => ({
     name: d.name, orders: d.orders,
-    gross: r2(d.gross), net: r2(d.net), cash: r2(d.cash), disc: r2(d.disc), comm: r2(d.comm),
+    gross: r2(d.gross), net: r2(d.net), cash: r2(d.cash), disc: r2(d.disc), cdisc: r2(d.cdisc), comm: r2(d.comm),
+    hand: r2(d.cash - d.cdisc),
   })).sort((a, b) => b.net - a.net);
   const tot = rows.reduce((a, r) => ({
     orders: a.orders + r.orders, gross: a.gross + r.gross, net: a.net + r.net, cash: a.cash + r.cash,
@@ -107,7 +109,7 @@ function summarize(orders) {
 
 function htmlTable(dateStr, sum, totalOrders) {
   const f = n => n.toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const rows = sum.rows.map(r => '<tr><td>' + r.name + '</td><td class=r>' + r.orders + '</td><td class=r>' + f(r.gross) + '</td><td class=r>' + f(r.comm) + '</td><td class=r><b>' + f(r.net) + '</b></td><td class=r>' + f(r.cash) + '</td></tr>').join('');
+  const rows = sum.rows.map(r => '<tr><td>' + r.name + '</td><td class=r>' + r.orders + '</td><td class=r>' + f(r.gross) + '</td><td class=r>' + f(r.comm) + '</td><td class=r><b>' + f(r.net) + '</b></td><td class=r>' + f(r.cash) + '</td><td class=r>' + f(r.cdisc) + '</td><td class=r><b>' + f(r.hand) + '</b></td></tr>').join('');
   return '<!doctype html><meta charset=utf-8><title>Bolt чисте ' + dateStr + '</title>'
     + '<style>body{font:14px/1.5 system-ui;margin:24px;color:#1a1c22}h2{margin:0 0 4px}p{color:#666;margin:0 0 16px;max-width:760px}'
     + 'table{border-collapse:collapse;width:100%;max-width:760px}th,td{padding:7px 10px;border-bottom:1px solid #eee;text-align:left}'
@@ -115,9 +117,9 @@ function htmlTable(dateStr, sum, totalOrders) {
     + 'tfoot td{border-top:2px solid #ccc;font-weight:700}</style>'
     + '<h2>Bolt · чисте по водіях · ' + dateStr + '</h2>'
     + '<p>Усього записів-замовлень: ' + totalOrders + '. «Чисте» = сума net_earnings із getFleetOrders (поїздки). Промо та відшкодування автопарку сюди НЕ входять — це окремі суми.</p>'
-    + '<table><thead><tr><th>Водій</th><th class=r>Поїздок</th><th class=r>Валове</th><th class=r>Комісія</th><th class=r>Чисте</th><th class=r>Готівка</th></tr></thead>'
+    + '<table><thead><tr><th>Водій</th><th class=r>Поїздок</th><th class=r>Валове</th><th class=r>Комісія</th><th class=r>Чисте</th><th class=r>Готівка</th><th class=r>Знижка(гот)</th><th class=r>На руки</th></tr></thead>'
     + '<tbody>' + rows + '</tbody>'
-    + '<tfoot><tr><td>РАЗОМ</td><td class=r>' + sum.tot.orders + '</td><td class=r>' + f(sum.tot.gross) + '</td><td class=r></td><td class=r>' + f(sum.tot.net) + '</td><td class=r>' + f(sum.tot.cash) + '</td></tr></tfoot>'
+    + '<tfoot><tr><td>РАЗОМ</td><td class=r>' + sum.tot.orders + '</td><td class=r>' + f(sum.tot.gross) + '</td><td class=r></td><td class=r>' + f(sum.tot.net) + '</td><td class=r>' + f(sum.tot.cash) + '</td><td class=r></td><td class=r></td></tr></tfoot>'
     + '</table>';
 }
 
