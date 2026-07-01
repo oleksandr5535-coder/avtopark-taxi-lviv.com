@@ -137,14 +137,28 @@ export default async function handler(req, res) {
 
     const token = await getToken();
 
-    // ЗА ЗАМОВЧУВАННЯМ — звичайний режим (за часом замовлення): точні денні суми, зі скасуваннями.
-    // ?trt=price_review -> режим порталу (для звірки), але може відкидати скасування.
-    let trt = null;
+    // ВІДНЕСЕННЯ ДО ДНЯ ЯК У BOLT (за замовчуванням, mode=merge):
+    //  - завершені поїздки — за днем фіналізації ціни (price_review), як портал;
+    //  - скасування/відмови — за днем створення (щоб не загубились).
+    // ?trt=none -> лише за часом створення; ?trt=price_review -> лише фіналізація.
+    let mode = 'merge';
     if (req.query && req.query.trt !== undefined) {
       const q = String(req.query.trt);
-      trt = (q === 'none' || q === 'created' || q === '') ? null : q;
+      mode = (q === 'none' || q === 'created' || q === '') ? 'none' : (q === 'price_review' ? 'price_review' : 'merge');
     }
-    const { meta, orders } = await fetchAll(token, start_ts, end_ts, trt);
+    let meta, orders;
+    if (mode === 'none') {
+      ({ meta, orders } = await fetchAll(token, start_ts, end_ts, null));
+    } else if (mode === 'price_review') {
+      ({ meta, orders } = await fetchAll(token, start_ts, end_ts, 'price_review'));
+    } else {
+      const cr = await fetchAll(token, start_ts, end_ts, null);
+      const pr = await fetchAll(token, start_ts, end_ts, 'price_review');
+      const prSet = new Set(pr.orders.map(o => o.order_reference));
+      // беремо всі поїздки price_review (гроші за правильний день) + скасування зі створеного набору
+      orders = pr.orders.concat(cr.orders.filter(o => !prSet.has(o.order_reference) && o.order_status !== 'finished'));
+      meta = { company_id: pr.meta.company_id, company_name: pr.meta.company_name, total_orders: orders.length };
+    }
 
     if (req.query && req.query.driver) {
       const q = String(req.query.driver).toLowerCase();
