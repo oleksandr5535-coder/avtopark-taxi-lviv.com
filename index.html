@@ -20,6 +20,21 @@
 .st-call{display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:50%;background:var(--good);color:#fff;font-size:20px;text-decoration:none}
 .st-noph{font-size:11px;color:var(--ink2);max-width:70px;text-align:center;line-height:1.2}
 .st-empty{margin-top:34px;text-align:center;color:var(--ink2);font-size:15px}
+.pct-panel{margin:14px 0 4px;background:var(--soft);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.pct-h{font-weight:800;font-size:15px;color:var(--ink);margin-bottom:10px}
+.pct-ctl{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.pct-toggle{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:2px;gap:2px}
+.pct-btn{border:none;background:transparent;color:var(--ink2);font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:8px;cursor:pointer}
+.pct-btn.on{background:var(--amber);color:#3a2c00}
+.pct-inp{display:inline-flex;align-items:center;gap:5px;margin-left:auto}
+.pct-inp input{width:78px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);font-size:15px;font-weight:700;text-align:right}
+.pct-inp span{color:var(--ink2);font-weight:700}
+.pct-res{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px}
+.pct-line{display:flex;justify-content:space-between;align-items:center;font-size:14px;padding:3px 0;color:var(--ink)}
+.pct-line.pct-ded b{color:var(--bad)}
+.pct-line.pct-left{margin-top:4px;padding-top:8px;border-top:1px solid var(--line);font-size:16px}
+.pct-line.pct-left b{color:var(--good);font-size:18px}
+.pct-hint{margin-top:8px;font-size:11.5px;color:var(--ink2)}
 .st-ord{color:var(--ink2);font-weight:600}
 .st-h2{margin:26px 0 10px;font-size:17px;font-weight:800;color:var(--ink)}
 .sp-list{display:flex;flex-direction:column;gap:8px}
@@ -1272,7 +1287,8 @@ function reportRangeRender(out){
   var H=['Дата','Bolt поїздки','Bolt чистий|\u20b4','Bolt готівка|\u20b4','Bolt км','Uklon замов.','Uklon разом|\u20b4','Uklon готівка|\u20b4','Uklon км'];
   var dataRows=rows.map(function(r){return [rptLabel(r.date),r.bComp||'',r.hasB?rpt_C(r.bNet):'',r.hasB?rpt_C(r.bCash):'',r.bKm?rpt_C(r.bKm):'',r.uOrd||'',r.uOrd?rpt_C(r.uNet):'',(r.uCash>0)?rpt_num(r.uCash):'',r.uKm?rpt_C(r.uKm):''];});
   var totRow=['ПІДСУМОК',T.bComp,rpt_C(T.bNet),rpt_C(T.bCash),rpt_C(T.bKm),T.uOrd,rpt_C(T.uNet),rpt_num(T.uCash),rpt_C(T.uKm)];
-  var html=head+'<div class="rpt-sec"><div class="rpt-head"><div class="rpt-title">'+rpt_esc(sel.name)+' \u00b7 \u0449\u043e\u0434\u0435\u043d\u043d\u043e</div><button class="rpt-copy">Копіювати дані</button></div>';
+  var _ptok=rpt_toks(sel.name).join('|');var _pst=pctSettings()[_ptok]||{pct:'',base:'card'};window._pctData={net:sumNet,cash:sumCash,token:_ptok};window._pctBase=_pst.base||'card';
+  var html=head+pctPanelHtml(sumNet,sumCash,_pst)+'<div class="rpt-sec"><div class="rpt-head"><div class="rpt-title">'+rpt_esc(sel.name)+' \u00b7 \u0449\u043e\u0434\u0435\u043d\u043d\u043e</div><button class="rpt-copy">Копіювати дані</button></div>';
   if(!dataRows.length){html+='<div class="rpt-empty">У цього водія немає даних за вибраний період.</div></div>';out.innerHTML=html;return;}
   html+='<div class="rpt-tablewrap"><table class="rpt-table"><thead><tr>'+H.map(function(c){return '<th>'+c+'</th>';}).join('')+'</tr></thead><tbody>';
   dataRows.forEach(function(r){html+='<tr>'+r.map(function(c){return '<td>'+(c===''?'':rpt_esc(c))+'</td>';}).join('')+'</tr>';});
@@ -1282,6 +1298,24 @@ function reportRangeRender(out){
   var btn=out.querySelector('.rpt-copy');if(btn)btn.onclick=function(){rpt_copy(rpt_tsv([H].concat(dataRows,[totRow])),btn);};
 }
 function renderReportOut(){var out=document.getElementById('rptOut');if(!out)return;if(rptMode==='day')reportDayRender(out);else reportRangeRender(out);}
+function pctSettings(){try{return JSON.parse(localStorage.getItem('pct_cuts')||'{}');}catch(e){return {};}}
+function setPctSettings(o){try{localStorage.setItem('pct_cuts',JSON.stringify(o));}catch(e){}}
+function _pctFmt(n){return (Math.round(n*100)/100).toLocaleString('uk-UA',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function pctResHtml(baseAmt,p,ded,left,base){var lbl=base==='net'?'Чистий':'Залишок на карті';
+  return '<div class="pct-line"><span>'+lbl+'</span><b>'+_pctFmt(baseAmt)+' ₴</b></div>'
+    +'<div class="pct-line pct-ded"><span>Утримання '+(p||0)+'%</span><b>−'+_pctFmt(ded)+' ₴</b></div>'
+    +'<div class="pct-line pct-left"><span>Лишається водію</span><b>'+_pctFmt(left)+' ₴</b></div>';}
+function pctPanelHtml(net,cash,st){var card=net-cash;var pct=(st&&st.pct!=null&&st.pct!=='')?st.pct:'';var base=(st&&st.base)||'card';
+  var baseAmt=base==='net'?net:card;var p=parseFloat(pct)||0;var ded=baseAmt*p/100;var left=baseAmt-ded;
+  return '<div class="pct-panel"><div class="pct-h">💰 Відсоток парку</div>'
+    +'<div class="pct-ctl"><div class="pct-toggle">'
+      +'<button class="pct-btn'+(base==='card'?' on':'')+'" onclick="pctSetBase(&quot;card&quot;,this)">від залишку на карті</button>'
+      +'<button class="pct-btn'+(base==='net'?' on':'')+'" onclick="pctSetBase(&quot;net&quot;,this)">від чистого</button>'
+    +'</div><div class="pct-inp"><input id="pctVal" type="number" inputmode="decimal" min="0" max="100" step="0.5" value="'+pct+'" oninput="pctRecalc()" placeholder="%"><span>%</span></div></div>'
+    +'<div class="pct-res" id="pctResult">'+pctResHtml(baseAmt,p,ded,left,base)+'</div>'
+    +'<div class="pct-hint">Залишок на карті = чистий − готівка (готівка вже у водія)</div></div>';}
+function pctRecalc(){var d=window._pctData;if(!d)return;var inp=document.getElementById('pctVal');var p=parseFloat(inp&&inp.value)||0;var base=window._pctBase||'card';var baseAmt=base==='net'?d.net:(d.net-d.cash);var ded=baseAmt*p/100;var left=baseAmt-ded;var r=document.getElementById('pctResult');if(r)r.innerHTML=pctResHtml(baseAmt,p,ded,left,base);var st=pctSettings();st[d.token]={pct:(inp&&inp.value)||'',base:base};setPctSettings(st);}
+function pctSetBase(b,btn){window._pctBase=b;if(btn&&btn.parentNode){var bs=btn.parentNode.querySelectorAll('.pct-btn');bs.forEach(function(x){x.classList.remove('on');});btn.classList.add('on');}pctRecalc();}
 function renderReport(){
   var el=document.getElementById('reportBody');if(!el)return;
   if(typeof DAYS==='undefined'||!Object.keys(DAYS).length){el.innerHTML='<div class="rpt-empty">Немає збережених днів. Завантаж дані хоча б за один день.</div>';return;}
@@ -1891,7 +1925,7 @@ function boltOrdersToParts(orders){
   var hist=[],inc={};
   (orders||[]).forEach(function(o){
     var pr=o.order_price||{};var st=stMap[o.order_status]||o.order_status||'';var pay=payMap[o.payment_method]||'Через додаток';
-    hist.push({'Дата':fmtDate(o.order_created_timestamp),'Водій':o.driver_name||'','Номерний знак':o.vehicle_license_plate||'','Модель авто':o.vehicle_model||'','Категорія':(o.category_info&&o.category_info.name)||'','Статус':st,'Відстань|км':(o.ride_distance!=null)?(o.ride_distance/1000).toFixed(2):'','Ціна поїздки|₴':(pr.ride_price!=null)?String(pr.ride_price):'','Спосіб оплати':pay,'Тривалість поїздки (мінімум)':(o.order_pickup_timestamp&&o.order_drop_off_timestamp)?String(Math.round((o.order_drop_off_timestamp-o.order_pickup_timestamp)/60)):''});
+    hist.push({'Дата':fmtDate(o.payment_confirmed_timestamp||o.order_created_timestamp),'Водій':o.driver_name||'','Номерний знак':o.vehicle_license_plate||'','Модель авто':o.vehicle_model||'','Категорія':(o.category_info&&o.category_info.name)||'','Статус':st,'Відстань|км':(o.ride_distance!=null)?(o.ride_distance/1000).toFixed(2):'','Ціна поїздки|₴':(pr.ride_price!=null)?String(pr.ride_price):'','Спосіб оплати':pay,'Тривалість поїздки (мінімум)':(o.order_pickup_timestamp&&o.order_drop_off_timestamp)?String(Math.round((o.order_drop_off_timestamp-o.order_pickup_timestamp)/60)):''});
     if(pr.net_earnings!=null){var n=o.driver_name||'';var a=inc[n]||(inc[n]={n:n,g:0,net:0,cash:0,tip:0});a.g+=(pr.ride_price||0);a.net+=(pr.net_earnings||0);if(o.payment_method==='cash')a.cash+=(pr.ride_price||0);a.tip+=(pr.tip||0);}
   });
   var income=Object.keys(inc).map(function(k){var a=inc[k];return {'Водій':a.n,'Валовий дохід (всього)|₴':a.g.toFixed(2),'Отримано готівкою|₴':a.cash.toFixed(2),'Чистий дохід|₴':a.net.toFixed(2),'Чайові від пасажирів|₴':a.tip.toFixed(2)};});
