@@ -1371,7 +1371,7 @@ function fetchUsdRate(){try{fetch('/api/rate').then(function(r){return r.json();
 function boltBrandPct(orders){orders=orders||0;if(orders>=140)return 6;if(orders>=120)return 5;if(orders>=90)return 4;if(orders>=60)return 3;return 0;}
 function uklonBrandAmt(orders){orders=orders||0;if(orders>=185)return 1500;if(orders>=150)return 1125;if(orders>=125)return 875;if(orders>=100)return 625;return 0;}
 function calcBrand(d){var bp=boltBrandPct(d.bComp);var bolt=(d.bGross||0)*bp/100;var uklon=uklonBrandAmt(d.uOrd);return {boltPct:bp,bolt:bolt,uklon:uklon,total:bolt+uklon};}
-function _brandAmt(d,st){if(!st||!st.brandOn)return 0;if(st.brandManual!=null&&st.brandManual!==''){return parseFloat(st.brandManual)||0;}return calcBrand(d).total;}
+function _brandAmt(d,st){if(!st||!st.brandOn)return 0;if(st.brandManual!=null&&st.brandManual!==''){return parseFloat(st.brandManual)||0;}var c=calcBrand(d);return (st.brandPlat==='uklon')?c.uklon:c.bolt;}
 function pctResHtml(card,brand,baseAmt,p,ded,left,base){var lbl=base==='net'?'Чистий':'Залишок на карті';
   var out='<div class="pct-line"><span>'+lbl+'</span><b>'+_pctFmt(card)+' ₴</b></div>';
   if(brand>0)out+='<div class="pct-line pct-brand"><span>Брендування</span><b>+'+_pctFmt(brand)+' ₴</b></div>';
@@ -1387,11 +1387,14 @@ function pctPanelHtml(net,cash,st){var d=window._pctData||{net:net,cash:cash,bGr
   var card=net-cash;var pct=(st&&st.pct!=null&&st.pct!=='')?st.pct:'';var base=(st&&st.base)||'card';var lease=(st&&st.lease!=null&&st.lease!=='')?st.lease:'';
   var cur=(st&&st.cur)||'usd';var rtype=(st&&st.rtype)||'sale';window._pctCur=cur;window._pctRType=rtype;
   var brandOn=!!(st&&st.brandOn);window._pctBrandOn=brandOn;var brandManual=(st&&st.brandManual!=null)?st.brandManual:'';
-  var brand=_brandAmt(d,st);var auto=calcBrand(d);
+  var plat=(st&&st.brandPlat)||'bolt';window._pctBrandPlat=plat;
+  var brand=_brandAmt(d,st);var auto=calcBrand(d);var autoAmt=(plat==='uklon')?auto.uklon:auto.bolt;
   var baseAmt=(base==='net'?net:card)+brand;var p=parseFloat(pct)||0;var ded=baseAmt*p/100;var left=baseAmt-ded;
   var rate=(_curRate()||'');var lz=parseFloat(lease)||0;var rt=parseFloat(rate)||0;
-  var brandBody=brandOn?('<div class="pct-brandbox"><div class="pct-brandinfo">Bolt '+auto.boltPct+'% \u00d7 '+_pctFmt(d.bGross)+' = <b>'+_pctFmt(auto.bolt)+'</b> \u00b7 Uklon (<b>'+d.uOrd+'</b> зам.) = <b>'+_pctFmt(auto.uklon)+'</b> \u00b7 авто: <b>'+_pctFmt(auto.total)+' ₴</b></div>'
-    +'<div class="pct-row2"><span>Сума брендування, ₴</span><input id="pctBrand" type="number" inputmode="decimal" step="1" value="'+brandManual+'" oninput="pctRecalc()" placeholder="'+_pctFmt(auto.total)+' (авто)"></div></div>'):'';
+  var brandBody=brandOn?('<div class="pct-brandbox">'
+    +'<div class="pct-row2"><span>Платформа</span><span class="pct-rtoggle"><button class="pct-btn2'+(plat==='bolt'?' on':'')+'" onclick="pctSetBrandPlat(&quot;bolt&quot;)">Bolt</button><button class="pct-btn2'+(plat==='uklon'?' on':'')+'" onclick="pctSetBrandPlat(&quot;uklon&quot;)">Uklon</button></span></div>'
+    +'<div class="pct-brandinfo">'+((plat==='uklon')?('Uklon: <b>'+d.uOrd+'</b> замовлень'):('Bolt: <b>'+auto.boltPct+'%</b> \u00d7 '+_pctFmt(d.bGross)+' ('+d.bComp+' поїзд.)'))+' = <b>'+_pctFmt(autoAmt)+' ₴</b></div>'
+    +'<div class="pct-row2"><span>Сума брендування, ₴</span><input id="pctBrand" type="number" inputmode="decimal" step="1" value="'+brandManual+'" oninput="pctRecalc()" placeholder="'+_pctFmt(autoAmt)+' (авто)"></div></div>'):'';
   var rateRow=(cur==='usd')?('<div class="pct-row2"><span>Курс</span><span class="pct-rtoggle"><button class="pct-btn2'+(rtype==='sale'?' on':'')+'" onclick="pctSetRType(&quot;sale&quot;,this)">продаж</button><button class="pct-btn2'+(rtype==='buy'?' on':'')+'" onclick="pctSetRType(&quot;buy&quot;,this)">купівля</button><input id="pctRate" type="number" inputmode="decimal" step="0.01" value="'+rate+'" oninput="pctRecalc()"></span></div>'):('<input id="pctRate" type="hidden" value="'+rate+'">');
   return '<div class="pct-panel"><div class="pct-h">\ud83d\udcb0 Розрахунок з водієм</div>'
     +'<div class="pct-ctl"><div class="pct-toggle"><button class="pct-btn'+(base==='card'?' on':'')+'" onclick="pctSetBase(&quot;card&quot;,this)">від залишку на карті</button><button class="pct-btn'+(base==='net'?' on':'')+'" onclick="pctSetBase(&quot;net&quot;,this)">від чистого</button></div><div class="pct-inp"><input id="pctVal" type="number" inputmode="decimal" min="0" max="100" step="0.5" value="'+pct+'" oninput="pctRecalc()" placeholder="%"><span>%</span></div></div>'
@@ -1405,14 +1408,15 @@ function pctPanelHtml(net,cash,st){var d=window._pctData||{net:net,cash:cash,bGr
       +'<div class="pct-usd-out" id="pctUsd">'+pctPayHtml(left,lz,cur,rt)+'</div>'
       +'<button id="pctSaveBtn" class="pct-save" onclick="pctSaveRecord()">\ud83d\udcbe Зберегти розрахунок</button></div>'
     +'<div class="pct-hint">Брендування = картковий дохід, з нього теж береться % парку. Лізинг у обраній валюті. Різниця = (лишається водію) \u2212 лізинг.</div></div>';}
-function pctRecalc(){var d=window._pctData;if(!d)return;var st=pctSettings()[d.token]||{};st.brandOn=!!window._pctBrandOn;var bm=document.getElementById('pctBrand');if(bm)st.brandManual=bm.value;
+function pctRecalc(){var d=window._pctData;if(!d)return;var st=pctSettings()[d.token]||{};st.brandOn=!!window._pctBrandOn;st.brandPlat=window._pctBrandPlat||'bolt';var bm=document.getElementById('pctBrand');if(bm)st.brandManual=bm.value;
   var inp=document.getElementById('pctVal');var p=parseFloat(inp&&inp.value)||0;var base=window._pctBase||'card';var brand=_brandAmt(d,st);
   var card0=(base==='net'?d.net:(d.net-d.cash));var baseAmt=card0+brand;var ded=baseAmt*p/100;var left=baseAmt-ded;
   var r=document.getElementById('pctResult');if(r)r.innerHTML=pctResHtml(card0,brand,baseAmt,p,ded,left,base);
   var cur=window._pctCur||'usd';var leaseEl=document.getElementById('pctLease');var lease=parseFloat(leaseEl&&leaseEl.value)||0;var rateEl=document.getElementById('pctRate');var rate=parseFloat(rateEl&&rateEl.value)||0;var uo=document.getElementById('pctUsd');if(uo)uo.innerHTML=pctPayHtml(left,lease,cur,rate);
-  var all=pctSettings();all[d.token]={pct:(inp&&inp.value)||'',base:base,lease:(leaseEl&&leaseEl.value)||'',cur:cur,rtype:window._pctRType||'sale',brandOn:!!window._pctBrandOn,brandManual:(bm&&bm.value)||''};setPctSettings(all);}
+  var all=pctSettings();all[d.token]={pct:(inp&&inp.value)||'',base:base,lease:(leaseEl&&leaseEl.value)||'',cur:cur,rtype:window._pctRType||'sale',brandOn:!!window._pctBrandOn,brandPlat:window._pctBrandPlat||'bolt',brandManual:(bm&&bm.value)||''};setPctSettings(all);}
 function pctRerender(){var d=window._pctData;if(!d)return;var el=document.querySelector('.pct-panel');if(!el)return;var st=pctSettings()[d.token]||{};st.cur=window._pctCur;st.rtype=window._pctRType;el.outerHTML=pctPanelHtml(d.net,d.cash,st);}
 function pctSetBrand(on){window._pctBrandOn=!!on;var d=window._pctData;if(d){var st=pctSettings();st[d.token]=st[d.token]||{};st[d.token].brandOn=!!on;setPctSettings(st);}pctRerender();}
+function pctSetBrandPlat(pl){window._pctBrandPlat=pl;var d=window._pctData;if(d){var st=pctSettings();st[d.token]=st[d.token]||{};st[d.token].brandPlat=pl;setPctSettings(st);}pctRerender();}
 function pctSetBase(b,btn){window._pctBase=b;if(btn&&btn.parentNode){var bs=btn.parentNode.querySelectorAll('.pct-btn');bs.forEach(function(x){x.classList.remove('on');});btn.classList.add('on');}pctRecalc();}
 function pctSetCur(c,btn){window._pctCur=c;var d=window._pctData;if(d){var st=pctSettings();st[d.token]=st[d.token]||{};st[d.token].cur=c;setPctSettings(st);}pctRerender();}
 function pctSetRType(t,btn){window._pctRType=t;var el=document.getElementById('pctRate');if(el)el.value=_curRate();var d=window._pctData;if(d){var st=pctSettings();st[d.token]=st[d.token]||{};st[d.token].rtype=t;setPctSettings(st);}pctRecalc();if(btn&&btn.parentNode){var bs=btn.parentNode.querySelectorAll('.pct-btn2');}pctRerender();}
@@ -1542,7 +1546,7 @@ function renderWeek(){var el=document.getElementById('week');if(!el)return;
  if(!A.present.length){el.innerHTML=head+'<p class="sub">За цей тиждень нема даних. Гортай \u2039 \u203a до тижня з даними.</p>';return;}
  var T=A.list.reduce(function(a,m){a.net+=m.net;a.gross+=m.gross;a.orders+=m.orders;a.online+=m.online;return a;},{net:0,gross:0,orders:0,online:0});
  function strip(m){return '<div class="wk-strip">'+A.keys.map(function(k,i){var pd=m.perDay[k];var cls=pd?(pd.done?'d':'u'):'n';var ti=DL[i]+' '+_wkLab(k)+(pd?(': '+Math.round(pd.net)+' \u20b4'):' \u2014');return '<span class="wk-cell '+cls+'" title="'+ti+'">'+DL[i].slice(0,1)+'</span>';}).join('')+'</div>';}
- var rows=A.list.map(function(m){return '<tr class="wk-row" data-n="'+encodeURIComponent(m.name)+'" onclick="renderWeekDriver(decodeURIComponent(this.dataset.n))"><td><div class="wk-nm">'+rpt_esc(nameFor(m.name))+' \u203a</div>'+strip(m)+'</td>'
+ var rows=A.list.map(function(m){return '<tr class="wk-row" data-n="'+encodeURIComponent(m.name)+'" onclick="openWeekDriver(this.dataset.n)"><td><div class="wk-nm">'+rpt_esc(nameFor(m.name))+' \u203a</div>'+strip(m)+'</td>'
   +'<td class="r"><b>'+gv(m.net)+'</b></td><td class="r">'+m.done+'/'+m.days+'</td><td class="r">'+(m.pct==null?'\u2014':m.pct+'%')+'</td>'
   +'<td class="r">'+(m.pace==null?'\u2014':m.pace)+'</td><td class="r">'+m.orders+'</td><td class="r">'+H(m.online)+'</td><td class="r">'+gv(m.cash)+'</td></tr>';}).join('');
  el.innerHTML=head
@@ -1567,6 +1571,7 @@ function weekDriverData(name,mon){var _nk=rpt_toks(name).join('|');var keys=week
  T.pace=T.online>0?Math.round(T.net/T.online):null;T.pct=T.planSum>0?Math.round(T.net/T.planSum*100):null;
  T.avgNet=T.days>0?Math.round(T.net/T.days):null;T.acceptPct=T.bOffer>0?Math.round(T.bComp/T.bOffer*100):null;T.util=T.online>0?T.utilW/T.online:null;T.grossPk=T.kmTotal>0?T.gross/T.kmTotal:null;T.netPk=T.kmTotal>0?T.net/T.kmTotal:null;T.premShare=(T.tEcon+T.tStd+T.tPrem+T.tDeliv)>0?Math.round(T.tPrem/(T.tEcon+T.tStd+T.tPrem+T.tDeliv)*100):null;T.deadhead=T.dhN>0?Math.round(T.dhW/T.dhN):null;T.ordPerH=T.online>0?(T.orders/T.online):null;return {days:days,T:T};}
 
+function openWeekDriver(enc){try{renderWeekDriver(decodeURIComponent(enc));}catch(e){try{alert('Помилка відкриття водія: '+(e&&e.message||e));}catch(_){}try{console.error('openWeekDriver',e);}catch(_){}}}
 function renderWeekDriver(name){var el=document.getElementById('week');if(!el)return;
   if(weekMon&&!/^\d{4}-\d{2}-\d{2}$/.test(weekMon))weekMon=null;
  if(!weekMon){var ak=Object.keys(DAYS).filter(function(k){return /^\d{4}-\d{2}-\d{2}$/.test(k);}).sort();if(ak.length)weekMon=weekStartOf(ak[ak.length-1]);}
