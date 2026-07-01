@@ -34,7 +34,10 @@
 .pct-line.pct-ded b{color:var(--bad)}
 .pct-line.pct-left{margin-top:4px;padding-top:8px;border-top:1px solid var(--line);font-size:16px}
 .pct-line.pct-left b{color:var(--good);font-size:18px}
-.pct-hint{margin-top:8px;font-size:11.5px;color:var(--ink2)}
+.rpt-upd{display:flex;align-items:center;gap:10px;margin-left:auto}
+#rptWeekBtn{background:var(--good);color:#fff;border:none;border-radius:10px;padding:9px 15px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
+#rptWeekBtn:disabled{opacity:.6;cursor:default}
+.rpt-wstat{font-size:12.5px;color:var(--ink2)}
 .pct-usd{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px}
 .pct-row2{display:flex;justify-content:space-between;align-items:center;padding:5px 0}
 .pct-row2 span{font-size:14px;color:var(--ink)}
@@ -1347,6 +1350,28 @@ function pctRerender(){var d=window._pctData;if(!d)return;var el=document.queryS
 function pctSetBase(b,btn){window._pctBase=b;if(btn&&btn.parentNode){var bs=btn.parentNode.querySelectorAll('.pct-btn');bs.forEach(function(x){x.classList.remove('on');});btn.classList.add('on');}pctRecalc();}
 function pctSetCur(c,btn){window._pctCur=c;var d=window._pctData;if(d){var st=pctSettings();st[d.token]=st[d.token]||{};st[d.token].cur=c;setPctSettings(st);}pctRerender();}
 function pctSetRType(t,btn){window._pctRType=t;var el=document.getElementById('pctRate');if(el)el.value=_curRate();var d=window._pctData;if(d){var st=pctSettings();st[d.token]=st[d.token]||{};st[d.token].rtype=t;setPctSettings(st);}pctRecalc();if(btn&&btn.parentNode){var bs=btn.parentNode.querySelectorAll('.pct-btn2');}pctRerender();}
+async function reportUpdateWeek(){
+  var btn=document.getElementById('rptWeekBtn');var stat=document.getElementById('rptWeekStat');
+  if(!btn||btn.disabled)return;
+  var anchor=(rptFrom&&/^\d{4}-\d{2}-\d{2}$/.test(rptFrom))?rptFrom:((rptDayKey&&/^\d{4}-\d{2}-\d{2}$/.test(rptDayKey))?rptDayKey:kyivToday());
+  var mon=weekStartOf(anchor);var wk=weekKeys(mon);var today=kyivToday();
+  var days=wk.filter(function(d){return d<=today;});
+  if(!days.length){if(stat)stat.textContent='Цей тиждень ще не почався';return;}
+  var di=document.getElementById('boltDate');var old=btn.textContent;btn.disabled=true;window._rptBatch=true;
+  var done=0,errs=[];
+  for(var k=0;k<days.length;k++){var day=days[k];
+    if(di)di.value=day;
+    btn.textContent='⏳ '+(k+1)+'/'+days.length;
+    if(stat)stat.textContent='Оновлюю '+day+' ('+(k+1)+'/'+days.length+')…';
+    try{await updateBolt();if(DAYS[day]&&DAYS[day]._parts){await updateUklon();await updateGPS();}done++;}
+    catch(e){errs.push(day+': '+((e&&e.message)||e));}
+  }
+  window._rptBatch=false;btn.disabled=false;btn.textContent=old;
+  rptMode='range';rptFrom=days[0];rptTo=days[days.length-1];
+  try{if(typeof cloudSaveAll==='function')cloudSaveAll();}catch(e){}
+  renderReport();
+  var s2=document.getElementById('rptWeekStat');if(s2)s2.textContent='✓ Оновлено '+done+' дн. ('+days[0]+' – '+days[days.length-1]+')'+(errs.length?(' · помилок: '+errs.length):'');
+}
 function renderReport(){
   var el=document.getElementById('reportBody');if(!el)return;
   if(typeof DAYS==='undefined'||!Object.keys(DAYS).length){el.innerHTML='<div class="rpt-empty">Немає збережених днів. Завантаж дані хоча б за один день.</div>';return;}
@@ -1363,9 +1388,11 @@ function renderReport(){
     bar+='<div class="rpt-ctl"><label>з</label><input type="date" id="rptFromI" value="'+rptFrom+'" min="'+dates[0]+'" max="'+dates[dates.length-1]+'"></div>';
     bar+='<div class="rpt-ctl"><label>по</label><input type="date" id="rptToI" value="'+rptTo+'" min="'+dates[0]+'" max="'+dates[dates.length-1]+'"></div>';
   }
+  bar+='<div class="rpt-ctl rpt-upd"><button id="rptWeekBtn">🔄 Оновити тиждень</button><span id="rptWeekStat" class="rpt-wstat"></span></div>';
   bar+='</div>';
   el.innerHTML=bar+'<div id="rptOut"></div>';
   el.querySelectorAll('.rpt-tab').forEach(function(b){b.onclick=function(){rptMode=b.getAttribute('data-m');renderReport();};});
+  var _wb=document.getElementById('rptWeekBtn');if(_wb)_wb.onclick=reportUpdateWeek;
   var ds=document.getElementById('rptDaySel');if(ds)ds.onchange=function(){rptDayKey=ds.value;renderReportOut();};
   var dr=document.getElementById('rptDrvSel');if(dr)dr.onchange=function(){rptDrvKey=dr.value;renderReportOut();};
   var fi=document.getElementById('rptFromI');if(fi)fi.onchange=function(){rptFrom=fi.value;renderReportOut();};
@@ -1981,7 +2008,7 @@ async function updateBolt(){
     D._parts=base;D.date=date;D.date_label=isoDateLabel(date);D.window=buildWin(date,D.now_min);
     DATA=D;registerDay(D);
     document.getElementById('uploader').classList.add('hide');document.getElementById('app').classList.remove('hide');
-    boot();
+    if(!window._rptBatch)boot();
     var fin=orders.filter(function(o){return o.order_status==='finished'}).length;
     stat.textContent='✓ '+date+': '+orders.length+' замовлень · '+fin+' виконаних';stat.className='bb-stat ok';
   }catch(err){stat.textContent='Помилка: '+err.message;stat.className='bb-stat bad';}
@@ -2022,7 +2049,7 @@ async function updateUklon(){
     base.uklon_agg=agg;base.uklon_trips=j.uklon_trips||[];
     var D=PROC.buildData(base,dayCutMin());D._parts=base;
     D.date=date;D.date_label=isoDateLabel(date);D.window=buildWin(date,D.now_min);
-    DATA=D;registerDay(D);boot();
+    DATA=D;registerDay(D);if(!window._rptBatch)boot();
     stat.textContent='✓ Uklon '+date+': '+agg.length+' водіїв · '+(j.count_orders||0)+' поїздок';stat.className='bb-stat ok';
   }catch(err){stat.textContent='Помилка Uklon: '+err.message;stat.className='bb-stat bad';}
   btn.textContent=old;btn.disabled=false;
@@ -2057,7 +2084,7 @@ async function updateGPS(){
     base.wialon_trips_rows=trips;base.wialon_stops_rows=stops;
     var D=PROC.buildData(base,dayCutMin());D._parts=base;
     D.date=date;D.date_label=isoDateLabel(date);D.window=buildWin(date,D.now_min);
-    DATA=D;registerDay(D);boot();
+    DATA=D;registerDay(D);if(!window._rptBatch)boot();
     stat.textContent='✓ GPS '+date+': '+trips.length+' поїздок · '+stops.length+' стоянок';stat.className='bb-stat ok';
   }catch(err){stat.textContent='Помилка GPS: '+err.message;stat.className='bb-stat bad';}
   btn.textContent=old;btn.disabled=false;
