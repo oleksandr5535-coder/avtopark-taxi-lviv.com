@@ -1555,9 +1555,9 @@ function weekStartOf(ds){var d=new Date(ds+'T00:00:00');var wd=(d.getDay()+6)%7;
 function weekKeys(mon){var out=[],d=new Date(mon+'T00:00:00');for(var i=0;i<7;i++){out.push(_wkYmd(d));d.setDate(d.getDate()+1);}return out;}
 function _wkLab(k){return k.slice(8,10)+'.'+k.slice(5,7);}
 function weekStep(dir){if(!weekMon)return;var d=new Date(weekMon+'T00:00:00');d.setDate(d.getDate()+dir*7);weekMon=_wkYmd(d);renderWeek();}
-function weekAgg(mon){var keys=weekKeys(mon);var present=keys.filter(function(k){return DAYS&&DAYS[k];});var map={};
+function weekAgg(mon,all){var keys=weekKeys(mon);var present=keys.filter(function(k){return DAYS&&DAYS[k];});var map={};
  keys.forEach(function(k){if(!(DAYS&&DAYS[k]))return;var H=(typeof rptHy==='function')?rptHy(k):DAYS[k];var drv=(H&&H.drivers)||[];var dayAgg={};
-  drv.forEach(function(o){if(!(isTaxi(o)&&!isHidden(o.name)))return;if(!((o.net||0)>0||(o.orders||0)>0||(o.online||0)>0))return;
+  drv.forEach(function(o){if(!(((all)||isTaxi(o))&&!isHidden(o.name)))return;if(!((o.net||0)>0||(o.orders||0)>0||(o.online||0)>0))return;
    var nk=rpt_toks(o.name).join('|');var d=dayAgg[nk]||(dayAgg[nk]={name:o.name,net:0,gross:0,orders:0,online:0,idle:0,cash:0,km:0,plan:0,bGross:0,bGrossFin:0,bComp:0,uOrd:0});
    d.net+=o.net||0;d.gross+=o.gross||0;d.orders+=o.orders||0;d.online+=o.online||0;d.idle+=o.idle||0;d.cash+=(o.b_cash||0)+(o.u_cash||0);d.km+=(o.b_km||0)+(o.u_km||0);d.bGross+=o.b_gross||0;d.bGrossFin+=(o.b_gross_fin!=null?o.b_gross_fin:(o.b_gross||0));d.bComp+=o.b_comp||0;d.uOrd+=o.u_orders||0;d.plan+=planOf(o);});
   Object.keys(dayAgg).forEach(function(nk){var d=dayAgg[nk];var m=map[nk]||(map[nk]={name:d.name,net:0,gross:0,orders:0,online:0,idle:0,cash:0,km:0,days:0,done:0,planSum:0,perDay:{},bGross:0,bGrossFin:0,bComp:0,uOrd:0});
@@ -2002,7 +2002,7 @@ function renderBranding(){var el=document.getElementById('branding');if(!el)retu
   if(weekMon&&!/^\d{4}-\d{2}-\d{2}$/.test(weekMon))weekMon=null;
   if(!weekMon){var ak=Object.keys(DAYS).filter(function(k){return /^\d{4}-\d{2}-\d{2}$/.test(k);}).sort();if(ak.length)weekMon=weekStartOf(ak[ak.length-1]);}
   if(!weekMon){el.innerHTML='<h1>🏷 <span class="accent">Брендування</span></h1><p class="sub">Ще нема даних.</p>';return;}
-  var A=weekAgg(weekMon),keys=A.keys,monL=_wkLab(keys[0]),sunL=_wkLab(keys[6]),wk=isoWeek(keys[0]);
+  var A=weekAgg(weekMon,true),keys=A.keys,monL=_wkLab(keys[0]),sunL=_wkLab(keys[6]),wk=isoWeek(keys[0]);
   window._brRows={};
   var flt=window._brFilter||'all';var _pass=(typeof drvPass==='function')?drvPass():{};var quals=A.list.filter(function(m){var _bA=((m.bGrossFin!=null?m.bGrossFin:m.bGross)||0)*boltBrandPct(m.bComp)/100;var _uA=uklonBrandAmt(m.uOrd);if(_bA<=0&&_uA<=0)return false;if(flt==='all')return true;var pt=(_pass[m.name]||{}).type||'taxi';return pt===flt;});
   var grand=0;
