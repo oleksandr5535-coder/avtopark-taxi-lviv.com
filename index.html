@@ -85,7 +85,20 @@
 .br-note{width:100%;margin-top:9px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);font-size:13px}
 .br-tot{margin-top:9px;padding-top:8px;border-top:1px solid var(--line);font-size:14px;color:var(--ink)}
 .br-tot b{color:var(--good);font-size:16px}
-.wk-brand{display:inline-block;font-size:11px;font-weight:700;color:#b9770f;background:rgba(230,162,60,.16);padding:1px 7px;border-radius:20px;margin-left:6px;white-space:nowrap}
+.wk-brand{display:inline-block;font-size:11px;font-weight:700;color:#b9770f;background:rgba(230,162,60,.16);padding:1px 7px;border-radius:20px;white-space:nowrap}
+.wk-brand.off{color:var(--muted);background:transparent}
+.br-ex{margin-left:auto;border:1px solid var(--line);border-radius:8px;padding:4px 11px;font-size:12px;font-weight:700;cursor:pointer}
+.br-ex.on{background:rgba(31,157,85,.12);color:var(--good);border-color:var(--good)}
+.br-ex.off{background:rgba(120,120,120,.14);color:var(--muted)}
+.br-card.br-excl{opacity:.6}
+.br-card .br-name{display:flex;align-items:center;gap:8px}
+.br-exnote{font-size:12.5px;color:var(--ink2)}
+.br-filter{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.br-ftab{border:1px solid var(--line);background:var(--panel);color:var(--ink2);font-size:13px;font-weight:700;padding:7px 14px;border-radius:20px;cursor:pointer}
+.br-ftab.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.br-cat{display:flex;gap:5px;flex-wrap:wrap;margin:2px 0 9px}
+.br-catb{border:1px solid var(--line);background:var(--paper);color:var(--ink2);font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:7px;cursor:pointer}
+.br-catb.on{background:var(--amber);color:#3a2c00;border-color:var(--amber)}
 .hi-wk{font-size:11px;color:#b9770f;background:rgba(230,162,60,.16);padding:1px 8px;border-radius:20px;font-weight:700}
 .hi-rec.hi-done{opacity:.72}
 .hi-rec.hi-done .hi-res{text-decoration:none}
@@ -1021,7 +1034,7 @@ function buildData(parts,dayCut){dayCut=(typeof dayCut==='number'&&dayCut>=0)?da
   (parts.bolt_income||[]).forEach(r=>{const d=rec(r['Водій']);d.plats.add('Bolt');
     const k=Object.keys(r);const gk=k.find(x=>x.indexOf('Валовий дохід (всього)')===0),nk=k.find(x=>x.indexOf('Чистий дохід')===0&&x.indexOf('година')<0&&x.indexOf('год')<0),
       rk=k.find(x=>x.indexOf('Валовий дохід за годину')===0),tk=k.find(x=>x.indexOf('Чайові від пасажирів')===0);
-    d.b_gross=F(r[gk]);d.b_net=F(r['Чистий дохід|₴']||r[nk]);d.b_revph=F(r[rk]);d.b_tips=F(r[tk]);d.b_cash=F(r['Отримано готівкою|₴']||0);d.b_hasinc=true;});
+    d.b_gross=F(r[gk]);d.b_gross_fin=F(r['Валове виконаних|₴']||r[gk]);d.b_net=F(r['Чистий дохід|₴']||r[nk]);d.b_revph=F(r[rk]);d.b_tips=F(r[tk]);d.b_cash=F(r['Отримано готівкою|₴']||0);d.b_hasinc=true;});
   (parts.bolt_hist||[]).forEach(r=>{const d=rec(r['Водій']);d.plats.add('Bolt');const s=r['Статус'];
     if(!d.plate&&r['Номерний знак'])d.plate=r['Номерний знак'];if(!d.car&&r['Модель авто'])d.car=r['Модель авто'];
     const dt=r['Дата'],t=dt&&dt.length>=16?dt.slice(11,16):null;const mn=t?tmin(t):null;if(dt&&dt.length>=10){const dd=dt.slice(0,10);dateCount[dd]=(dateCount[dd]||0)+1;}
@@ -1308,7 +1321,7 @@ function rptDates(){ return (typeof DAYS!=='undefined')?Object.keys(DAYS).sort()
 function rptLabel(k){ var d=(typeof DAYS!=='undefined')?DAYS[k]:null; return (d&&d.date_label)||k; }
 function rptGlobalFl(){ var m={}; rptDates().forEach(function(k){ var H=rptHy(k); if(!H||!H._parts)return; var src=[].concat(H._parts.bolt_income||[],H._parts.bolt_hist||[]); src.forEach(function(r){var v=r&&r['Водій'];if(v)m[rpt_toks(v).join('|')]=v;}); }); return m; }
 function rptDriverList(){ var fl=rptGlobalFl(),lf=rptGlobalLF(),seen={},out=[]; rptDates().forEach(function(k){ var H=rptHy(k); if(!H||!H.drivers)return; H.drivers.forEach(function(o){ if((o.b_comp||0)>0||o.b_hasinc||(o.u_orders||0)>0){ var key=rpt_toks(o.name).join('|'); if(!seen[key]){seen[key]=1; out.push({key:key,name:rpt_name(o.name,fl,lf)});} } }); }); out.sort(function(a,b){return a.name.localeCompare(b.name,'uk');}); return out; }
-function rptRangeRows(driverKey,from,to){ var rows=[],dates=rptDates().filter(function(k){return (!from||k>=from)&&(!to||k<=to);}); dates.forEach(function(k){ var H=rptHy(k); if(!H||!H.drivers)return; var o=null; for(var i=0;i<H.drivers.length;i++){ if(rpt_toks(H.drivers[i].name).join('|')===driverKey){o=H.drivers[i];break;} } if(!o)return; var hasB=(o.b_comp||0)>0||o.b_hasinc,hasU=(o.u_orders||0)>0; if(!hasB&&!hasU)return; rows.push({date:k,bComp:o.b_comp||0,bGross:o.b_gross||0,bNet:o.b_net||0,bCash:o.b_cash||0,bKm:o.b_km||0,uOrd:o.u_orders||0,uNet:o.u_net||0,uCash:o.u_cash||0,uKm:o.u_km||0,hasB:hasB}); }); return rows; }
+function rptRangeRows(driverKey,from,to){ var rows=[],dates=rptDates().filter(function(k){return (!from||k>=from)&&(!to||k<=to);}); dates.forEach(function(k){ var H=rptHy(k); if(!H||!H.drivers)return; var o=null; for(var i=0;i<H.drivers.length;i++){ if(rpt_toks(H.drivers[i].name).join('|')===driverKey){o=H.drivers[i];break;} } if(!o)return; var hasB=(o.b_comp||0)>0||o.b_hasinc,hasU=(o.u_orders||0)>0; if(!hasB&&!hasU)return; rows.push({date:k,bComp:o.b_comp||0,bGross:o.b_gross||0,bGrossFin:(o.b_gross_fin!=null?o.b_gross_fin:(o.b_gross||0)),bNet:o.b_net||0,bCash:o.b_cash||0,bKm:o.b_km||0,uOrd:o.u_orders||0,uNet:o.u_net||0,uCash:o.u_cash||0,uKm:o.u_km||0,hasB:hasB}); }); return rows; }
 
 function reportData(D){
   D=D||DATA;
@@ -1363,15 +1376,15 @@ function reportRangeRender(out){
   if(!drv.length){out.innerHTML='<div class="rpt-empty">Немає водіїв у збережених днях.</div>';return;}
   var sel=null;for(var i=0;i<drv.length;i++){if(drv[i].key===rptDrvKey){sel=drv[i];break;}}if(!sel){sel=drv[0];rptDrvKey=sel.key;}
   var rows=rptRangeRows(rptDrvKey,rptFrom,rptTo);
-  var T={bComp:0,bGross:0,bNet:0,bCash:0,bKm:0,uOrd:0,uNet:0,uCash:0,uKm:0};
-  rows.forEach(function(r){T.bComp+=r.bComp;T.bGross+=(r.bGross||0);T.bNet+=r.bNet;T.bCash+=r.bCash;T.bKm+=r.bKm;T.uOrd+=r.uOrd;T.uNet+=r.uNet;T.uCash+=r.uCash;T.uKm+=r.uKm;});
+  var T={bComp:0,bGross:0,bGrossFin:0,bNet:0,bCash:0,bKm:0,uOrd:0,uNet:0,uCash:0,uKm:0};
+  rows.forEach(function(r){T.bComp+=r.bComp;T.bGross+=(r.bGross||0);T.bGrossFin+=(r.bGrossFin||0);T.bNet+=r.bNet;T.bCash+=r.bCash;T.bKm+=r.bKm;T.uOrd+=r.uOrd;T.uNet+=r.uNet;T.uCash+=r.uCash;T.uKm+=r.uKm;});
   var sumNet=T.bNet+T.uNet,sumCash=T.bCash+T.uCash,sumKm=T.bKm+T.uKm,sumTrips=T.bComp+T.uOrd;
   var head='<div class="rpt-summary"><div class="rpt-sumname">'+rpt_esc(sel.name)+'</div><div class="rpt-sumsub">'+rptLabel(rptFrom)+' \u2013 '+rptLabel(rptTo)+' \u00b7 '+rows.length+' \u0434\u043d\u0456\u0432 \u0437 \u0434\u0430\u043d\u0438\u043c\u0438</div>'
     +'<div class="rpt-sumgrid"><div><span>'+rpt_C(sumNet)+'</span>\u03a3 \u0434\u043e\u0445\u0456\u0434 (Bolt+Uklon), \u20b4</div><div><span>'+rpt_C(sumCash)+'</span>\u03a3 \u0433\u043e\u0442\u0456\u0432\u043a\u0430, \u20b4</div><div><span>'+rpt_C(sumKm)+'</span>\u03a3 \u043a\u043c</div><div><span>'+sumTrips+'</span>\u03a3 \u043f\u043e\u0457\u0437\u0434\u043e\u043a</div></div></div>';
   var H=['Дата','Bolt поїздки','Bolt чистий|\u20b4','Bolt готівка|\u20b4','Bolt км','Uklon замов.','Uklon разом|\u20b4','Uklon готівка|\u20b4','Uklon км'];
   var dataRows=rows.map(function(r){return [rptLabel(r.date),r.bComp||'',r.hasB?rpt_C(r.bNet):'',r.hasB?rpt_C(r.bCash):'',r.bKm?rpt_C(r.bKm):'',r.uOrd||'',r.uOrd?rpt_C(r.uNet):'',(r.uCash>0)?rpt_num(r.uCash):'',r.uKm?rpt_C(r.uKm):''];});
   var totRow=['ПІДСУМОК',T.bComp,rpt_C(T.bNet),rpt_C(T.bCash),rpt_C(T.bKm),T.uOrd,rpt_C(T.uNet),rpt_num(T.uCash),rpt_C(T.uKm)];
-  var _ptok=rpt_toks(sel.name).join('|');var _pst=pctSettings()[_ptok]||{pct:'',base:'card'};window._pctData={net:sumNet,cash:sumCash,token:_ptok,name:sel.name,bGross:T.bGross||0,bComp:T.bComp||0,uOrd:T.uOrd||0};window._pctBase=_pst.base||'card';
+  var _ptok=rpt_toks(sel.name).join('|');var _pst=pctSettings()[_ptok]||{pct:'',base:'card'};window._pctData={net:sumNet,cash:sumCash,token:_ptok,name:sel.name,bGross:(T.bGrossFin!=null?T.bGrossFin:T.bGross)||0,bComp:T.bComp||0,uOrd:T.uOrd||0};window._pctBase=_pst.base||'card';
   var html=head+pctPanelHtml(sumNet,sumCash,_pst)+'<div class="rpt-sec"><div class="rpt-head"><div class="rpt-title">'+rpt_esc(sel.name)+' \u00b7 \u0449\u043e\u0434\u0435\u043d\u043d\u043e</div><button class="rpt-copy">Копіювати дані</button></div>';
   if(!dataRows.length){html+='<div class="rpt-empty">У цього водія немає даних за вибраний період.</div></div>';out.innerHTML=html;return;}
   html+='<div class="rpt-tablewrap"><table class="rpt-table"><thead><tr>'+H.map(function(c){return '<th>'+c+'</th>';}).join('')+'</tr></thead><tbody>';
@@ -1544,10 +1557,10 @@ function weekStep(dir){if(!weekMon)return;var d=new Date(weekMon+'T00:00:00');d.
 function weekAgg(mon){var keys=weekKeys(mon);var present=keys.filter(function(k){return DAYS&&DAYS[k];});var map={};
  keys.forEach(function(k){if(!(DAYS&&DAYS[k]))return;var H=(typeof rptHy==='function')?rptHy(k):DAYS[k];var drv=(H&&H.drivers)||[];var dayAgg={};
   drv.forEach(function(o){if(!(isTaxi(o)&&!isHidden(o.name)))return;if(!((o.net||0)>0||(o.orders||0)>0||(o.online||0)>0))return;
-   var nk=rpt_toks(o.name).join('|');var d=dayAgg[nk]||(dayAgg[nk]={name:o.name,net:0,gross:0,orders:0,online:0,idle:0,cash:0,km:0,plan:0,bGross:0,bComp:0,uOrd:0});
-   d.net+=o.net||0;d.gross+=o.gross||0;d.orders+=o.orders||0;d.online+=o.online||0;d.idle+=o.idle||0;d.cash+=(o.b_cash||0)+(o.u_cash||0);d.km+=(o.b_km||0)+(o.u_km||0);d.bGross+=o.b_gross||0;d.bComp+=o.b_comp||0;d.uOrd+=o.u_orders||0;d.plan+=planOf(o);});
-  Object.keys(dayAgg).forEach(function(nk){var d=dayAgg[nk];var m=map[nk]||(map[nk]={name:d.name,net:0,gross:0,orders:0,online:0,idle:0,cash:0,km:0,days:0,done:0,planSum:0,perDay:{},bGross:0,bComp:0,uOrd:0});
-   m.net+=d.net;m.gross+=d.gross;m.orders+=d.orders;m.online+=d.online;m.idle+=d.idle;m.cash+=d.cash;m.km+=d.km;m.bGross+=d.bGross;m.bComp+=d.bComp;m.uOrd+=d.uOrd;
+   var nk=rpt_toks(o.name).join('|');var d=dayAgg[nk]||(dayAgg[nk]={name:o.name,net:0,gross:0,orders:0,online:0,idle:0,cash:0,km:0,plan:0,bGross:0,bGrossFin:0,bComp:0,uOrd:0});
+   d.net+=o.net||0;d.gross+=o.gross||0;d.orders+=o.orders||0;d.online+=o.online||0;d.idle+=o.idle||0;d.cash+=(o.b_cash||0)+(o.u_cash||0);d.km+=(o.b_km||0)+(o.u_km||0);d.bGross+=o.b_gross||0;d.bGrossFin+=(o.b_gross_fin!=null?o.b_gross_fin:(o.b_gross||0));d.bComp+=o.b_comp||0;d.uOrd+=o.u_orders||0;d.plan+=planOf(o);});
+  Object.keys(dayAgg).forEach(function(nk){var d=dayAgg[nk];var m=map[nk]||(map[nk]={name:d.name,net:0,gross:0,orders:0,online:0,idle:0,cash:0,km:0,days:0,done:0,planSum:0,perDay:{},bGross:0,bGrossFin:0,bComp:0,uOrd:0});
+   m.net+=d.net;m.gross+=d.gross;m.orders+=d.orders;m.online+=d.online;m.idle+=d.idle;m.cash+=d.cash;m.km+=d.km;m.bGross+=d.bGross;m.bGrossFin+=d.bGrossFin;m.bComp+=d.bComp;m.uOrd+=d.uOrd;
    m.days++;m.planSum+=d.plan;var dn=d.plan>0?(d.net>=d.plan):false;if(dn)m.done++;m.perDay[k]={net:d.net,done:dn};});});
  var list=Object.keys(map).map(function(n){var m=map[n];m.pace=m.online>0?Math.round(m.net/m.online):null;m.pct=m.planSum>0?Math.round(m.net/m.planSum*100):null;return m;}).sort(function(a,b){return b.net-a.net;});
  return {keys:keys,present:present,list:list};}
@@ -1565,14 +1578,14 @@ function renderWeek(){var el=document.getElementById('week');if(!el)return;
  if(!A.present.length){el.innerHTML=head+'<p class="sub">За цей тиждень нема даних. Гортай \u2039 \u203a до тижня з даними.</p>';return;}
  var T=A.list.reduce(function(a,m){a.net+=m.net;a.gross+=m.gross;a.orders+=m.orders;a.online+=m.online;return a;},{net:0,gross:0,orders:0,online:0});
  function strip(m){return '<div class="wk-strip">'+A.keys.map(function(k,i){var pd=m.perDay[k];var cls=pd?(pd.done?'d':'u'):'n';var ti=DL[i]+' '+_wkLab(k)+(pd?(': '+Math.round(pd.net)+' \u20b4'):' \u2014');return '<span class="wk-cell '+cls+'" title="'+ti+'">'+DL[i].slice(0,1)+'</span>';}).join('')+'</div>';}
- var rows=A.list.map(function(m){return '<tr class="wk-row" data-n="'+encodeURIComponent(m.name)+'" onclick="openWeekDriver(this.dataset.n)"><td><div class="wk-nm">'+rpt_esc(nameFor(m.name))+' \u203a'+((function(){var _ba=(m.bGross||0)*boltBrandPct(m.bComp)/100+uklonBrandAmt(m.uOrd);return _ba>0?' <span class="wk-brand">\ud83c\udff7 '+Math.round(_ba)+'\u20b4</span>':'';})())+'</div>'+strip(m)+'</td>'
+ var rows=A.list.map(function(m){return '<tr class="wk-row" data-n="'+encodeURIComponent(m.name)+'" onclick="openWeekDriver(this.dataset.n)"><td><div class="wk-nm">'+rpt_esc(nameFor(m.name))+' \u203a</div>'+strip(m)+'</td>'
   +'<td class="r"><b>'+gv(m.net)+'</b></td><td class="r">'+m.done+'/'+m.days+'</td><td class="r">'+(m.pct==null?'\u2014':m.pct+'%')+'</td>'
-  +'<td class="r">'+(m.pace==null?'\u2014':m.pace)+'</td><td class="r">'+m.orders+'</td><td class="r">'+H(m.online)+'</td><td class="r">'+gv(m.cash)+'</td></tr>';}).join('');
+  +'<td class="r">'+(m.pace==null?'\u2014':m.pace)+'</td><td class="r">'+m.orders+'</td><td class="r">'+H(m.online)+'</td><td class="r">'+gv(m.cash)+'</td><td class="r">'+((function(){var _bv=weekBrandVal(m);return _bv<0?'<span class="wk-brand off">\u2014</span>':(_bv>0?'<span class="wk-brand">'+Math.round(_bv)+'\u20b4</span>':'0');})())+'</td></tr>';}).join('');
  el.innerHTML=head
   +'<div class="ovhero"><div class="oh-card oh-net"><div class="oh-l">Чиста каса за тиждень</div><div class="oh-big">'+gv(T.net)+' \u20b4</div><div class="oh-sub">'+A.list.length+' водіїв \u00b7 '+T.orders+' поїздок</div></div>'
   +'<div class="oh-card oh-cash"><div class="oh-l">Валове</div><div class="oh-big">'+gv(T.gross)+' \u20b4</div><div class="oh-sub">'+H(T.online)+' год онлайн</div></div></div>'
   +'<div class="wk-legend"><span class="wk-cell d"></span> виконав план <span class="wk-cell u"></span> недобрав <span class="wk-cell n"></span> не виходив</div>'
-  +'<div style="overflow-x:auto"><table class="otable wk-table"><thead><tr><th>Водій \u00b7 тиждень</th><th class="r">Чистими</th><th class="r">План дн.</th><th class="r">% тиж.</th><th class="r">\u20b4/год</th><th class="r">Поїзд</th><th class="r">Онлайн</th><th class="r">Готів</th></tr></thead><tbody>'+rows+'</tbody></table></div>';}
+  +'<div style="overflow-x:auto"><table class="otable wk-table"><thead><tr><th>Водій \u00b7 тиждень</th><th class="r">Чистими</th><th class="r">План дн.</th><th class="r">% тиж.</th><th class="r">\u20b4/год</th><th class="r">Поїзд</th><th class="r">Онлайн</th><th class="r">Готів</th><th class="r">Брендув.</th></tr></thead><tbody>'+rows+'</tbody></table></div>';}
 
 function _durMin(x){if(!x)return 0;x=String(x);var d=x.match(/(\d+)\s*дн/),h=x.match(/(\d+)\s*год/),m=x.match(/(\d+)\s*хв/);return (d?+d[1]*1440:0)+(h?+h[1]*60:0)+(m?+m[1]:0);}
 function weekDriverData(name,mon){var _nk=rpt_toks(name).join('|');var keys=weekKeys(mon),days=[],T={net:0,gross:0,orders:0,online:0,idle:0,cash:0,km:0,bNet:0,bGross:0,bCash:0,bKm:0,bComp:0,uNet:0,uGross:0,uCash:0,uKm:0,uOrd:0,tips:0,bOffer:0,bCancel:0,bNoans:0,tEcon:0,tStd:0,tPrem:0,tDeliv:0,cats:{},kmTotal:0,unacc:0,maxSpeed:0,utilW:0,dhW:0,dhN:0,gpsKm:0,unexpl:0,deadEst:0,hasGps:false,stopN:0,stopMap:{},days:0,done:0,planSum:0};
@@ -1959,9 +1972,23 @@ function brandStep(d){if(!weekMon){var ak=Object.keys(DAYS||{}).filter(function(
 function brandSetOv(token,plat,val){var all=brandFixLocal();var k=brandFixKey(weekMon,token);all[k]=all[k]||{};all[k][plat==='bolt'?'boltOv':'uklonOv']=val;brandFixSaveLocal(all);brandFixCloudSave(all);var el=document.getElementById('br-tot-'+token);if(el){var d=window._brRows&&window._brRows[token];if(d)el.innerHTML=_brandTotHtml(token,d);}}
 function brandTogglePaid(token,plat){var f=brandFixGet(weekMon,token);var key=plat==='bolt'?'boltPaid':'uklonPaid';var cur=(f[key]===undefined)?true:f[key];brandFixSet(weekMon,token,defObj(key,!cur));renderBranding();}
 function brandSetNote(token,val){brandFixSet(weekMon,token,{note:val});}
+function brandToggleExclude(token){var f=brandFixGet(weekMon,token);brandFixSet(weekMon,token,{excluded:!f.excluded});renderBranding();}
+function weekBrandVal(m){var tok=rpt_toks(m.name).join('|');var f=(typeof brandFixGet==='function')?brandFixGet(weekMon,tok):{};if(f&&f.excluded)return -1;return _brandEff(tok,m).total;}
+function isLeasingDrv(token){try{var st=pctSettings()[token];if(!st)return false;var lz=parseFloat(st.lease);return !isNaN(lz)&&lz>0;}catch(e){return false;}}
 function defObj(k,v){var o={};o[k]=v;return o;}
+// ===== ТИП ВОДІЯ (авто/таксі/оренда/лізинг) — спільне, key=drvcat:all =====
+var BRAND_CATS={auto:'Авто',taxi:'Таксі',rent:'Оренда',lease:'Лізинг'};
+function drvCatLocal(){try{return JSON.parse(localStorage.getItem('drv_cat')||'{}');}catch(e){return {};}}
+function drvCatSaveLocal(o){try{localStorage.setItem('drv_cat',JSON.stringify(o));}catch(e){}}
+async function drvCatCloudSave(o){if(typeof supa==='undefined'||!supa)return;try{await supa.from('app_data').upsert({key:'drvcat:all',value:JSON.stringify(o)});}catch(e){console.error('drvcat save',e);}}
+async function drvCatCloudLoad(){if(typeof supa==='undefined'||!supa)return null;try{var r=await supa.from('app_data').select('value').eq('key','drvcat:all').maybeSingle();if(r&&r.data&&r.data.value)return (typeof r.data.value==='string')?JSON.parse(r.data.value):r.data.value;}catch(e){console.error('drvcat load',e);}return null;}
+async function drvCatInit(){var c=await drvCatCloudLoad();if(c&&typeof c==='object'){drvCatSaveLocal(c);if(typeof view!=='undefined'&&view==='branding'&&typeof renderBranding==='function')renderBranding();}}
+function drvCatGet(token){return drvCatLocal()[token]||'';}
+function drvCatSet(token,cat){var o=drvCatLocal();o[token]=cat;drvCatSaveLocal(o);drvCatCloudSave(o);renderBranding();}
+function setBrandFilter(f){window._brFilter=f;renderBranding();}
 function _brandEff(token,d){var f=brandFixGet(weekMon,token);
-  var boltAuto=(d.bGross||0)*boltBrandPct(d.bComp)/100;var uklonAuto=uklonBrandAmt(d.uOrd);
+  if(f.excluded)return {boltAuto:0,uklonAuto:0,boltEff:0,uklonEff:0,boltPaid:false,uklonPaid:false,boltPct:boltBrandPct(d.bComp),total:0,excluded:true};
+  var boltAuto=((d.bGrossFin!=null?d.bGrossFin:d.bGross)||0)*boltBrandPct(d.bComp)/100;var uklonAuto=uklonBrandAmt(d.uOrd);
   var boltOv=(f.boltOv!=null&&f.boltOv!=='')?parseFloat(f.boltOv):null;var uklonOv=(f.uklonOv!=null&&f.uklonOv!=='')?parseFloat(f.uklonOv):null;
   var boltEff=(boltOv!=null&&!isNaN(boltOv))?boltOv:boltAuto;var uklonEff=(uklonOv!=null&&!isNaN(uklonOv))?uklonOv:uklonAuto;
   var boltPaid=(f.boltPaid===undefined)?true:!!f.boltPaid;var uklonPaid=(f.uklonPaid===undefined)?true:!!f.uklonPaid;
@@ -1976,27 +2003,31 @@ function renderBranding(){var el=document.getElementById('branding');if(!el)retu
   if(!weekMon){el.innerHTML='<h1>🏷 <span class="accent">Брендування</span></h1><p class="sub">Ще нема даних.</p>';return;}
   var A=weekAgg(weekMon),keys=A.keys,monL=_wkLab(keys[0]),sunL=_wkLab(keys[6]),wk=isoWeek(keys[0]);
   window._brRows={};
-  var quals=A.list.filter(function(m){return (m.bGross||0)*boltBrandPct(m.bComp)/100>0 || uklonBrandAmt(m.uOrd)>0;});
+  var flt=window._brFilter||'all';var quals=A.list.filter(function(m){if(flt==='all')return true;var _tk=rpt_toks(m.name).join('|');return drvCatGet(_tk)===flt;});
   var grand=0;
   var cards=quals.map(function(m){var token=rpt_toks(m.name).join('|');window._brRows[token]=m;
-    var f=brandFixGet(weekMon,token);var e=_brandEff(token,m);grand+=e.total;
+    var f=brandFixGet(weekMon,token);var excluded=!!f.excluded;var e=_brandEff(token,m);grand+=e.total;
     var noteVal=(f.note||'').replace(/"/g,'&quot;');
     var boltOvVal=(f.boltOv!=null?f.boltOv:'');var uklonOvVal=(f.uklonOv!=null?f.uklonOv:'');
+    var exBtn='<button class="br-ex '+(excluded?'off':'on')+'" onclick="brandToggleExclude(&quot;'+token+'&quot;)">'+(excluded?'не рахується':'рахується')+'</button>';
+    var _cat=drvCatGet(token);var catRow='<div class="br-cat">'+Object.keys(BRAND_CATS).map(function(ck){return '<button class="br-catb'+(_cat===ck?' on':'')+'" onclick="drvCatSet(&quot;'+token+'&quot;,&quot;'+(_cat===ck?'':ck)+'&quot;)">'+BRAND_CATS[ck]+'</button>';}).join('')+'</div>';
+    if(excluded){return '<div class="br-card br-excl"><div class="br-name">'+rpt_esc(nameFor(m.name))+exBtn+'</div>'+catRow+'<div class="br-exnote">Брендування не враховується для цього водія.</div></div>';}
     function platRow(plat,lbl,info,auto,ovVal,paid){
       return '<div class="br-row"><span class="br-lbl">'+lbl+'</span><span class="br-info">'+info+'</span>'
         +'<span class="br-auto">'+_bf(auto)+' ₴</span>'
         +'<input class="br-ov" type="number" inputmode="decimal" value="'+ovVal+'" placeholder="'+_bf(auto)+'" oninput="brandSetOv(&quot;'+token+'&quot;,&quot;'+plat+'&quot;,this.value)">'
-        +'<button class="br-paid '+(paid?'on':'off')+'" onclick="brandTogglePaid(&quot;'+token+'&quot;,&quot;'+plat+'&quot;)">'+(paid?'✓ оплачено':'✕ не оплачено')+'</button></div>';}
-    var boltInfo=m.bComp+' поїзд · '+e.boltPct+'%';var uklonInfo=m.uOrd+' замов.';
+        +'<button class="br-paid '+(paid?'on':'off')+'" onclick="brandTogglePaid(&quot;'+token+'&quot;,&quot;'+plat+'&quot;)">'+(paid?'\u2713 оплачено':'\u2715 не оплачено')+'</button></div>';}
+    var boltInfo=m.bComp+' поїзд \u00b7 '+e.boltPct+'%';var uklonInfo=m.uOrd+' замов.';
     var rows='';
-    if(e.boltAuto>0||boltOvVal!=='')rows+=platRow('bolt','Bolt',boltInfo,e.boltAuto,boltOvVal,e.boltPaid);
-    if(e.uklonAuto>0||uklonOvVal!=='')rows+=platRow('uklon','Uklon',uklonInfo,e.uklonAuto,uklonOvVal,e.uklonPaid);
-    return '<div class="br-card"><div class="br-name">'+rpt_esc(nameFor(m.name))+'</div>'+rows
+    rows+=platRow('bolt','Bolt',boltInfo,e.boltAuto,boltOvVal,e.boltPaid);
+    rows+=platRow('uklon','Uklon',uklonInfo,e.uklonAuto,uklonOvVal,e.uklonPaid);
+    return '<div class="br-card"><div class="br-name">'+rpt_esc(nameFor(m.name))+exBtn+'</div>'+catRow+rows
       +'<input class="br-note" value="'+noteVal+'" placeholder="Нотатка (напр.: не подав авто на мийку)" oninput="brandSetNote(&quot;'+token+'&quot;,this.value)">'
       +'<div class="br-tot" id="br-tot-'+token+'">'+_brandTotHtml(token,m)+'</div></div>';
   }).join('');
   el.innerHTML='<h1>🏷 <span class="accent">Брендування</span></h1>'
     +'<div class="wk-nav"><button class="wk-arrow" onclick="brandStep(-1)">‹</button><div class="wk-lab"><b>'+monL+' – '+sunL+'</b><span>тиждень '+wk+' · '+quals.length+' водіїв</span></div><button class="wk-arrow" onclick="brandStep(1)">›</button></div>'
+    +'<div class="br-filter">'+[['all','Всі'],['auto','Авто'],['taxi','Таксі'],['rent','Оренда'],['lease','Лізинг']].map(function(p){return '<button class="br-ftab'+((window._brFilter||'all')===p[0]?' on':'')+'" onclick="setBrandFilter(&quot;'+p[0]+'&quot;)">'+p[1]+'</button>';}).join('')+'</div>'
     +'<div class="br-grand">Разом брендування до виплати: <b>'+_bf(grand)+' ₴</b></div>'
     +(cards||'<div class="st-empty">Цього тижня ніхто не досяг порогів брендування.</div>');}
 function renderHistory(){var el=document.getElementById('history');if(!el)return;
@@ -2158,7 +2189,7 @@ function boot(){A=DATA.drivers;M=DATA.med;TARGET=DATA.plan_default;NOW=DATA.now_
 A.forEach((o,i)=>o._i=i);
 document.getElementById('sub').textContent=DATA.window+' · попит сьогодні '+DATA.dayq;
 prefillFleet();document.getElementById('plan').value=TARGET;document.getElementById('hourly').value=HOURLY;document.getElementById('tripgoal').value=TRIPGOAL;var dse=document.getElementById('daystart');if(dse)dse.value=hm(Math.round(DAYSTART*60));
-loadSel();renderDriverPanel();drvLabel();renderFleet();daybar();kpis();renderList();renderStandingMini();updateStandBadge();if(!window._usd)fetchUsdRate();if(typeof payCalcInit==='function')payCalcInit();if(typeof brandFixInit==='function')brandFixInit();var ln=document.getElementById('legnorm');if(ln)ln.textContent=HOURLY;var ls=document.getElementById('legshift');if(ls)ls.textContent=document.getElementById('shiftend').value;var lt=document.getElementById('legtarget');if(lt)lt.textContent=TARGET;
+loadSel();renderDriverPanel();drvLabel();renderFleet();daybar();kpis();renderList();renderStandingMini();updateStandBadge();if(!window._usd)fetchUsdRate();if(typeof payCalcInit==='function')payCalcInit();if(typeof brandFixInit==='function')brandFixInit();if(typeof drvCatInit==='function')drvCatInit();var ln=document.getElementById('legnorm');if(ln)ln.textContent=HOURLY;var ls=document.getElementById('legshift');if(ls)ls.textContent=document.getElementById('shiftend').value;var lt=document.getElementById('legtarget');if(lt)lt.textContent=TARGET;
 try{var _lv=localStorage.getItem('lastView');if(_lv&&['morning','overview','drivers','cars','owner','report','settings','week','standing','history','branding'].indexOf(_lv)>=0)view=_lv;}catch(e){}
 showLogin(false);document.getElementById('uploader').classList.add('hide');document.getElementById('app').classList.remove('hide');showView(view);fillDaySel();window.scrollTo(0,0);}
 
@@ -2217,9 +2248,9 @@ function boltOrdersToParts(orders){
   (orders||[]).forEach(function(o){
     var pr=o.order_price||{};var st=stMap[o.order_status]||o.order_status||'';var pay=payMap[o.payment_method]||'Через додаток';
     hist.push({'Дата':fmtDate(o.payment_confirmed_timestamp||o.order_created_timestamp),'Водій':o.driver_name||'','Номерний знак':o.vehicle_license_plate||'','Модель авто':o.vehicle_model||'','Категорія':(o.category_info&&o.category_info.name)||'','Статус':st,'Відстань|км':(o.ride_distance!=null)?(o.ride_distance/1000).toFixed(2):'','Ціна поїздки|₴':(pr.ride_price!=null)?String(pr.ride_price):'','Спосіб оплати':pay,'Тривалість поїздки (мінімум)':(o.order_pickup_timestamp&&o.order_drop_off_timestamp)?String(Math.round((o.order_drop_off_timestamp-o.order_pickup_timestamp)/60)):''});
-    if(pr.net_earnings!=null){var n=o.driver_name||'';var a=inc[n]||(inc[n]={n:n,g:0,net:0,cash:0,tip:0,cdisc:0});a.g+=(pr.ride_price||0);a.net+=(pr.net_earnings||0);if(o.payment_method==='cash'&&(pr.ride_price||0)>0)a.cash+=(pr.ride_price||0);a.cdisc+=(pr.cash_discount||0);a.tip+=(pr.tip||0);}
+    if(pr.net_earnings!=null){var n=o.driver_name||'';var a=inc[n]||(inc[n]={n:n,g:0,gfin:0,net:0,cash:0,tip:0,cdisc:0});a.g+=(pr.ride_price||0);if(o.order_status==='finished'&&(pr.ride_price||0)>0)a.gfin+=(pr.ride_price||0);a.net+=(pr.net_earnings||0);if(o.payment_method==='cash'&&(pr.ride_price||0)>0)a.cash+=(pr.ride_price||0);a.cdisc+=(pr.cash_discount||0);a.tip+=(pr.tip||0);}
   });
-  var income=Object.keys(inc).map(function(k){var a=inc[k];return {'Водій':a.n,'Валовий дохід (всього)|₴':a.g.toFixed(2),'Отримано готівкою|₴':(a.cash-a.cdisc).toFixed(2),'Чистий дохід|₴':a.net.toFixed(2),'Чайові від пасажирів|₴':a.tip.toFixed(2)};});
+  var income=Object.keys(inc).map(function(k){var a=inc[k];return {'Водій':a.n,'Валовий дохід (всього)|₴':a.g.toFixed(2),'Валове виконаних|₴':(a.gfin||0).toFixed(2),'Отримано готівкою|₴':(a.cash-a.cdisc).toFixed(2),'Чистий дохід|₴':a.net.toFixed(2),'Чайові від пасажирів|₴':a.tip.toFixed(2)};});
   return {bolt_income:income,bolt_hist:hist,uklon_agg:[],uklon_trips:[],wialon_trips_rows:[],wialon_stops_rows:[]};
 }
 function extractOrders(j){var found=[];function isOrd(x){return x&&typeof x==='object'&&('order_status'in x||'order_price'in x||'driver_name'in x||'vehicle_license_plate'in x);}function walk(x){if(!x||typeof x!=='object')return;if(Array.isArray(x)){if(x.length&&(isOrd(x[0])||isOrd(x[1])))found.push(x);x.forEach(walk);return;}Object.keys(x).forEach(function(k){walk(x[k])});}walk(j);found.sort(function(a,b){return b.length-a.length});return found[0]||[];}
