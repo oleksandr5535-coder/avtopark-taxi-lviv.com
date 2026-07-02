@@ -102,9 +102,10 @@
 .br-typebadge{display:inline-block;font-size:11.5px;font-weight:700;color:var(--ink2);background:var(--panel);border:1px solid var(--line);padding:2px 10px;border-radius:20px}
 .rpt-drvpick{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:12px}
 .rpt-drvpick-t{font-size:12.5px;color:var(--ink2);font-weight:700;margin-bottom:8px}
-.rpt-drvpick-l{display:flex;flex-wrap:wrap;gap:7px}
-.rpt-chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink);border:1px solid var(--line);background:var(--paper);padding:6px 11px;border-radius:9px;cursor:pointer}
-.rpt-chk.on{background:rgba(31,157,85,.12);border-color:var(--good);color:var(--good)}
+.rpt-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:9px}
+.rpt-chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--good);background:rgba(31,157,85,.12);border:1px solid var(--good);padding:6px 11px;border-radius:20px}
+.rpt-chipx{border:none;background:transparent;color:var(--good);cursor:pointer;font-size:12px;padding:0 0 0 2px;line-height:1}
+.rpt-addsel{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);font-size:14px;font-weight:600}
 .rpt-multi{font-size:11px;font-weight:700;color:var(--good);background:rgba(31,157,85,.14);padding:2px 9px;border-radius:20px;vertical-align:middle}
 .rpt-perbreak{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px;display:flex;flex-direction:column;gap:6px}
 .rpt-perrow{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--ink2)}
@@ -1385,6 +1386,7 @@ function reportDayRender(out){
 }
 function _rptT(key){var rows=rptRangeRows(key,rptFrom,rptTo);var T={bComp:0,bGross:0,bGrossFin:0,bNet:0,bCash:0,bKm:0,uOrd:0,uNet:0,uCash:0,uKm:0};rows.forEach(function(r){T.bComp+=r.bComp;T.bGross+=(r.bGross||0);T.bGrossFin+=(r.bGrossFin||0);T.bNet+=r.bNet;T.bCash+=r.bCash;T.bKm+=r.bKm;T.uOrd+=r.uOrd;T.uNet+=r.uNet;T.uCash+=r.uCash;T.uKm+=r.uKm;});return {rows:rows,T:T};}
 function rptToggleDrv(key){if(!Array.isArray(rptDrvKeys))rptDrvKeys=[];var i=rptDrvKeys.indexOf(key);if(i>=0){if(rptDrvKeys.length>1)rptDrvKeys.splice(i,1);}else{rptDrvKeys.push(key);}rptDrvKey=rptDrvKeys[0];renderReportOut();}
+function rptAddDrv(key){if(!Array.isArray(rptDrvKeys))rptDrvKeys=[];if(rptDrvKeys.indexOf(key)<0)rptDrvKeys.push(key);rptDrvKey=rptDrvKeys[0];renderReportOut();}
 function reportRangeRender(out){
   var drv=rptDriverList();
   if(!drv.length){out.innerHTML='<div class="rpt-empty">Немає водіїв у збережених днях.</div>';return;}
@@ -1393,7 +1395,7 @@ function reportRangeRender(out){
   if(!rptDrvKeys.length)rptDrvKeys=[drv[0].key];
   rptDrvKey=rptDrvKeys[0];
   var sels=drv.filter(function(d){return rptDrvKeys.indexOf(d.key)>=0;});
-  var checks='<div class="rpt-drvpick"><div class="rpt-drvpick-t">Водії (можна кілька — на одне авто):</div><div class="rpt-drvpick-l">'+drv.map(function(d){return '<label class="rpt-chk'+(rptDrvKeys.indexOf(d.key)>=0?' on':'')+'"><input type="checkbox" '+(rptDrvKeys.indexOf(d.key)>=0?'checked':'')+' onchange="rptToggleDrv(decodeURIComponent(this.dataset.k))" data-k="'+encodeURIComponent(d.key)+'"> '+rpt_esc(d.name)+'</label>';}).join('')+'</div></div>';
+  var _avail=drv.filter(function(d){return rptDrvKeys.indexOf(d.key)<0;});var checks='<div class="rpt-drvpick"><div class="rpt-drvpick-t">Водії (можна кілька — на одне авто):</div>'+'<div class="rpt-chips">'+sels.map(function(s){return '<span class="rpt-chip">'+rpt_esc(s.name)+(rptDrvKeys.length>1?'<button class="rpt-chipx" onclick="rptToggleDrv(decodeURIComponent(this.dataset.k))" data-k="'+encodeURIComponent(s.key)+'">✕</button>':'')+'</span>';}).join('')+'</div>'+'<select class="rpt-addsel" onchange="if(this.value){rptAddDrv(decodeURIComponent(this.value));}"><option value="">+ додати водія…</option>'+_avail.map(function(d){return '<option value="'+encodeURIComponent(d.key)+'">'+rpt_esc(d.name)+'</option>';}).join('')+'</select>'+'</div>';
   var combT={bComp:0,bGross:0,bGrossFin:0,bNet:0,bCash:0,bKm:0,uOrd:0,uNet:0,uCash:0,uKm:0};
   var perData=sels.map(function(s){var r=_rptT(s.key);var Ti=r.T;combT.bComp+=Ti.bComp;combT.bGross+=Ti.bGross;combT.bGrossFin+=Ti.bGrossFin;combT.bNet+=Ti.bNet;combT.bCash+=Ti.bCash;combT.bKm+=Ti.bKm;combT.uOrd+=Ti.uOrd;combT.uNet+=Ti.uNet;combT.uCash+=Ti.uCash;combT.uKm+=Ti.uKm;return {sel:s,rows:r.rows,T:Ti};});
   var sumNet=combT.bNet+combT.uNet,sumCash=combT.bCash+combT.uCash,sumKm=combT.bKm+combT.uKm,sumTrips=combT.bComp+combT.uOrd;
