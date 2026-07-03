@@ -2015,6 +2015,15 @@ window._boltBrand=boltBrandBuildIndex(boltBrandLocal());
 function boltBrandObj(weekMonKey,plateNorm){try{var w=(window._boltBrand||{})[weekMonKey];if(!w)return null;var v=w[plateNorm];return (v==null)?null:v;}catch(e){return null;}}
 function boltBrandReal(weekMonKey,plateNorm){var o=boltBrandObj(weekMonKey,plateNorm);return (o&&o.income!=null)?o.income:null;}
 function _boltRealFor(d){return (d&&d.plate_norm)?boltBrandReal(weekMon,d.plate_norm):null;}
+// ===== Розділювач: частка водія від Bolt-брендування (глобальна, Supabase key=brandsplit:all) =====
+function brandSplitLocal(){try{var v=localStorage.getItem('brandsplit');return (v==null||v==='')?50:(parseFloat(v)||0);}catch(e){return 50;}}
+function brandSplitSaveLocal(p){try{localStorage.setItem('brandsplit',String(p));}catch(e){}}
+async function brandSplitCloudSave(p){if(typeof supa==='undefined'||!supa)return;try{await supa.from('app_data').upsert({key:'brandsplit:all',value:{pct:p}});}catch(e){console.error('brandsplit save',e);}}
+async function brandSplitCloudLoad(){if(typeof supa==='undefined'||!supa)return null;try{var r=await supa.from('app_data').select('value').eq('key','brandsplit:all').maybeSingle();if(r&&r.data&&r.data.value){var v=r.data.value;return (typeof v==='string')?JSON.parse(v):v;}}catch(e){console.error('brandsplit load',e);}return null;}
+async function brandSplitInit(){var c=await brandSplitCloudLoad();if(c&&c.pct!=null){window._brandSplit=parseFloat(c.pct)||0;brandSplitSaveLocal(window._brandSplit);if(typeof view!=='undefined'&&view==='branding'&&typeof renderBranding==='function')renderBranding();}}
+window._brandSplit=brandSplitLocal();
+function brandSplitPct(){return (window._brandSplit!=null)?window._brandSplit:brandSplitLocal();}
+function brandSetSplit(v){var p=parseFloat(v);if(isNaN(p))p=0;if(p<0)p=0;if(p>100)p=100;window._brandSplit=p;brandSplitSaveLocal(p);brandSplitCloudSave(p);if(typeof renderBranding==='function')renderBranding();}
 function brandFixKey(wk,token){return wk+'|'+token;}
 function brandFixGet(wk,token){var all=brandFixLocal();return all[brandFixKey(wk,token)]||{};}
 function brandFixSet(wk,token,patch){var all=brandFixLocal();var k=brandFixKey(wk,token);all[k]=Object.assign({},all[k]||{},patch);brandFixSaveLocal(all);brandFixCloudSave(all);}
@@ -2071,7 +2080,7 @@ function _brandEff(token,d){var f=brandFixGet(weekMon,token);
   var boltPaid=(f.boltPaid===undefined)?true:!!f.boltPaid;var uklonPaid=(f.uklonPaid===undefined)?true:!!f.uklonPaid;
   return {boltAuto:boltAuto,uklonAuto:uklonAuto,boltEff:boltEff,uklonEff:uklonEff,boltPaid:boltPaid,uklonPaid:uklonPaid,boltPct:boltBrandPct(d.bComp),
     total:(boltPaid?boltEff:0)};}
-function _brandTotHtml(token,d){var e=_brandEff(token,d);return 'Разом до виплати: <b>'+_bf(e.total)+' ₴</b>';}
+function _brandTotHtml(token,d){var e=_brandEff(token,d);var pct=(typeof brandSplitPct==='function')?brandSplitPct():100;var share=e.total*pct/100;return 'Bolt '+_bf(e.total)+' ₴ · водію '+pct+'% = <b>'+_bf(share)+' ₴</b>';}
 function _bf(n){return (Math.round((n||0)*100)/100).toLocaleString('uk-UA',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function renderBranding(){var el=document.getElementById('branding');if(!el)return;
   if(!DAYS||!Object.keys(DAYS).length){el.innerHTML='<h1>🏷 <span class="accent">Брендування</span></h1><p class="sub">Ще нема даних.</p>';return;}
@@ -2104,7 +2113,8 @@ function renderBranding(){var el=document.getElementById('branding');if(!el)retu
   el.innerHTML='<h1>🏷 <span class="accent">Брендування</span></h1>'+brandPeriodTabs()
     +'<div class="wk-nav"><button class="wk-arrow" onclick="brandStep(-1)">‹</button><div class="wk-lab"><b>'+monL+' – '+sunL+'</b><span>тиждень '+wk+' · '+quals.length+' водіїв</span></div><button class="wk-arrow" onclick="brandStep(1)">›</button></div>'
     +'<div class="br-filter">'+[['all','Всі'],['taxi','Таксі'],['rent','Оренда'],['lease','Лізинг']].map(function(p){return '<button class="br-ftab'+((window._brFilter||'all')===p[0]?' on':'')+'" onclick="setBrandFilter(&quot;'+p[0]+'&quot;)">'+p[1]+'</button>';}).join('')+'</div>'
-    +'<div class="br-grand">Разом брендування до виплати: <b>'+_bf(grand)+' ₴</b></div>'
+    +'<div style="background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin:10px 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:13.5px;color:var(--ink2)">Частка водія від Bolt-брендування:</span><input type="number" inputmode="decimal" min="0" max="100" step="1" value="'+brandSplitPct()+'" onchange="brandSetSplit(this.value)" style="width:72px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font-size:14px;font-weight:700;font-family:inherit"><span style="font-size:14px;font-weight:700;color:var(--ink)">%</span><span style="font-size:12px;color:var(--muted)">для всіх водіїв</span></div>'
+    +'<div class="br-grand">Bolt-брендування: <b>'+_bf(grand)+' ₴</b> · водіям ('+brandSplitPct()+'%): <b>'+_bf(grand*brandSplitPct()/100)+' ₴</b></div>'
     +(cards||'<div class="st-empty">Цього тижня ніхто не досяг порогів брендування.</div>');}
 function renderHistory(){var el=document.getElementById('history');if(!el)return;
   function f(n){return (Math.round((n||0)*100)/100).toLocaleString('uk-UA',{minimumFractionDigits:2,maximumFractionDigits:2});}
@@ -2265,7 +2275,7 @@ function boot(){A=DATA.drivers;M=DATA.med;TARGET=DATA.plan_default;NOW=DATA.now_
 A.forEach((o,i)=>o._i=i);
 document.getElementById('sub').textContent=DATA.window+' · попит сьогодні '+DATA.dayq;
 prefillFleet();document.getElementById('plan').value=TARGET;document.getElementById('hourly').value=HOURLY;document.getElementById('tripgoal').value=TRIPGOAL;var dse=document.getElementById('daystart');if(dse)dse.value=hm(Math.round(DAYSTART*60));
-loadSel();renderDriverPanel();drvLabel();renderFleet();daybar();kpis();renderList();renderStandingMini();updateStandBadge();if(!window._usd)fetchUsdRate();if(typeof payCalcInit==='function')payCalcInit();if(typeof brandFixInit==='function')brandFixInit();if(typeof boltBrandInit==='function')boltBrandInit();if(typeof drvCatInit==='function')drvCatInit();var ln=document.getElementById('legnorm');if(ln)ln.textContent=HOURLY;var ls=document.getElementById('legshift');if(ls)ls.textContent=document.getElementById('shiftend').value;var lt=document.getElementById('legtarget');if(lt)lt.textContent=TARGET;
+loadSel();renderDriverPanel();drvLabel();renderFleet();daybar();kpis();renderList();renderStandingMini();updateStandBadge();if(!window._usd)fetchUsdRate();if(typeof payCalcInit==='function')payCalcInit();if(typeof brandFixInit==='function')brandFixInit();if(typeof boltBrandInit==='function')boltBrandInit();if(typeof brandSplitInit==='function')brandSplitInit();if(typeof drvCatInit==='function')drvCatInit();var ln=document.getElementById('legnorm');if(ln)ln.textContent=HOURLY;var ls=document.getElementById('legshift');if(ls)ls.textContent=document.getElementById('shiftend').value;var lt=document.getElementById('legtarget');if(lt)lt.textContent=TARGET;
 try{var _lv=localStorage.getItem('lastView');if(_lv&&['morning','overview','drivers','cars','owner','report','settings','week','standing','history','branding'].indexOf(_lv)>=0)view=_lv;}catch(e){}
 showLogin(false);document.getElementById('uploader').classList.add('hide');document.getElementById('app').classList.remove('hide');showView(view);fillDaySel();window.scrollTo(0,0);}
 
