@@ -2049,28 +2049,28 @@ function renderBrandingMonth(el){
   var byDrv={};var savedWM=weekMon;
   wks.forEach(function(mon){var A=weekAgg(mon,true);A.list.forEach(function(m){var tok=rpt_toks(m.name).join('|');weekMon=mon;var e=_brandEff(tok,m);var gf=(m.bGrossFin!=null?m.bGrossFin:m.bGross)||0;var d=byDrv[tok]||(byDrv[tok]={name:m.name,token:tok,sumWeeks:0,mGrossFin:0,mComp:0,mUOrd:0});d.sumWeeks+=e.total;d.mGrossFin+=gf;d.mComp+=m.bComp;d.mUOrd+=m.uOrd;});});
   weekMon=savedWM;
-  var list=Object.keys(byDrv).map(function(k){return byDrv[k];}).filter(function(d){var single=d.mGrossFin*boltBrandPct(d.mComp)/100+uklonBrandAmt(d.mUOrd);if(d.sumWeeks<=0&&single<=0)return false;if(flt!=='all'){var pt=(_pass[d.name]||{}).type||'taxi';if(pt!==flt)return false;}return true;}).sort(function(a,b){return b.sumWeeks-a.sumWeeks;});
+  var list=Object.keys(byDrv).map(function(k){return byDrv[k];}).filter(function(d){var single=d.mGrossFin*boltBrandPct(d.mComp)/100+uklonBrandAmt(d.mUOrd);if(d.sumWeeks<=0)return false;if(flt!=='all'){var pt=(_pass[d.name]||{}).type||'taxi';if(pt!==flt)return false;}return true;}).sort(function(a,b){return b.sumWeeks-a.sumWeeks;});
   var grandW=0,grandM=0;
   var cards=list.map(function(d){var single=d.mGrossFin*boltBrandPct(d.mComp)/100+uklonBrandAmt(d.mUOrd);grandW+=d.sumWeeks;grandM+=single;
     var pt=(_pass[d.name]||{}).type||'taxi';var ptl=({taxi:'Таксі',rent:'Оренда',lease:'Лізинг'})[pt]||pt;
     return '<div class="br-card"><div class="br-name">'+rpt_esc(nameFor(d.name))+' <span class="br-typebadge">'+ptl+'</span></div>'
-      +'<div class="brm-row"><span>Сума тижнів (як Bolt платить)</span><b>'+f(d.sumWeeks)+' ₴</b></div>'
-      +'<div class="brm-row brm-alt"><span>За місяць (1 тариф: '+d.mComp+' поїзд · '+boltBrandPct(d.mComp)+'% + Uklon '+d.mUOrd+')</span><b>'+f(single)+' ₴</b></div>'
+      +'<div class="brm-row"><span>Брендування Bolt</span><b>'+f(d.sumWeeks)+' ₴</b></div>'
+      +''
       +'</div>';}).join('');
   el.innerHTML='<h1>🏷 <span class="accent">Брендування</span></h1>'+brandPeriodTabs()
     +'<div class="wk-nav"><button class="wk-arrow" onclick="brandMonthStep(-1)">‹</button><div class="wk-lab"><b>'+_monLabel(ym)+'</b><span>'+wks.length+' тижнів · '+list.length+' водіїв</span></div><button class="wk-arrow" onclick="brandMonthStep(1)">›</button></div>'
     +'<div class="br-filter">'+[['all','Всі'],['taxi','Таксі'],['rent','Оренда'],['lease','Лізинг']].map(function(pp){return '<button class="br-ftab'+((window._brFilter||'all')===pp[0]?' on':'')+'" onclick="setBrandFilter(&quot;'+pp[0]+'&quot;)">'+pp[1]+'</button>';}).join('')+'</div>'
-    +'<div class="br-grand">Сума тижнів: <b>'+f(grandW)+' ₴</b> · За місяць (1 тариф): <b class="brm-single">'+f(grandM)+' ₴</b></div>'
+    +'<div class="br-grand">Брендування Bolt: <b>'+f(grandW)+' ₴</b></div>'
     +'<div class="brm-hint">«Сума тижнів» = як Bolt реально платить (пороги щотижня). «За місяць» = один % від місячних поїздок (для порівняння). Коригування робляться в режимі «Тиждень».</div>'
     +(cards||'<div class="st-empty">Цього місяця ніхто не заробив брендування.</div>');}
 function _brandEff(token,d){var f=brandFixGet(weekMon,token);
   if(f.excluded)return {boltAuto:0,uklonAuto:0,boltEff:0,uklonEff:0,boltPaid:false,uklonPaid:false,boltPct:boltBrandPct(d.bComp),total:0,excluded:true};
-  var _rbolt=(typeof _boltRealFor==='function')?_boltRealFor(d):null;var boltAuto=(_rbolt!=null)?_rbolt:(((d.bGrossFin!=null?d.bGrossFin:d.bGross)||0)*boltBrandPct(d.bComp)/100);var uklonAuto=uklonBrandAmt(d.uOrd);
+  var _rbolt=(typeof _boltRealFor==='function')?_boltRealFor(d):null;var boltAuto=(_rbolt!=null)?_rbolt:0;var uklonAuto=uklonBrandAmt(d.uOrd);
   var boltOv=(f.boltOv!=null&&f.boltOv!=='')?parseFloat(f.boltOv):null;var uklonOv=(f.uklonOv!=null&&f.uklonOv!=='')?parseFloat(f.uklonOv):null;
-  var boltEff=(boltOv!=null&&!isNaN(boltOv))?boltOv:boltAuto;var uklonEff=(uklonOv!=null&&!isNaN(uklonOv))?uklonOv:uklonAuto;
+  var boltEff=boltAuto;var uklonEff=(uklonOv!=null&&!isNaN(uklonOv))?uklonOv:uklonAuto;
   var boltPaid=(f.boltPaid===undefined)?true:!!f.boltPaid;var uklonPaid=(f.uklonPaid===undefined)?true:!!f.uklonPaid;
   return {boltAuto:boltAuto,uklonAuto:uklonAuto,boltEff:boltEff,uklonEff:uklonEff,boltPaid:boltPaid,uklonPaid:uklonPaid,boltPct:boltBrandPct(d.bComp),
-    total:(boltPaid?boltEff:0)+(uklonPaid?uklonEff:0)};}
+    total:(boltPaid?boltEff:0)};}
 function _brandTotHtml(token,d){var e=_brandEff(token,d);return 'Разом до виплати: <b>'+_bf(e.total)+' ₴</b>';}
 function _bf(n){return (Math.round((n||0)*100)/100).toLocaleString('uk-UA',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function renderBranding(){var el=document.getElementById('branding');if(!el)return;
@@ -2080,7 +2080,7 @@ function renderBranding(){var el=document.getElementById('branding');if(!el)retu
   if(!weekMon){el.innerHTML='<h1>🏷 <span class="accent">Брендування</span></h1><p class="sub">Ще нема даних.</p>';return;}
   var A=weekAgg(weekMon,true),keys=A.keys,monL=_wkLab(keys[0]),sunL=_wkLab(keys[6]),wk=isoWeek(keys[0]);
   window._brRows={};
-  var flt=window._brFilter||'all';var _pass=(typeof drvPass==='function')?drvPass():{};var quals=A.list.filter(function(m){var _rb=(typeof _boltRealFor==='function')?_boltRealFor(m):null;var _bA=(_rb!=null)?_rb:(((m.bGrossFin!=null?m.bGrossFin:m.bGross)||0)*boltBrandPct(m.bComp)/100);var _uA=uklonBrandAmt(m.uOrd);if(_bA<=0&&_uA<=0)return false;if(flt==='all')return true;var pt=(_pass[m.name]||{}).type||'taxi';return pt===flt;});
+  var flt=window._brFilter||'all';var _pass=(typeof drvPass==='function')?drvPass():{};var quals=A.list.filter(function(m){var _rb=(typeof _boltRealFor==='function')?_boltRealFor(m):null;var _bA=(_rb!=null)?_rb:0;if(_bA<=0)return false;if(flt==='all')return true;var pt=(_pass[m.name]||{}).type||'taxi';return pt===flt;});
   var grand=0;
   var cards=quals.map(function(m){var token=rpt_toks(m.name).join('|');window._brRows[token]=m;
     var f=brandFixGet(weekMon,token);var excluded=!!f.excluded;var e=_brandEff(token,m);grand+=e.total;
@@ -2094,10 +2094,9 @@ function renderBranding(){var el=document.getElementById('branding');if(!el)retu
         +'<span class="br-auto">'+_bf(auto)+' ₴</span>'
         +'<input class="br-ov" type="number" inputmode="decimal" value="'+ovVal+'" placeholder="'+_bf(auto)+'" oninput="brandSetOv(&quot;'+token+'&quot;,&quot;'+plat+'&quot;,this.value)">'
         +'<button class="br-paid '+(paid?'on':'off')+'" onclick="brandTogglePaid(&quot;'+token+'&quot;,&quot;'+plat+'&quot;)">'+(paid?'\u2713 оплачено':'\u2715 не оплачено')+'</button></div>';}
-    var boltInfo=m.bComp+' поїзд \u00b7 '+e.boltPct+'%';var uklonInfo=m.uOrd+' замов.';
+    var _bo=(typeof boltBrandObj==='function'&&m.plate_norm)?boltBrandObj(weekMon,m.plate_norm):null;var boltInfo=_bo?((_bo.orders||0)+' кваліф. поїзд.'):'';var uklonInfo='';
     var rows='';
     rows+=platRow('bolt','Bolt',boltInfo,e.boltAuto,boltOvVal,e.boltPaid);
-    rows+=platRow('uklon','Uklon',uklonInfo,e.uklonAuto,uklonOvVal,e.uklonPaid);
     return '<div class="br-card"><div class="br-name">'+rpt_esc(nameFor(m.name))+exBtn+'</div>'+catRow+rows
       +'<input class="br-note" value="'+noteVal+'" placeholder="Нотатка (напр.: не подав авто на мийку)" oninput="brandSetNote(&quot;'+token+'&quot;,this.value)">'
       +'<div class="br-tot" id="br-tot-'+token+'">'+_brandTotHtml(token,m)+'</div></div>';
