@@ -1597,10 +1597,10 @@ function weekStep(dir){if(!weekMon)return;var d=new Date(weekMon+'T00:00:00');d.
 function weekAgg(mon,all){var keys=weekKeys(mon);var present=keys.filter(function(k){return DAYS&&DAYS[k];});var map={};
  keys.forEach(function(k){if(!(DAYS&&DAYS[k]))return;var H=(typeof rptHy==='function')?rptHy(k):DAYS[k];var drv=(H&&H.drivers)||[];var dayAgg={};
   drv.forEach(function(o){if(!(((all)||isTaxi(o))&&!isHidden(o.name)))return;if(!((o.net||0)>0||(o.orders||0)>0||(o.online||0)>0))return;
-   var nk=rpt_toks(o.name).join('|');var d=dayAgg[nk]||(dayAgg[nk]={name:o.name,net:0,gross:0,orders:0,online:0,idle:0,cash:0,km:0,plan:0,bGross:0,bGrossFin:0,bComp:0,uOrd:0});
-   d.net+=o.net||0;d.gross+=o.gross||0;d.orders+=o.orders||0;d.online+=o.online||0;d.idle+=o.idle||0;d.cash+=(o.b_cash||0)+(o.u_cash||0);d.km+=(o.b_km||0)+(o.u_km||0);d.bGross+=o.b_gross||0;d.bGrossFin+=(o.b_gross_fin!=null?o.b_gross_fin:(o.b_gross||0));d.bComp+=o.b_comp||0;d.uOrd+=o.u_orders||0;d.plan+=planOf(o);});
-  Object.keys(dayAgg).forEach(function(nk){var d=dayAgg[nk];var m=map[nk]||(map[nk]={name:d.name,net:0,gross:0,orders:0,online:0,idle:0,cash:0,km:0,days:0,done:0,planSum:0,perDay:{},bGross:0,bGrossFin:0,bComp:0,uOrd:0});
-   m.net+=d.net;m.gross+=d.gross;m.orders+=d.orders;m.online+=d.online;m.idle+=d.idle;m.cash+=d.cash;m.km+=d.km;m.bGross+=d.bGross;m.bGrossFin+=d.bGrossFin;m.bComp+=d.bComp;m.uOrd+=d.uOrd;
+   var nk=rpt_toks(o.name).join('|');var d=dayAgg[nk]||(dayAgg[nk]={name:o.name,net:0,gross:0,orders:0,online:0,idle:0,cash:0,km:0,plan:0,bGross:0,bGrossFin:0,bComp:0,uOrd:0,plate_norm:''});
+   d.net+=o.net||0;d.gross+=o.gross||0;d.orders+=o.orders||0;d.online+=o.online||0;d.idle+=o.idle||0;d.cash+=(o.b_cash||0)+(o.u_cash||0);d.km+=(o.b_km||0)+(o.u_km||0);d.bGross+=o.b_gross||0;d.bGrossFin+=(o.b_gross_fin!=null?o.b_gross_fin:(o.b_gross||0));d.bComp+=o.b_comp||0;d.uOrd+=o.u_orders||0;d.plan+=planOf(o);if(o.plate_norm)d.plate_norm=o.plate_norm;});
+  Object.keys(dayAgg).forEach(function(nk){var d=dayAgg[nk];var m=map[nk]||(map[nk]={name:d.name,net:0,gross:0,orders:0,online:0,idle:0,cash:0,km:0,days:0,done:0,planSum:0,perDay:{},bGross:0,bGrossFin:0,bComp:0,uOrd:0,plate_norm:''});
+   m.net+=d.net;m.gross+=d.gross;m.orders+=d.orders;m.online+=d.online;m.idle+=d.idle;m.cash+=d.cash;m.km+=d.km;m.bGross+=d.bGross;m.bGrossFin+=d.bGrossFin;m.bComp+=d.bComp;m.uOrd+=d.uOrd;if(d.plate_norm)m.plate_norm=d.plate_norm;
    m.days++;m.planSum+=d.plan;var dn=d.plan>0?(d.net>=d.plan):false;if(dn)m.done++;m.perDay[k]={net:d.net,done:dn};});});
  var list=Object.keys(map).map(function(n){var m=map[n];m.pace=m.online>0?Math.round(m.net/m.online):null;m.pct=m.planSum>0?Math.round(m.net/m.planSum*100):null;return m;}).sort(function(a,b){return b.net-a.net;});
  return {keys:keys,present:present,list:list};}
@@ -2005,6 +2005,16 @@ function brandFixSaveLocal(o){try{localStorage.setItem('brand_fix',JSON.stringif
 async function brandFixCloudSave(o){if(typeof supa==='undefined'||!supa)return;try{await supa.from('app_data').upsert({key:'brandfix:all',value:JSON.stringify(o)});}catch(e){console.error('brandfix save',e);}}
 async function brandFixCloudLoad(){if(typeof supa==='undefined'||!supa)return null;try{var r=await supa.from('app_data').select('value').eq('key','brandfix:all').maybeSingle();if(r&&r.data&&r.data.value)return (typeof r.data.value==='string')?JSON.parse(r.data.value):r.data.value;}catch(e){console.error('brandfix load',e);}return null;}
 async function brandFixInit(){var c=await brandFixCloudLoad();if(c&&typeof c==='object'){brandFixSaveLocal(c);if(typeof view!=='undefined'&&view==='branding'&&typeof renderBranding==='function')renderBranding();}}
+// ===== БРЕНДУВАННЯ Bolt: реальні дані зі збирача (Supabase key=boltbrand:all) =====
+function boltBrandLocal(){try{return JSON.parse(localStorage.getItem('boltbrand')||'{}');}catch(e){return {};}}
+function boltBrandSaveLocal(o){try{localStorage.setItem('boltbrand',JSON.stringify(o));}catch(e){}}
+function boltBrandBuildIndex(raw){var idx={};if(!raw||typeof raw!=='object')return idx;Object.keys(raw).forEach(function(wk){if(wk==='_updatedAt')return;var byPl=raw[wk]||{};var out={};Object.keys(byPl).forEach(function(pl){var np=(typeof NPL==='function')?NPL(pl):String(pl).toUpperCase();out[np]=byPl[pl];});idx[wk]=out;});return idx;}
+async function boltBrandCloudLoad(){if(typeof supa==='undefined'||!supa)return null;try{var r=await supa.from('app_data').select('value').eq('key','boltbrand:all').maybeSingle();if(r&&r.data&&r.data.value)return (typeof r.data.value==='string')?JSON.parse(r.data.value):r.data.value;}catch(e){console.error('boltbrand load',e);}return null;}
+async function boltBrandInit(){var c=await boltBrandCloudLoad();if(!c)c=boltBrandLocal();if(c&&typeof c==='object'){boltBrandSaveLocal(c);window._boltBrand=boltBrandBuildIndex(c);if(typeof view!=='undefined'&&view==='branding'&&typeof renderBranding==='function')renderBranding();}}
+window._boltBrand=boltBrandBuildIndex(boltBrandLocal());
+function boltBrandObj(weekMonKey,plateNorm){try{var w=(window._boltBrand||{})[weekMonKey];if(!w)return null;var v=w[plateNorm];return (v==null)?null:v;}catch(e){return null;}}
+function boltBrandReal(weekMonKey,plateNorm){var o=boltBrandObj(weekMonKey,plateNorm);return (o&&o.income!=null)?o.income:null;}
+function _boltRealFor(d){return (d&&d.plate_norm)?boltBrandReal(weekMon,d.plate_norm):null;}
 function brandFixKey(wk,token){return wk+'|'+token;}
 function brandFixGet(wk,token){var all=brandFixLocal();return all[brandFixKey(wk,token)]||{};}
 function brandFixSet(wk,token,patch){var all=brandFixLocal();var k=brandFixKey(wk,token);all[k]=Object.assign({},all[k]||{},patch);brandFixSaveLocal(all);brandFixCloudSave(all);}
@@ -2055,7 +2065,7 @@ function renderBrandingMonth(el){
     +(cards||'<div class="st-empty">Цього місяця ніхто не заробив брендування.</div>');}
 function _brandEff(token,d){var f=brandFixGet(weekMon,token);
   if(f.excluded)return {boltAuto:0,uklonAuto:0,boltEff:0,uklonEff:0,boltPaid:false,uklonPaid:false,boltPct:boltBrandPct(d.bComp),total:0,excluded:true};
-  var boltAuto=((d.bGrossFin!=null?d.bGrossFin:d.bGross)||0)*boltBrandPct(d.bComp)/100;var uklonAuto=uklonBrandAmt(d.uOrd);
+  var _rbolt=(typeof _boltRealFor==='function')?_boltRealFor(d):null;var boltAuto=(_rbolt!=null)?_rbolt:(((d.bGrossFin!=null?d.bGrossFin:d.bGross)||0)*boltBrandPct(d.bComp)/100);var uklonAuto=uklonBrandAmt(d.uOrd);
   var boltOv=(f.boltOv!=null&&f.boltOv!=='')?parseFloat(f.boltOv):null;var uklonOv=(f.uklonOv!=null&&f.uklonOv!=='')?parseFloat(f.uklonOv):null;
   var boltEff=(boltOv!=null&&!isNaN(boltOv))?boltOv:boltAuto;var uklonEff=(uklonOv!=null&&!isNaN(uklonOv))?uklonOv:uklonAuto;
   var boltPaid=(f.boltPaid===undefined)?true:!!f.boltPaid;var uklonPaid=(f.uklonPaid===undefined)?true:!!f.uklonPaid;
@@ -2070,7 +2080,7 @@ function renderBranding(){var el=document.getElementById('branding');if(!el)retu
   if(!weekMon){el.innerHTML='<h1>🏷 <span class="accent">Брендування</span></h1><p class="sub">Ще нема даних.</p>';return;}
   var A=weekAgg(weekMon,true),keys=A.keys,monL=_wkLab(keys[0]),sunL=_wkLab(keys[6]),wk=isoWeek(keys[0]);
   window._brRows={};
-  var flt=window._brFilter||'all';var _pass=(typeof drvPass==='function')?drvPass():{};var quals=A.list.filter(function(m){var _bA=((m.bGrossFin!=null?m.bGrossFin:m.bGross)||0)*boltBrandPct(m.bComp)/100;var _uA=uklonBrandAmt(m.uOrd);if(_bA<=0&&_uA<=0)return false;if(flt==='all')return true;var pt=(_pass[m.name]||{}).type||'taxi';return pt===flt;});
+  var flt=window._brFilter||'all';var _pass=(typeof drvPass==='function')?drvPass():{};var quals=A.list.filter(function(m){var _rb=(typeof _boltRealFor==='function')?_boltRealFor(m):null;var _bA=(_rb!=null)?_rb:(((m.bGrossFin!=null?m.bGrossFin:m.bGross)||0)*boltBrandPct(m.bComp)/100);var _uA=uklonBrandAmt(m.uOrd);if(_bA<=0&&_uA<=0)return false;if(flt==='all')return true;var pt=(_pass[m.name]||{}).type||'taxi';return pt===flt;});
   var grand=0;
   var cards=quals.map(function(m){var token=rpt_toks(m.name).join('|');window._brRows[token]=m;
     var f=brandFixGet(weekMon,token);var excluded=!!f.excluded;var e=_brandEff(token,m);grand+=e.total;
@@ -2256,7 +2266,7 @@ function boot(){A=DATA.drivers;M=DATA.med;TARGET=DATA.plan_default;NOW=DATA.now_
 A.forEach((o,i)=>o._i=i);
 document.getElementById('sub').textContent=DATA.window+' · попит сьогодні '+DATA.dayq;
 prefillFleet();document.getElementById('plan').value=TARGET;document.getElementById('hourly').value=HOURLY;document.getElementById('tripgoal').value=TRIPGOAL;var dse=document.getElementById('daystart');if(dse)dse.value=hm(Math.round(DAYSTART*60));
-loadSel();renderDriverPanel();drvLabel();renderFleet();daybar();kpis();renderList();renderStandingMini();updateStandBadge();if(!window._usd)fetchUsdRate();if(typeof payCalcInit==='function')payCalcInit();if(typeof brandFixInit==='function')brandFixInit();if(typeof drvCatInit==='function')drvCatInit();var ln=document.getElementById('legnorm');if(ln)ln.textContent=HOURLY;var ls=document.getElementById('legshift');if(ls)ls.textContent=document.getElementById('shiftend').value;var lt=document.getElementById('legtarget');if(lt)lt.textContent=TARGET;
+loadSel();renderDriverPanel();drvLabel();renderFleet();daybar();kpis();renderList();renderStandingMini();updateStandBadge();if(!window._usd)fetchUsdRate();if(typeof payCalcInit==='function')payCalcInit();if(typeof brandFixInit==='function')brandFixInit();if(typeof boltBrandInit==='function')boltBrandInit();if(typeof drvCatInit==='function')drvCatInit();var ln=document.getElementById('legnorm');if(ln)ln.textContent=HOURLY;var ls=document.getElementById('legshift');if(ls)ls.textContent=document.getElementById('shiftend').value;var lt=document.getElementById('legtarget');if(lt)lt.textContent=TARGET;
 try{var _lv=localStorage.getItem('lastView');if(_lv&&['morning','overview','drivers','cars','owner','report','settings','week','standing','history','branding'].indexOf(_lv)>=0)view=_lv;}catch(e){}
 showLogin(false);document.getElementById('uploader').classList.add('hide');document.getElementById('app').classList.remove('hide');showView(view);fillDaySel();window.scrollTo(0,0);}
 
