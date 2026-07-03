@@ -95,6 +95,15 @@
 .br-exnote{font-size:12.5px;color:var(--ink2)}
 .br-filter{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
 .br-ftab{border:1px solid var(--line);background:var(--panel);color:var(--ink2);font-size:13px;font-weight:700;padding:7px 14px;border-radius:20px;cursor:pointer}
+.br-period{display:flex;gap:0;margin:12px 0 4px;border:1px solid var(--line);border-radius:10px;overflow:hidden;width:fit-content}
+.br-ptab{border:none;background:var(--panel);color:var(--ink2);font-size:13.5px;font-weight:700;padding:8px 22px;cursor:pointer}
+.br-ptab.on{background:var(--ink);color:var(--paper)}
+.brm-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;font-size:13.5px;color:var(--ink)}
+.brm-row b{font-size:16px;color:var(--good)}
+.brm-row.brm-alt{border-top:1px dashed var(--line);color:var(--ink2);font-size:12.5px}
+.brm-row.brm-alt b{color:var(--ink2);font-size:15px}
+.brm-single{color:var(--ink2)!important}
+.brm-hint{font-size:11.5px;color:var(--ink2);margin:8px 0 12px;line-height:1.5}
 .br-ftab.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .br-cat{display:flex;gap:5px;flex-wrap:wrap;margin:2px 0 9px}
 .br-catb{border:1px solid var(--line);background:var(--paper);color:var(--ink2);font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:7px;cursor:pointer}
@@ -1785,12 +1794,12 @@ function effStartMin(o){const ds=DAYSTART*60;const ts=(o.trips||[]).filter(t=>t.
 function nightTail(o){const ds=DAYSTART*60;const tr=(o.trips||[]).filter(t=>t.t&&t.st=='ok'&&T2(t.t)!=null&&T2(t.t)<ds);return {n:tr.length,g:Math.round(tr.reduce((s,t)=>s+(t.fare||0),0))};}
 function stDisp(o){return hm(effStartMin(o));}
 function saveDays(){try{localStorage.setItem('days_store',JSON.stringify(DAYS))}catch(e){}}
-function loadDays(){try{Object.assign(DAYS,JSON.parse(localStorage.getItem('days_store')||'{}'))}catch(e){} cleanDays(); }
+function loadDays(){try{var _ls=JSON.parse(localStorage.getItem('days_store')||'{}');Object.keys(_ls).forEach(function(k){var d=_ls[k];var ex=DAYS[k];if(!ex||(((d&&d._ts)||0)>=((ex&&ex._ts)||0)))DAYS[k]=d;});}catch(e){} cleanDays(); }
 function isoDateLabel(date){if(!/^\d{4}-\d{2}-\d{2}$/.test(date||''))return date||'';var _M=['\u0441\u0456\u0447\u043d\u044f','\u043b\u044e\u0442\u043e\u0433\u043e','\u0431\u0435\u0440\u0435\u0437\u043d\u044f','\u043a\u0432\u0456\u0442\u043d\u044f','\u0442\u0440\u0430\u0432\u043d\u044f','\u0447\u0435\u0440\u0432\u043d\u044f','\u043b\u0438\u043f\u043d\u044f','\u0441\u0435\u0440\u043f\u043d\u044f','\u0432\u0435\u0440\u0435\u0441\u043d\u044f','\u0436\u043e\u0432\u0442\u043d\u044f','\u043b\u0438\u0441\u0442\u043e\u043f\u0430\u0434\u0430','\u0433\u0440\u0443\u0434\u043d\u044f'];var mo=+date.slice(5,7)-1,dy=+date.slice(8,10);return _M[mo]?(dy+' '+_M[mo]):date;}
 function buildWin(date,nowMin){var m=nowMin||0;try{var np=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());var g=function(t){return np.find(function(x){return x.type===t}).value};var today=g('year')+'-'+g('month')+'-'+g('day');var cur=(+g('hour'))*60+(+g('minute'));if(date===today&&m>cur)m=cur;}catch(e){}var h=Math.floor(m/60),mm=m%60;var hhmm=(h<10?'0':'')+h+':'+(mm<10?'0':'')+mm;var lbl=isoDateLabel(date);return (lbl?lbl+' \u00b7 ':'')+'\u0441\u0442\u0430\u043d\u043e\u043c \u043d\u0430 ~'+hhmm;}
 async function cloudDeleteDay(k){if(typeof supa==='undefined'||!supa)return;try{await supa.from("app_data").delete().eq("key","day:"+k);}catch(e){console.error('cloudDeleteDay',e);}}
 function cleanDays(){var bad=[];Object.keys(DAYS).forEach(function(k){var okKey=/^\d{4}-\d{2}-\d{2}$/.test(k);var d=DAYS[k];var p=(d&&d._parts)||{};var hasData=((p.bolt_hist||[]).length||(p.bolt_income||[]).length||(p.uklon_trips||[]).length||(p.uklon_agg||[]).length||(p.wialon_trips_rows||[]).length);if(!okKey||!hasData){bad.push(k);}else if(d){d.date=k;d.date_label=isoDateLabel(k);}});bad.forEach(function(k){delete DAYS[k];cloudDeleteDay(k);});if(bad.length){try{localStorage.setItem('days_store',JSON.stringify(DAYS));}catch(e){}}return bad;}
-function registerDay(d){if(d&&d.date){DAYS[d.date]=d;saveDays();if(typeof cloudSaveDay==='function')cloudSaveDay(d);}}
+function registerDay(d){if(d&&d.date){d._ts=Date.now();DAYS[d.date]=d;saveDays();if(typeof cloudSaveDay==='function')cloudSaveDay(d);}}
 function fillDaySel(){const sel=document.getElementById('daySel');if(!sel)return;const ks=Object.keys(DAYS).sort().reverse();
 sel.innerHTML=ks.map(k=>`<option value="${k}" ${DATA&&DATA.date===k?'selected':''}>${(DAYS[k].date_label||k)}</option>`).join('');sel.style.display=ks.length>1?'':'none';}
 function dayCutMin(){return Math.round((typeof DAYSTART!=='undefined'&&DAYSTART!=null?DAYSTART:5)*60);}
@@ -2017,6 +2026,33 @@ async function drvCatInit(){var c=await drvCatCloudLoad();if(c&&typeof c==='obje
 function drvCatGet(token){return drvCatLocal()[token]||'';}
 function drvCatSet(token,cat){var o=drvCatLocal();o[token]=cat;drvCatSaveLocal(o);drvCatCloudSave(o);renderBranding();}
 function setBrandFilter(f){window._brFilter=f;renderBranding();}
+function setBrandPeriod(p){window._brPeriod=p;renderBranding();}
+function _monKey(ds){return ds.slice(0,7);}
+function _monLabel(ym){var M=['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];var y=+ym.slice(0,4),m=+ym.slice(5,7);return M[m-1]+' '+y;}
+function monthWeeks(ym){var y=+ym.slice(0,4),m=+ym.slice(5,7);var out=[];var mon=new Date(weekStartOf(_wkYmd(new Date(Date.UTC(y,m-1,1))))+'T00:00:00');for(var i=0;i<6;i++){var mk=_wkYmd(mon);var md=new Date(mk+'T00:00:00');if((md.getMonth()+1)===m&&md.getFullYear()===y)out.push(mk);mon.setDate(mon.getDate()+7);}return out;}
+function brandMonthStep(d){if(!window._brMonth){var ak=Object.keys(DAYS||{}).filter(function(k){return /^\d{4}-\d{2}-\d{2}$/.test(k);}).sort();window._brMonth=ak.length?_monKey(ak[ak.length-1]):_monKey(_wkYmd(new Date()));}var y=+window._brMonth.slice(0,4),m=+window._brMonth.slice(5,7);var nd=new Date(Date.UTC(y,m-1+d,1));window._brMonth=(nd.getUTCFullYear())+'-'+String(nd.getUTCMonth()+1).padStart(2,'0');renderBranding();}
+function brandPeriodTabs(){var p=window._brPeriod||'week';return '<div class="br-period"><button class="br-ptab'+(p==='week'?' on':'')+'" onclick="setBrandPeriod(&quot;week&quot;)">Тиждень</button><button class="br-ptab'+(p==='month'?' on':'')+'" onclick="setBrandPeriod(&quot;month&quot;)">Місяць</button></div>';}
+function renderBrandingMonth(el){
+  function f(n){return (Math.round((n||0)*100)/100).toLocaleString('uk-UA',{minimumFractionDigits:2,maximumFractionDigits:2});}
+  if(!window._brMonth){var ak=Object.keys(DAYS).filter(function(k){return /^\d{4}-\d{2}-\d{2}$/.test(k);}).sort();window._brMonth=ak.length?_monKey(ak[ak.length-1]):_monKey(_wkYmd(new Date()));}
+  var ym=window._brMonth;var wks=monthWeeks(ym);var flt=window._brFilter||'all';var _pass=(typeof drvPass==='function')?drvPass():{};
+  var byDrv={};var savedWM=weekMon;
+  wks.forEach(function(mon){var A=weekAgg(mon,true);A.list.forEach(function(m){var tok=rpt_toks(m.name).join('|');weekMon=mon;var e=_brandEff(tok,m);var gf=(m.bGrossFin!=null?m.bGrossFin:m.bGross)||0;var d=byDrv[tok]||(byDrv[tok]={name:m.name,token:tok,sumWeeks:0,mGrossFin:0,mComp:0,mUOrd:0});d.sumWeeks+=e.total;d.mGrossFin+=gf;d.mComp+=m.bComp;d.mUOrd+=m.uOrd;});});
+  weekMon=savedWM;
+  var list=Object.keys(byDrv).map(function(k){return byDrv[k];}).filter(function(d){var single=d.mGrossFin*boltBrandPct(d.mComp)/100+uklonBrandAmt(d.mUOrd);if(d.sumWeeks<=0&&single<=0)return false;if(flt!=='all'){var pt=(_pass[d.name]||{}).type||'taxi';if(pt!==flt)return false;}return true;}).sort(function(a,b){return b.sumWeeks-a.sumWeeks;});
+  var grandW=0,grandM=0;
+  var cards=list.map(function(d){var single=d.mGrossFin*boltBrandPct(d.mComp)/100+uklonBrandAmt(d.mUOrd);grandW+=d.sumWeeks;grandM+=single;
+    var pt=(_pass[d.name]||{}).type||'taxi';var ptl=({taxi:'Таксі',rent:'Оренда',lease:'Лізинг'})[pt]||pt;
+    return '<div class="br-card"><div class="br-name">'+rpt_esc(nameFor(d.name))+' <span class="br-typebadge">'+ptl+'</span></div>'
+      +'<div class="brm-row"><span>Сума тижнів (як Bolt платить)</span><b>'+f(d.sumWeeks)+' ₴</b></div>'
+      +'<div class="brm-row brm-alt"><span>За місяць (1 тариф: '+d.mComp+' поїзд · '+boltBrandPct(d.mComp)+'% + Uklon '+d.mUOrd+')</span><b>'+f(single)+' ₴</b></div>'
+      +'</div>';}).join('');
+  el.innerHTML='<h1>🏷 <span class="accent">Брендування</span></h1>'+brandPeriodTabs()
+    +'<div class="wk-nav"><button class="wk-arrow" onclick="brandMonthStep(-1)">‹</button><div class="wk-lab"><b>'+_monLabel(ym)+'</b><span>'+wks.length+' тижнів · '+list.length+' водіїв</span></div><button class="wk-arrow" onclick="brandMonthStep(1)">›</button></div>'
+    +'<div class="br-filter">'+[['all','Всі'],['taxi','Таксі'],['rent','Оренда'],['lease','Лізинг']].map(function(pp){return '<button class="br-ftab'+((window._brFilter||'all')===pp[0]?' on':'')+'" onclick="setBrandFilter(&quot;'+pp[0]+'&quot;)">'+pp[1]+'</button>';}).join('')+'</div>'
+    +'<div class="br-grand">Сума тижнів: <b>'+f(grandW)+' ₴</b> · За місяць (1 тариф): <b class="brm-single">'+f(grandM)+' ₴</b></div>'
+    +'<div class="brm-hint">«Сума тижнів» = як Bolt реально платить (пороги щотижня). «За місяць» = один % від місячних поїздок (для порівняння). Коригування робляться в режимі «Тиждень».</div>'
+    +(cards||'<div class="st-empty">Цього місяця ніхто не заробив брендування.</div>');}
 function _brandEff(token,d){var f=brandFixGet(weekMon,token);
   if(f.excluded)return {boltAuto:0,uklonAuto:0,boltEff:0,uklonEff:0,boltPaid:false,uklonPaid:false,boltPct:boltBrandPct(d.bComp),total:0,excluded:true};
   var boltAuto=((d.bGrossFin!=null?d.bGrossFin:d.bGross)||0)*boltBrandPct(d.bComp)/100;var uklonAuto=uklonBrandAmt(d.uOrd);
@@ -2056,7 +2092,7 @@ function renderBranding(){var el=document.getElementById('branding');if(!el)retu
       +'<input class="br-note" value="'+noteVal+'" placeholder="Нотатка (напр.: не подав авто на мийку)" oninput="brandSetNote(&quot;'+token+'&quot;,this.value)">'
       +'<div class="br-tot" id="br-tot-'+token+'">'+_brandTotHtml(token,m)+'</div></div>';
   }).join('');
-  el.innerHTML='<h1>🏷 <span class="accent">Брендування</span></h1>'
+  el.innerHTML='<h1>🏷 <span class="accent">Брендування</span></h1>'+brandPeriodTabs()
     +'<div class="wk-nav"><button class="wk-arrow" onclick="brandStep(-1)">‹</button><div class="wk-lab"><b>'+monL+' – '+sunL+'</b><span>тиждень '+wk+' · '+quals.length+' водіїв</span></div><button class="wk-arrow" onclick="brandStep(1)">›</button></div>'
     +'<div class="br-filter">'+[['all','Всі'],['taxi','Таксі'],['rent','Оренда'],['lease','Лізинг']].map(function(p){return '<button class="br-ftab'+((window._brFilter||'all')===p[0]?' on':'')+'" onclick="setBrandFilter(&quot;'+p[0]+'&quot;)">'+p[1]+'</button>';}).join('')+'</div>'
     +'<div class="br-grand">Разом брендування до виплати: <b>'+_bf(grand)+' ₴</b></div>'
@@ -2395,7 +2431,7 @@ const SUPA_KEY="sb_publishable_NydeHBpAcKE5M6y8G8hwSg_qkEn7XwC";
 let supa=null;
 try{if(window.supabase&&window.supabase.createClient){supa=window.supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});}}catch(e){console.error("supa init",e);}
 function showUploaderOnly(){var up=document.getElementById("uploader"),ap=document.getElementById("app");if(up)up.classList.remove("hide");if(ap)ap.classList.add("hide");showLogin(false);}
-async function cloudLoadDays(){if(!supa)return;try{const r=await supa.from("app_data").select("key,value").like("key","day:%");if(r.error){console.error(r.error);return;}DAYS={};(r.data||[]).forEach(x=>{const d=x.value;if(d&&d.date)DAYS[d.date]=d;});cleanDays();try{localStorage.setItem("days_store",JSON.stringify(DAYS));}catch(e){}}catch(e){console.error(e);}}
+async function cloudLoadDays(){if(!supa)return;try{const r=await supa.from("app_data").select("key,value").like("key","day:%");if(r.error){console.error(r.error);return;}(r.data||[]).forEach(x=>{const d=x.value;if(d&&d.date){var ld=DAYS[d.date];if(!ld||((d._ts||0)>=(ld._ts||0)))DAYS[d.date]=d;}});cleanDays();try{localStorage.setItem("days_store",JSON.stringify(DAYS));}catch(e){}}catch(e){console.error(e);}}
 async function cloudSaveDay(d){if(!supa||!d||!d.date)return;try{await supa.from("app_data").upsert({key:"day:"+d.date,value:d});}catch(e){console.error(e);}}
 async function cloudDeleteAllDays(){if(!supa)return;try{await supa.from("app_data").delete().like("key","day:%");}catch(e){console.error(e);}}
 async function cloudSaveKV(k,v){if(!supa)return;try{await supa.from("app_data").upsert({key:"kv:"+k,value:v});}catch(e){console.error(e);}}
