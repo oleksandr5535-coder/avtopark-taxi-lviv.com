@@ -125,6 +125,55 @@ function htmlTable(dateStr, sum, totalOrders) {
 
 export default async function handler(req, res) {
   try {
+    // ===== ДІАГНОСТИКА: ?probe=1 — перебирає ймовірні методи Fleet API =====
+    if (req.query && req.query.probe) {
+      const token = await getToken();
+      const now = Math.floor(Date.now()/1000);
+      const weekAgo = now - 7*24*3600;
+      const bases = [
+        'https://node.bolt.eu/fleet-integration-gateway/fleetIntegration/v1',
+        'https://node.bolt.eu/fleet-integration-gateway/fleetIntegration/v2',
+      ];
+      const methods = [
+        'getFleetOrders','getDrivers','getDriversByDateRange','getVehicles',
+        'getCompanyState','getFleetState','getCompanyBalance','getBalance',
+        'getDriverEarnings','getEarnings','getCompanyEarnings','getFleetEarnings',
+        'getCompensations','getBonuses','getPayouts','getInvoices',
+        'getFleetEngagementData','getDriverEngagementData','getCampaigns',
+        'getCommission','getCommissionInvoices','getEngagementData',
+      ];
+      const body = {
+        company_ids:[COMPANY_ID], company_id:COMPANY_ID,
+        start_ts:weekAgo, end_ts:now,
+        start_date:new Date(weekAgo*1000).toISOString().slice(0,10),
+        end_date:new Date(now*1000).toISOString().slice(0,10),
+        offset:0, limit:10,
+      };
+      const rows = [];
+      for (const base of bases) {
+        for (const m of methods) {
+          const url = base + '/' + m;
+          let status='?', snippet='';
+          try {
+            const r = await fetchT(url, { method:'POST', headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}, body:JSON.stringify(body) }, 9000);
+            status = r.status;
+            const txt = await r.text();
+            snippet = txt.slice(0, 240).replace(/</g,'&lt;');
+          } catch (e) { status='ERR'; snippet=(e.message||'').slice(0,120); }
+          rows.push({ ver: base.endsWith('v2')?'v2':'v1', method:m, status, snippet });
+        }
+      }
+      const esc = s => String(s);
+      const html = '<html><head><meta charset="utf-8"><style>body{font:13px monospace;padding:14px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:4px 6px;vertical-align:top}th{background:#eee}.ok{background:#e7f7e7}.no{background:#f7e7e7}.snip{color:#333;max-width:640px;word-break:break-all}</style></head><body>'
+        + '<h3>Bolt Fleet API — перебір методів (шукаємо брендування/бонуси/компенсації)</h3>'
+        + '<p>Статус 200 = метод існує й відповів. Дивись у "відповідь" на поля bonus/compensation/campaign/branding.</p>'
+        + '<table><thead><tr><th>API</th><th>Метод</th><th>Статус</th><th>Відповідь (початок)</th></tr></thead><tbody>'
+        + rows.map(r => '<tr class="'+(String(r.status)==='200'?'ok':'no')+'"><td>'+r.ver+'</td><td>'+r.method+'</td><td>'+esc(r.status)+'</td><td class=snip>'+esc(r.snippet)+'</td></tr>').join('')
+        + '</tbody></table></body></html>';
+      res.setHeader('Content-Type','text/html; charset=utf-8');
+      return res.status(200).send(html);
+    }
+
     let dateStr = (req.query && req.query.date) ? String(req.query.date) : null;
     if (!dateStr) {
       const p = new Intl.DateTimeFormat('en-CA', { timeZone:'Europe/Kyiv', year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(new Date());
@@ -152,8 +201,10 @@ export default async function handler(req, res) {
     } else if (mode === 'price_review') {
       ({ meta, orders } = await fetchAll(token, start_ts, end_ts, 'price_review'));
     } else {
-      const cr = await fetchAll(token, start_ts, end_ts, null);
-      const pr = await fetchAll(token, start_ts, end_ts, 'price_review');
+      const [cr, pr] = await Promise.all([
+        fetchAll(token, start_ts, end_ts, null),
+        fetchAll(token, start_ts, end_ts, 'price_review'),
+      ]);
       const prSet = new Set(pr.orders.map(o => o.order_reference));
       // беремо всі поїздки price_review (гроші за правильний день) + скасування зі створеного набору
       orders = pr.orders.concat(cr.orders.filter(o => !prSet.has(o.order_reference) && o.order_status !== 'finished'));
