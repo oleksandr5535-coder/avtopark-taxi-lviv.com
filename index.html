@@ -1380,8 +1380,7 @@ function rptWireCopy(box,sets){box.querySelectorAll('.rpt-sec').forEach(function
 function reportDayRender(out){
   var D=rptHy(rptDayKey)||DATA;
   var d=reportData(D);
-  var _edt=(D&&D.date)?D.date:rptDayKey;
-  var boltRows=d.bolt.map(function(o){var re=(typeof boltEarnFor==='function')?boltEarnFor(_edt,o.name):null;var net=re?re.net:o.net;var cash=re?re.cash:o.cash;return [o.name,o.comp,net,cash,o.km];});
+  var boltRows=d.bolt.map(function(o){return [o.name,o.comp,o.net,o.cash,o.km];});
   var gpsRows=d.gps.map(function(o){return [o.grp,o.km,o.sp,o.time];});
   var uklonRows=d.uklon.map(function(o){return [o.name,o.ord,o.razom,o.cash,o.km];});
   var bH=['Водій','Завершені поїздки','Чистий дохід|\u20b4','Отримано готівкою|\u20b4','Загальна відстань поїздки|км'];
@@ -2061,7 +2060,7 @@ function brandSetOv(token,plat,val){var all=brandFixLocal();var k=brandFixKey(we
 function brandTogglePaid(token,plat){var f=brandFixGet(weekMon,token);var key=plat==='bolt'?'boltPaid':'uklonPaid';var cur=(f[key]===undefined)?true:f[key];brandFixSet(weekMon,token,defObj(key,!cur));renderBranding();}
 function brandSetNote(token,val){brandFixSet(weekMon,token,{note:val});}
 function brandToggleExclude(token){var f=brandFixGet(weekMon,token);brandFixSet(weekMon,token,{excluded:!f.excluded});renderBranding();}
-function weekBrandVal(m){var tok=rpt_toks(m.name).join('|');var f=(typeof brandFixGet==='function')?brandFixGet(weekMon,tok):{};if(f&&f.excluded)return -1;return _brandEff(tok,m).total;}
+function weekBrandVal(m){var tok=rpt_toks(m.name).join('|');var f=(typeof brandFixGet==='function')?brandFixGet(weekMon,tok):{};if(f&&f.excluded)return -1;var pct=(typeof brandSplitPct==='function')?brandSplitPct():100;return _brandEff(tok,m).total*pct/100;}
 function isLeasingDrv(token){try{var st=pctSettings()[token];if(!st)return false;var lz=parseFloat(st.lease);return !isNaN(lz)&&lz>0;}catch(e){return false;}}
 function defObj(k,v){var o={};o[k]=v;return o;}
 // ===== ТИП ВОДІЯ (авто/таксі/оренда/лізинг) — спільне, key=drvcat:all =====
