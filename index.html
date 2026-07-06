@@ -2176,10 +2176,10 @@ function _brandEff(token,d){var f=brandFixGet(weekMon,token);
 function _brandTotHtml(token,d){var e=_brandEff(token,d);var pct=(typeof brandSplitPct==='function')?brandSplitPct():100;var share=e.total*pct/100;return 'Bolt '+_bf(e.total)+' ₴ · водію '+pct+'% = <b>'+_bf(share)+' ₴</b>';}
 function _bf(n){return (Math.round((n||0)*100)/100).toLocaleString('uk-UA',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function renderBranding(){var el=document.getElementById('branding');if(!el)return;
-  if(!DAYS||!Object.keys(DAYS).length){el.innerHTML='<h1>🏷 <span class="accent">Брендування</span></h1><p class="sub">Ще нема даних.</p>';return;}
+  if(!DAYS||!Object.keys(DAYS).length){el.innerHTML='<h1>🏷 <span class="accent">Брендування</span></h1>'+brandUploadBox()+'<p class="sub" style="margin-top:10px">Ще нема щоденних даних — але файл брендування можна завантажити вже зараз.</p>';return;}
   if(weekMon&&!/^\d{4}-\d{2}-\d{2}$/.test(weekMon))weekMon=null;
   if(!weekMon){var ak=Object.keys(DAYS).filter(function(k){return /^\d{4}-\d{2}-\d{2}$/.test(k);}).sort();if(ak.length)weekMon=weekStartOf(ak[ak.length-1]);}
-  if(!weekMon){el.innerHTML='<h1>🏷 <span class="accent">Брендування</span></h1><p class="sub">Ще нема даних.</p>';return;}
+  if(!weekMon){el.innerHTML='<h1>🏷 <span class="accent">Брендування</span></h1>'+brandUploadBox()+'<p class="sub" style="margin-top:10px">Ще нема щоденних даних — але файл брендування можна завантажити вже зараз.</p>';return;}
   var A=weekAgg(weekMon,true),keys=A.keys,monL=_wkLab(keys[0]),sunL=_wkLab(keys[6]),wk=isoWeek(keys[0]);
   window._brRows={};
   var flt=window._brFilter||'all';var _pass=(typeof drvPass==='function')?drvPass():{};var quals=A.list.filter(function(m){var _rb=(typeof _boltRealFor==='function')?_boltRealFor(m):null;var _bA=(_rb!=null)?_rb:0;if(_bA<=0)return false;if(flt==='all')return true;var pt=(_pass[m.name]||{}).type||'taxi';return pt===flt;});
