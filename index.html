@@ -2095,6 +2095,22 @@ async function uklonBrandCloudLoad(){if(typeof supa==='undefined'||!supa)return 
 async function uklonBrandInit(){var c=await uklonBrandCloudLoad();if(!c)c=uklonBrandLocal();if(c&&typeof c==='object'){uklonBrandSaveLocal(c);window._uklonBrand=uklonBrandBuildIndex(c);window._uklonBrandMeta=(c&&c._meta)||{};if(typeof view!=='undefined'){if(view==='branding'&&typeof renderBranding==='function')renderBranding();else if(view==='coverage'&&typeof renderCoverage==='function')renderCoverage();}}}
 function uklonBrandObj(wk,pn){try{var w=(window._uklonBrand||{})[wk];if(!w)return null;var v=w[pn];return (v==null)?null:v;}catch(e){return null;}}
 function uklonBrandReal(wk,pn){var o=uklonBrandObj(wk,pn);return (o&&o.income!=null)?o.income:null;}
+function uklonWeekBlock(weekMon){
+  var idx=(window._uklonBrand||{})[weekMon];
+  function money(n){return (Math.round(n||0)).toLocaleString('uk-UA');}
+  if(!idx||!Object.keys(idx).length){
+    return '<div style="background:#fff6e6;border:1px solid #f0d9a8;color:#8a6100;border-radius:10px;padding:10px 12px;margin:10px 0;font-size:13px;font-weight:600">— Uklon: за цей тиждень нема даних. Натисни «🔄 Підтягнути брендування Uklon» вище.</div>';
+  }
+  var plates=Object.keys(idx).sort(function(a,b){return (idx[b].income||0)-(idx[a].income||0);});
+  var tot=0,cnt=0;
+  plates.forEach(function(pl){var inc=idx[pl].income||0;if(inc>0){tot+=inc;cnt++;}});
+  var rows=plates.map(function(pl){var o=idx[pl]||{};var inc=o.income||0;
+    return '<tr'+(inc>0?'':' style="opacity:.45"')+'><td style="font-weight:700">'+pl+'</td><td>'+(o.driver||'—')+'</td><td class="r">'+(o.orders||0)+'</td><td class="r" style="font-weight:700">'+(inc>0?money(inc)+' ₴':'0')+'</td></tr>';
+  }).join('');
+  return '<div class="sect" style="margin-top:14px"><h3 style="display:flex;align-items:center;gap:8px">🟢 Брендування Uklon '
+    +'<span style="font-size:13px;font-weight:700;color:#0a7d33">'+cnt+' авто · '+money(tot)+' ₴</span></h3>'
+    +'<table class="otable"><thead><tr><th>Номер</th><th>Водій</th><th class="r">Поїздки</th><th class="r">Бонус ₴</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
 async function uklonRefresh(btn){
   function show(h){window._uklonLastMsg=h;var e=document.getElementById('uklon-upl-status');if(e)e.innerHTML=h;}
   if(btn){btn.disabled=true;btn.style.opacity='.6';}
@@ -2269,7 +2285,7 @@ function renderBranding(){var el=document.getElementById('branding');if(!el)retu
     +'<div class="br-filter">'+[['all','Всі'],['taxi','Таксі'],['rent','Оренда'],['lease','Лізинг']].map(function(p){return '<button class="br-ftab'+((window._brFilter||'all')===p[0]?' on':'')+'" onclick="setBrandFilter(&quot;'+p[0]+'&quot;)">'+p[1]+'</button>';}).join('')+'</div>'
     +'<div style="background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin:10px 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:13.5px;color:var(--ink2)">Частка водія від Bolt-брендування:</span><input type="number" inputmode="decimal" min="0" max="100" step="1" value="'+brandSplitPct()+'" onchange="brandSetSplit(this.value)" style="width:72px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font-size:14px;font-weight:700;font-family:inherit"><span style="font-size:14px;font-weight:700;color:var(--ink)">%</span><span style="font-size:12px;color:var(--muted)">для всіх водіїв</span></div>'
     +'<div class="br-grand">Bolt-брендування: <b>'+_bf(grand)+' ₴</b> · водіям ('+brandSplitPct()+'%): <b>'+_bf(grand*brandSplitPct()/100)+' ₴</b></div>'
-    +(cards||'<div class="st-empty">Цього тижня ніхто не досяг порогів брендування.</div>');}
+    +(cards||'<div class="st-empty">Цього тижня ніхто не досяг порогів брендування.</div>')+uklonWeekBlock(weekMon);}
 function renderCoverage(){var el=document.getElementById('coverage');if(!el)return;
   var dayKeys=Object.keys(DAYS||{}).filter(function(k){return /^\d{4}-\d{2}-\d{2}$/.test(k);});
   var brandIdx=window._boltBrand||{};var brandMeta=window._boltBrandMeta||{};
