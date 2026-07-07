@@ -50,8 +50,11 @@ async function getPeriods(fleetId, programId, H) {
   );
   return (list || []).filter(p => p && p.period && Array.isArray(p.period.range));
 }
-async function getCalculation(calcId, H) {
-  return await getJSON(BASE + '/api/bonuses/branding-programs/calculations/' + calcId, H);
+async function getCalculation(calcId, fleetId, programId, H) {
+  return await getJSON(
+    BASE + '/api/bonuses/branding-programs/calculations/' + calcId +
+    '?fleet_id=' + fleetId + '&program_id=' + programId, H
+  );
 }
 
 export default async function handler(req, res) {
@@ -103,7 +106,7 @@ export default async function handler(req, res) {
         const from = kyivYmd(per.period.range[0]);
         const to = kyivYmd(per.period.range[1]);
         let calc;
-        try { calc = await getCalculation(per.calculation_id, H); }
+        try { calc = await getCalculation(per.calculation_id, fleetId, prog.id, H); }
         catch (e) { dbg.calc.push({ week: wk, error: e.message }); continue; }
         const items = (calc && calc.items) || [];
         dbg.calc.push({ week: wk, items: items.length });
