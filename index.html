@@ -440,7 +440,7 @@ h4.sub3{font-size:12px;font-weight:700;color:var(--ink2);margin:16px 0 9px}
   .topnav>.ncat>.ncat-h{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:76px;min-height:52px;padding:7px 6px;border-radius:17px;font-size:10.5px;font-weight:650;color:var(--ink2);background:transparent;text-align:center;line-height:1.15}
   .topnav>.ncat.active>.ncat-h{background:rgba(43,134,89,.14);color:#2b8659}
   .ncat-caret{display:none}
-  .topnav .ncat-menu{position:absolute;bottom:calc(100% + 12px);left:50%;transform:translateX(-50%);top:auto;min-width:214px;max-height:58vh;overflow:auto;background:rgba(252,250,245,.97);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+  .topnav .ncat-menu{position:fixed;left:12px;right:12px;bottom:calc(86px + env(safe-area-inset-bottom));top:auto;transform:none;min-width:0;max-width:none;max-height:56vh;overflow:auto;z-index:200;background:rgba(252,250,245,.98);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);box-shadow:0 -8px 30px rgba(40,30,10,.22);border:1px solid rgba(255,255,255,.6)}
   .topnav .ncat-menu button{flex-direction:row!important;align-items:center;justify-content:flex-start;min-width:0!important;min-height:0!important;width:100%;padding:12px 14px!important;border-radius:9px;font-size:14px;color:var(--ink)}
   .topnav .ncat-menu .ti{display:none!important}
   .topnav .ncat-menu .tl{font-size:14px}
