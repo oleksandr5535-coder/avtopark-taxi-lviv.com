@@ -41,15 +41,24 @@ async function post(token, method, bodyObj) {
   try { return JSON.parse(txt); } catch (e) { throw new Error(method + ' не-JSON (' + r.status + '): ' + txt.slice(0, 160)); }
 }
 
-// uuid авто -> номер
-async function vehicleMap(token, start_ts, end_ts) {
-  const j = await post(token, 'getVehicles', {
-    company_id: COMPANY_ID, start_ts, end_ts, offset: 0, limit: 1000,
-    portal_status: 'active', search: 'BC',
-  });
+// uuid авто -> номер (широке вікно + кілька пошуків, щоб зловити всі авто)
+async function vehicleMap(token) {
+  const now = Math.floor(Date.now() / 1000);
+  const start = now - 30 * 24 * 3600; // 30 днів — авто нікуди не діваються
   const map = {};
-  const list = (j && j.data && j.data.vehicles) || [];
-  for (const v of list) if (v.uuid) map[v.uuid] = v.reg_number || '—';
+  const searches = ['BC', 'B', 'A', 'C', 'K', 'X', 'T', 'E', 'O', 'I', 'M', 'P', 'H'];
+  for (const s of searches) {
+    let j;
+    try {
+      j = await post(token, 'getVehicles', {
+        company_id: COMPANY_ID, start_ts: start, end_ts: now, offset: 0, limit: 1000,
+        portal_status: 'active', search: s,
+      });
+    } catch (e) { continue; }
+    const list = (j && j.data && j.data.vehicles) || [];
+    for (const v of list) if (v.uuid) map[v.uuid] = v.reg_number || '—';
+    if (Object.keys(map).length >= 40) break; // вистачить
+  }
   return map;
 }
 
@@ -87,7 +96,7 @@ export default async function handler(req, res) {
 
     const token = await getToken();
     const [vmap, states] = await Promise.all([
-      vehicleMap(token, start_ts, now),
+      vehicleMap(token),
       latestStates(token, start_ts, now),
     ]);
 
