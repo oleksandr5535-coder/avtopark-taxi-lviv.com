@@ -41,23 +41,34 @@ async function post(token, method, bodyObj) {
   try { return JSON.parse(txt); } catch (e) { throw new Error(method + ' не-JSON (' + r.status + '): ' + txt.slice(0, 160)); }
 }
 
-// uuid авто -> номер (широке вікно + кілька пошуків, щоб зловити всі авто)
-async function vehicleMap(token) {
+// uuid авто -> номер. getVehicles капризний — пробуємо кілька варіантів тіла.
+async function vehicleMap(token, diag) {
   const now = Math.floor(Date.now() / 1000);
-  const start = now - 30 * 24 * 3600; // 30 днів — авто нікуди не діваються
+  const start = now - 30 * 24 * 3600;
   const map = {};
-  const searches = ['BC', 'B', 'A', 'C', 'K', 'X', 'T', 'E', 'O', 'I', 'M', 'P', 'H'];
-  for (const s of searches) {
-    let j;
+  const bodies = [
+    { company_id: COMPANY_ID, start_ts: start, end_ts: now, offset: 0, limit: 1000, portal_status: 'active', search: 'BC' },
+    { company_id: COMPANY_ID, start_ts: start, end_ts: now, offset: 0, limit: 1000, search: 'BC' },
+    { company_id: COMPANY_ID, start_ts: start, end_ts: now, offset: 0, limit: 1000, portal_status: 'active', search: '' },
+    { company_ids: [COMPANY_ID], company_id: COMPANY_ID, start_ts: start, end_ts: now, offset: 0, limit: 1000, portal_status: 'active', search: 'BC' },
+    { company_id: COMPANY_ID, start_ts: start, end_ts: now, offset: 0, limit: 1000 },
+    { company_id: COMPANY_ID, offset: 0, limit: 1000, portal_status: 'active', search: 'BC' },
+  ];
+  for (let i = 0; i < bodies.length; i++) {
+    let j, raw = '';
     try {
-      j = await post(token, 'getVehicles', {
-        company_id: COMPANY_ID, start_ts: start, end_ts: now, offset: 0, limit: 1000,
-        portal_status: 'active', search: s,
-      });
-    } catch (e) { continue; }
+      const r = await fetchT(API + '/getVehicles', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(bodies[i]),
+      }, 15000);
+      raw = await r.text();
+      j = JSON.parse(raw);
+    } catch (e) { if (diag) diag.push({ variant: i, error: (e.message || '').slice(0, 120) }); continue; }
     const list = (j && j.data && j.data.vehicles) || [];
+    if (diag) diag.push({ variant: i, code: j && j.code, count: list.length, snippet: raw.slice(0, 140) });
     for (const v of list) if (v.uuid) map[v.uuid] = v.reg_number || '—';
-    if (Object.keys(map).length >= 40) break; // вистачить
+    if (list.length) break; // спрацювало — виходимо
   }
   return map;
 }
@@ -95,8 +106,9 @@ export default async function handler(req, res) {
     const start_ts = now - hours * 3600;
 
     const token = await getToken();
+    const vdiag = [];
     const [vmap, states] = await Promise.all([
-      vehicleMap(token),
+      vehicleMap(token, vdiag),
       latestStates(token, start_ts, now),
     ]);
 
@@ -130,6 +142,7 @@ export default async function handler(req, res) {
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
       return res.status(200).send(JSON.stringify({
         vehicles_found: vkeys.length,
+        vehicle_request_variants: vdiag,
         vehicle_sample: vkeys.slice(0, 3).map(u => ({ uuid: u, plate: vmap[u] })),
         state_vehicle_uuids_sample: sampleStateUuids,
         match_test: sampleStateUuids.map(u => ({ uuid: u, plate: vmap[u] || 'НЕ ЗНАЙДЕНО' })),
