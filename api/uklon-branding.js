@@ -81,10 +81,13 @@ export default async function handler(req, res) {
 
     // weeks[weekMonday] = { from, to, total, cars: { PLATE: {income, orders, driver, src} } }
     const weeks = {};
+    const debug = [];
 
     for (const prog of programs) {
       let periods = await getPeriods(fleetId, prog.id, H);
+      const totalPeriods = periods.length;
       periods.sort((a, b) => b.period.range[0] - a.period.range[0]); // новіші спершу
+      const sampleMondays = periods.slice(0, 3).map(p => kyivYmd(p.period.range[0]));
 
       if (oneWeek) {
         periods = periods.filter(p => kyivYmd(p.period.range[0]) === oneWeek);
@@ -92,14 +95,18 @@ export default async function handler(req, res) {
         periods = periods.slice(0, weeksLimit);
       } // weeksLimit === 0 -> усі
 
+      const dbg = { program: prog.name, periods_total: totalPeriods, sample_mondays: sampleMondays, after_filter: periods.length, calc: [] };
+      debug.push(dbg);
+
       for (const per of periods) {
         const wk = kyivYmd(per.period.range[0]);
         const from = kyivYmd(per.period.range[0]);
         const to = kyivYmd(per.period.range[1]);
         let calc;
         try { calc = await getCalculation(per.calculation_id, H); }
-        catch (e) { continue; }
+        catch (e) { dbg.calc.push({ week: wk, error: e.message }); continue; }
         const items = (calc && calc.items) || [];
+        dbg.calc.push({ week: wk, items: items.length });
 
         if (!weeks[wk]) weeks[wk] = { from, to, total: 0, cars: {} };
         for (const it of items) {
@@ -134,6 +141,7 @@ export default async function handler(req, res) {
       count_weeks: Object.keys(weeks).length,
       grand_total: grand,
       programs: programs.map(p => p.name),
+      debug,
     }));
   } catch (err) {
     res.status(200).send(JSON.stringify({ ok: false, error: err.message }));
