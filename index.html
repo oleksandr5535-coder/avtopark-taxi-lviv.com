@@ -2201,7 +2201,7 @@ function brandSetOv(token,plat,val){var all=brandFixLocal();var k=brandFixKey(we
 function brandTogglePaid(token,plat){var f=brandFixGet(weekMon,token);var key=plat==='bolt'?'boltPaid':'uklonPaid';var cur=(f[key]===undefined)?true:f[key];brandFixSet(weekMon,token,defObj(key,!cur));renderBranding();}
 function brandSetNote(token,val){brandFixSet(weekMon,token,{note:val});}
 function brandToggleExclude(token){var f=brandFixGet(weekMon,token);brandFixSet(weekMon,token,{excluded:!f.excluded});renderBranding();}
-function weekBrandVal(m){var tok=rpt_toks(m.name).join('|');var f=(typeof brandFixGet==='function')?brandFixGet(weekMon,tok):{};if(f&&f.excluded)return -1;var pct=(typeof brandSplitPct==='function')?brandSplitPct():100;return _brandEff(tok,m).total*pct/100;}
+function weekBrandVal(m){var tok=rpt_toks(m.name).join('|');var f=(typeof brandFixGet==='function')?brandFixGet(weekMon,tok):{};if(f&&f.excluded)return -1;var pct=(typeof brandSplitPct==='function')?brandSplitPct():100;var bolt=_brandEff(tok,m).total;var uklon=(typeof uklonBrandReal==='function'&&m.plate_norm)?(uklonBrandReal(weekMon,m.plate_norm)||0):0;return (bolt+uklon)*pct/100;}
 function isLeasingDrv(token){try{var st=pctSettings()[token];if(!st)return false;var lz=parseFloat(st.lease);return !isNaN(lz)&&lz>0;}catch(e){return false;}}
 function defObj(k,v){var o={};o[k]=v;return o;}
 // ===== ТИП ВОДІЯ (авто/таксі/оренда/лізинг) — спільне, key=drvcat:all =====
@@ -2258,34 +2258,44 @@ function renderBranding(){var el=document.getElementById('branding');if(!el)retu
   if(!weekMon){el.innerHTML='<h1>🏷 <span class="accent">Брендування</span></h1>'+brandUploadBox()+'<p class="sub" style="margin-top:10px">Ще нема щоденних даних — але файл брендування можна завантажити вже зараз.</p>';return;}
   var A=weekAgg(weekMon,true),keys=A.keys,monL=_wkLab(keys[0]),sunL=_wkLab(keys[6]),wk=isoWeek(keys[0]);
   window._brRows={};
-  var flt=window._brFilter||'all';var _pass=(typeof drvPass==='function')?drvPass():{};var quals=A.list.filter(function(m){var _rb=(typeof _boltRealFor==='function')?_boltRealFor(m):null;var _bA=(_rb!=null)?_rb:0;if(_bA<=0)return false;if(flt==='all')return true;var pt=(_pass[m.name]||{}).type||'taxi';return pt===flt;});
-  var grand=0;
-  var cards=quals.map(function(m){var token=rpt_toks(m.name).join('|');window._brRows[token]=m;
-    var f=brandFixGet(weekMon,token);var excluded=!!f.excluded;var e=_brandEff(token,m);grand+=e.total;
-    var noteVal=(f.note||'').replace(/"/g,'&quot;');
-    var boltOvVal=(f.boltOv!=null?f.boltOv:'');var uklonOvVal=(f.uklonOv!=null?f.uklonOv:'');
-    var exBtn='<button class="br-ex '+(excluded?'off':'on')+'" onclick="brandToggleExclude(&quot;'+token+'&quot;)">'+(excluded?'не рахується':'рахується')+'</button>';
-    var _pt=(_pass[m.name]||{}).type||'taxi';var _ptl=({taxi:'Таксі',rent:'Оренда',lease:'Лізинг'})[_pt]||_pt;var catRow='<div class="br-cat"><span class="br-typebadge">'+_ptl+'</span></div>';
-    if(excluded){return '<div class="br-card br-excl"><div class="br-name">'+rpt_esc(nameFor(m.name))+exBtn+'</div>'+catRow+'<div class="br-exnote">Брендування не враховується для цього водія.</div></div>';}
-    function platRow(plat,lbl,info,auto,ovVal,paid){
-      return '<div class="br-row"><span class="br-lbl">'+lbl+'</span><span class="br-info">'+info+'</span>'
-        +'<span class="br-auto">'+_bf(auto)+' ₴</span>'
-        +'<input class="br-ov" type="number" inputmode="decimal" value="'+ovVal+'" placeholder="'+_bf(auto)+'" oninput="brandSetOv(&quot;'+token+'&quot;,&quot;'+plat+'&quot;,this.value)">'
-        +'<button class="br-paid '+(paid?'on':'off')+'" onclick="brandTogglePaid(&quot;'+token+'&quot;,&quot;'+plat+'&quot;)">'+(paid?'\u2713 оплачено':'\u2715 не оплачено')+'</button></div>';}
-    var _bo=(typeof boltBrandObj==='function'&&m.plate_norm)?boltBrandObj(weekMon,m.plate_norm):null;var boltInfo=_bo?((_bo.orders||0)+' кваліф. поїзд.'):'';var uklonInfo='';
-    var rows='';
-    rows+=platRow('bolt','Bolt',boltInfo,e.boltAuto,boltOvVal,e.boltPaid);
-    return '<div class="br-card"><div class="br-name">'+rpt_esc(nameFor(m.name))+exBtn+'</div>'+catRow+rows
-      +'<input class="br-note" value="'+noteVal+'" placeholder="Нотатка (напр.: не подав авто на мийку)" oninput="brandSetNote(&quot;'+token+'&quot;,this.value)">'
-      +'<div class="br-tot" id="br-tot-'+token+'">'+_brandTotHtml(token,m)+'</div></div>';
+  var pct=(typeof brandSplitPct==='function')?brandSplitPct():50;
+  var boltW=(window._boltBrand||{})[weekMon]||{};
+  var uklW=(window._uklonBrand||{})[weekMon]||{};
+  var plateDrv={};(A.list||[]).forEach(function(m){if(m.plate_norm)plateDrv[m.plate_norm]=m.name;});
+  var _plates={};Object.keys(boltW).forEach(function(x){_plates[x]=1;});Object.keys(uklW).forEach(function(x){_plates[x]=1;});
+  var rows=Object.keys(_plates).map(function(pn){
+    var b=(boltW[pn]&&boltW[pn].income)||0;var u=(uklW[pn]&&uklW[pn].income)||0;
+    var rawName=(uklW[pn]&&uklW[pn].driver)||plateDrv[pn]||'';
+    var token=rawName?rpt_toks(rawName).join('|'):'';
+    var excluded=(token&&typeof brandFixGet==='function')?!!(brandFixGet(weekMon,token)||{}).excluded:false;
+    var ord=(uklW[pn]&&uklW[pn].orders)||(boltW[pn]&&boltW[pn].orders)||0;
+    var drvDisp=rawName?((typeof nameFor==='function')?nameFor(rawName):rawName):'';
+    return {plate:pn,driver:drvDisp,token:token,excluded:excluded,orders:ord,bolt:b,uklon:u,total:b+u};
+  }).filter(function(r){return r.total>0;});
+  rows.sort(function(a,b){return b.total-a.total;});
+  var sB=0,sU=0;rows.forEach(function(r){if(!r.excluded){sB+=r.bolt;sU+=r.uklon;}});
+  var sT=sB+sU,sShare=sT*pct/100;
+  function _m(n){return (typeof _bf==='function')?_bf(n):(Math.round(n||0)).toLocaleString('uk-UA');}
+  var trs=rows.map(function(r){
+    var exBtn=r.token?'<button class="br-ex '+(r.excluded?'off':'on')+'" style="margin-left:6px;font-size:11px;padding:2px 7px" onclick="brandToggleExclude(&quot;'+r.token+'&quot;)">'+(r.excluded?'\u2715':'\u2713')+'</button>':'';
+    var share=r.excluded?0:r.total*pct/100;
+    var op=r.excluded?' style="opacity:.4"':'';
+    return '<tr'+op+'><td style="font-weight:700">'+r.plate+'</td><td>'+(r.driver||'\u2014')+exBtn+'</td><td class="r">'+r.orders+'</td>'
+      +'<td class="r">'+(r.bolt>0?_m(r.bolt)+' \u20b4':'\u2014')+'</td>'
+      +'<td class="r">'+(r.uklon>0?_m(r.uklon)+' \u20b4':'\u2014')+'</td>'
+      +'<td class="r" style="font-weight:700">'+_m(r.total)+' \u20b4</td>'
+      +'<td class="r" style="font-weight:800;color:#0a7d33">'+_m(share)+' \u20b4</td></tr>';
   }).join('');
+  var tableHtml=rows.length
+    ?'<table class="otable"><thead><tr><th>Номер</th><th>Водій</th><th class="r">Поїзд.</th><th class="r">Bolt \u20b4</th><th class="r">Uklon \u20b4</th><th class="r">Разом \u20b4</th><th class="r">Водію ('+pct+'%)</th></tr></thead><tbody>'+trs
+      +'<tr style="border-top:2px solid var(--line)"><td colspan="3" style="font-weight:800">Разом</td><td class="r" style="font-weight:800">'+_m(sB)+' \u20b4</td><td class="r" style="font-weight:800">'+_m(sU)+' \u20b4</td><td class="r" style="font-weight:800">'+_m(sT)+' \u20b4</td><td class="r" style="font-weight:800;color:#0a7d33">'+_m(sShare)+' \u20b4</td></tr></tbody></table>'
+    :'<div class="st-empty">Цього тижня нема брендування (ні Bolt, ні Uklon).</div>';
   el.innerHTML='<h1>🏷 <span class="accent">Брендування</span></h1>'+brandPeriodTabs()+brandUploadBox()
-    +'<div class="wk-nav"><button class="wk-arrow" onclick="brandStep(-1)">‹</button><div class="wk-lab"><b>'+monL+' – '+sunL+'</b><span>тиждень '+wk+' · '+quals.length+' водіїв</span></div><button class="wk-arrow" onclick="brandStep(1)">›</button></div>'
+    +'<div class="wk-nav"><button class="wk-arrow" onclick="brandStep(-1)">\u2039</button><div class="wk-lab"><b>'+monL+' \u2013 '+sunL+'</b><span>тиждень '+wk+' \u00b7 '+rows.length+' авто</span></div><button class="wk-arrow" onclick="brandStep(1)">\u203a</button></div>'
     +brandWeekBadge(weekMon)
-    +'<div class="br-filter">'+[['all','Всі'],['taxi','Таксі'],['rent','Оренда'],['lease','Лізинг']].map(function(p){return '<button class="br-ftab'+((window._brFilter||'all')===p[0]?' on':'')+'" onclick="setBrandFilter(&quot;'+p[0]+'&quot;)">'+p[1]+'</button>';}).join('')+'</div>'
-    +'<div style="background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin:10px 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:13.5px;color:var(--ink2)">Частка водія від Bolt-брендування:</span><input type="number" inputmode="decimal" min="0" max="100" step="1" value="'+brandSplitPct()+'" onchange="brandSetSplit(this.value)" style="width:72px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font-size:14px;font-weight:700;font-family:inherit"><span style="font-size:14px;font-weight:700;color:var(--ink)">%</span><span style="font-size:12px;color:var(--muted)">для всіх водіїв</span></div>'
-    +'<div class="br-grand">Bolt-брендування: <b>'+_bf(grand)+' ₴</b> · водіям ('+brandSplitPct()+'%): <b>'+_bf(grand*brandSplitPct()/100)+' ₴</b></div>'
-    +(cards||'<div class="st-empty">Цього тижня ніхто не досяг порогів брендування.</div>')+uklonWeekBlock(weekMon);}
+    +'<div style="background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin:10px 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:13.5px;color:var(--ink2)">Частка водія від брендування:</span><input type="number" inputmode="decimal" min="0" max="100" step="1" value="'+pct+'" onchange="brandSetSplit(this.value)" style="width:72px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font-size:14px;font-weight:700;font-family:inherit"><span style="font-size:14px;font-weight:700;color:var(--ink)">%</span><span style="font-size:12px;color:var(--muted)">Bolt + Uklon</span></div>'
+    +'<div class="br-grand">Разом брендування: <b>'+_m(sT)+' \u20b4</b> <span style="font-weight:400;color:var(--muted)">(Bolt '+_m(sB)+' + Uklon '+_m(sU)+')</span> \u00b7 водіям ('+pct+'%): <b>'+_m(sShare)+' \u20b4</b></div>'
+    +tableHtml;}
 function renderCoverage(){var el=document.getElementById('coverage');if(!el)return;
   var dayKeys=Object.keys(DAYS||{}).filter(function(k){return /^\d{4}-\d{2}-\d{2}$/.test(k);});
   var brandIdx=window._boltBrand||{};var brandMeta=window._boltBrandMeta||{};
