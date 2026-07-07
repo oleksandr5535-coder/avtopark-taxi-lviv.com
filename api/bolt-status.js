@@ -41,34 +41,29 @@ async function post(token, method, bodyObj) {
   try { return JSON.parse(txt); } catch (e) { throw new Error(method + ' не-JSON (' + r.status + '): ' + txt.slice(0, 160)); }
 }
 
-// uuid авто -> номер. getVehicles капризний — пробуємо кілька варіантів тіла.
+// uuid авто -> номер. limit має бути невеликий (<=50), тому з пагінацією.
 async function vehicleMap(token, diag) {
   const now = Math.floor(Date.now() / 1000);
   const start = now - 30 * 24 * 3600;
   const map = {};
-  const bodies = [
-    { company_id: COMPANY_ID, start_ts: start, end_ts: now, offset: 0, limit: 1000, portal_status: 'active', search: 'BC' },
-    { company_id: COMPANY_ID, start_ts: start, end_ts: now, offset: 0, limit: 1000, search: 'BC' },
-    { company_id: COMPANY_ID, start_ts: start, end_ts: now, offset: 0, limit: 1000, portal_status: 'active', search: '' },
-    { company_ids: [COMPANY_ID], company_id: COMPANY_ID, start_ts: start, end_ts: now, offset: 0, limit: 1000, portal_status: 'active', search: 'BC' },
-    { company_id: COMPANY_ID, start_ts: start, end_ts: now, offset: 0, limit: 1000 },
-    { company_id: COMPANY_ID, offset: 0, limit: 1000, portal_status: 'active', search: 'BC' },
-  ];
-  for (let i = 0; i < bodies.length; i++) {
+  const limit = 50;
+  let offset = 0;
+  for (let guard = 0; guard < 20; guard++) {
     let j, raw = '';
     try {
       const r = await fetchT(API + '/getVehicles', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify(bodies[i]),
+        body: JSON.stringify({ company_id: COMPANY_ID, start_ts: start, end_ts: now, offset, limit, portal_status: 'active', search: 'BC' }),
       }, 15000);
       raw = await r.text();
       j = JSON.parse(raw);
-    } catch (e) { if (diag) diag.push({ variant: i, error: (e.message || '').slice(0, 120) }); continue; }
+    } catch (e) { if (diag) diag.push({ offset, error: (e.message || '').slice(0, 120) }); break; }
     const list = (j && j.data && j.data.vehicles) || [];
-    if (diag) diag.push({ variant: i, code: j && j.code, count: list.length, snippet: raw.slice(0, 140) });
+    if (diag) diag.push({ offset, code: j && j.code, count: list.length });
     for (const v of list) if (v.uuid) map[v.uuid] = v.reg_number || '—';
-    if (list.length) break; // спрацювало — виходимо
+    if (list.length < limit) break;
+    offset += limit;
   }
   return map;
 }
