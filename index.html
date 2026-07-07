@@ -2261,14 +2261,14 @@ function renderBranding(){var el=document.getElementById('branding');if(!el)retu
   var pct=(typeof brandSplitPct==='function')?brandSplitPct():50;
   var boltW=(window._boltBrand||{})[weekMon]||{};
   var uklW=(window._uklonBrand||{})[weekMon]||{};
-  var plateDrv={};(A.list||[]).forEach(function(m){if(m.plate_norm)plateDrv[m.plate_norm]=m.name;});
+  var plateDrv={},plateOrders={};(A.list||[]).forEach(function(m){if(m.plate_norm){plateDrv[m.plate_norm]=m.name;plateOrders[m.plate_norm]=m.orders;}});
   var _plates={};Object.keys(boltW).forEach(function(x){_plates[x]=1;});Object.keys(uklW).forEach(function(x){_plates[x]=1;});
   var rows=Object.keys(_plates).map(function(pn){
     var b=(boltW[pn]&&boltW[pn].income)||0;var u=(uklW[pn]&&uklW[pn].income)||0;
     var rawName=(uklW[pn]&&uklW[pn].driver)||plateDrv[pn]||'';
     var token=rawName?rpt_toks(rawName).join('|'):'';
     var excluded=(token&&typeof brandFixGet==='function')?!!(brandFixGet(weekMon,token)||{}).excluded:false;
-    var ord=(uklW[pn]&&uklW[pn].orders)||(boltW[pn]&&boltW[pn].orders)||0;
+    var ord=(uklW[pn]&&uklW[pn].orders)||(plateOrders[pn]!=null?plateOrders[pn]:0);
     var drvDisp=rawName?((typeof nameFor==='function')?nameFor(rawName):rawName):'';
     return {plate:pn,driver:drvDisp,token:token,excluded:excluded,orders:ord,bolt:b,uklon:u,total:b+u};
   }).filter(function(r){return r.total>0;});
