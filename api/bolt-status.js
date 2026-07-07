@@ -123,6 +123,19 @@ export default async function handler(req, res) {
 
     const payload = { ok: true, updated: new Date().toISOString(), window_hours: hours, counts, drivers };
 
+    // ?debug=1 — діагностика звʼязки авто
+    if (req.query && req.query.debug) {
+      const vkeys = Object.keys(vmap);
+      const sampleStateUuids = Object.keys(states).slice(0, 5).map(k => states[k].vehicle_uuid);
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      return res.status(200).send(JSON.stringify({
+        vehicles_found: vkeys.length,
+        vehicle_sample: vkeys.slice(0, 3).map(u => ({ uuid: u, plate: vmap[u] })),
+        state_vehicle_uuids_sample: sampleStateUuids,
+        match_test: sampleStateUuids.map(u => ({ uuid: u, plate: vmap[u] || 'НЕ ЗНАЙДЕНО' })),
+      }, null, 2));
+    }
+
     if (req.query && req.query.html) {
       const rows = drivers.map(d =>
         '<tr><td>' + d.dot + ' ' + d.label + '</td><td><b>' + d.car + '</b></td><td class=r>' + d.mins_ago + ' хв тому</td><td>' + (d.order ? (d.order.pickup || '') + ' → ' + (d.order.dest || '') : '') + '</td></tr>'
