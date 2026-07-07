@@ -18,13 +18,15 @@ async function auth(id, secret) {
   return j.access_token;
 }
 
-// Uklon status -> наш загальний вигляд
+// Uklon status -> наш загальний вигляд (за реальними значеннями з API)
 const STATE = {
-  Free:           { label: 'Вільний', group: 'free', dot: '🟢' },
   OrderExecution: { label: 'На замовленні', group: 'on_order', dot: '🔵' },
+  Waiting:        { label: 'Очікування', group: 'on_order', dot: '🔵' },
+  Active:         { label: 'Вільний', group: 'free', dot: '🟢' },
+  Free:           { label: 'Вільний', group: 'free', dot: '🟢' },
   OnBreak:        { label: 'Перерва', group: 'break', dot: '🟠' },
   Restricted:     { label: 'З обмеженнями', group: 'break', dot: '🟠' },
-  Waiting:        { label: 'Очікування', group: 'on_order', dot: '🔵' },
+  Inactive:       { label: 'Офлайн', group: 'offline', dot: '⚪' },
 };
 
 export default async function handler(req, res) {
@@ -64,9 +66,9 @@ export default async function handler(req, res) {
     const order = { on_order: 0, free: 1, break: 2, other: 3, offline: 4 };
     drivers.sort((a, b) => (order[a.group] - order[b.group]) || String(a.car).localeCompare(String(b.car)));
 
-    const counts = { free: 0, on_order: 0, break: 0, other: 0, total: drivers.length };
+    const counts = { free: 0, on_order: 0, break: 0, offline: 0, other: 0, total: drivers.length };
     for (const d of drivers) counts[d.group] = (counts[d.group] || 0) + 1;
-    counts.online = drivers.length; // геолокація віддає лише активних
+    counts.online = counts.free + counts.on_order + counts.break;
 
     const payload = { ok: true, updated: new Date().toISOString(), counts, drivers };
 
@@ -87,7 +89,7 @@ export default async function handler(req, res) {
         + 'td,th{padding:7px 10px;border-bottom:1px solid #eee;text-align:left}'
         + 'thead th{border-bottom:2px solid #ccc;font-size:12px;color:#666}</style>'
         + '<h2>Uklon · статус водіїв</h2>'
-        + '<p class=sum>🟢 Вільних: <b>' + counts.free + '</b> · 🔵 На замовленні: <b>' + counts.on_order + '</b> · 🟠 Перерва/обмеження: <b>' + counts.break + '</b> &nbsp; (на лінії ' + counts.total + ')</p>'
+        + '<p class=sum>🟢 Вільних: <b>' + counts.free + '</b> · 🔵 На замовленні: <b>' + counts.on_order + '</b> · 🟠 Перерва/обмеження: <b>' + counts.break + '</b> · ⚪ Офлайн: <b>' + counts.offline + '</b> &nbsp; (на лінії ' + counts.online + ' з ' + counts.total + ')</p>'
         + '<table><thead><tr><th>Статус</th><th>Авто</th><th>Водій</th></tr></thead><tbody>' + rows + '</tbody></table>';
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       return res.status(200).send(html);
