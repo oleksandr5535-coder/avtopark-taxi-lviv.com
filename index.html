@@ -2334,21 +2334,30 @@ async function _statusWorkedToday(){
   var day=new Date().toLocaleDateString('en-CA');
   var c=window._workedTodayCache;
   if(c&&c.day===day&&(Date.now()-c.ts)<10*60*1000)return c.val;
-  var toks=new Set(),plates=new Set();
+  var toks=new Set(),plates=new Set(),lastT={},lastP={};
   function tok(n){return (typeof rpt_toks==='function')?rpt_toks(n).join('|'):String(n||'').toLowerCase();}
   function npl(p){return (typeof NPL==='function')?NPL(p):String(p||'').toUpperCase();}
+  function hhmm(str){var m=String(str||'').match(/(\d{2}):(\d{2})/);return m?(m[1]+':'+m[2]):'';}
+  function later(a,b){if(!a)return b;if(!b)return a;return a>b?a:b;}
   try{var rb=await fetch('/api/bolt?date='+day);var jb=await rb.json();
     var orders=(typeof extractOrders==='function')?(extractOrders(jb)||[]):[];
-    orders.forEach(function(o){var nm=o.driver_name||'';if(nm)toks.add(tok(nm));var pl=o.vehicle_license_plate||o.license_plate||'';if(pl)plates.add(npl(pl));});
+    orders.forEach(function(o){var nm=o.driver_name||'';var pl=npl(o.vehicle_license_plate||o.license_plate||'');
+      var ts=o.payment_confirmed_timestamp||o.order_created_timestamp||null;var t='';
+      if(ts){try{t=new Intl.DateTimeFormat('uk-UA',{timeZone:'Europe/Kyiv',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(ts*1000));}catch(e){}}
+      if(nm){toks.add(tok(nm));if(t)lastT[tok(nm)]=later(lastT[tok(nm)],t);}
+      if(pl){plates.add(pl);if(t)lastP[pl]=later(lastP[pl],t);}});
   }catch(e){}
   try{var ru=await fetch('/api/uklon?date='+day);var ju=await ru.json();
     (ju&&ju.uklon_agg||[]).forEach(function(r){var nm=r['Водій']||r.driver||'';
       var trips=parseFloat(String(r['Завершені поїздки']||r.trips||'0').replace(',','.'))||0;
       var net=parseFloat(String(r['Чистий дохід|₴']||r['Чистий дохід']||r.net||'0').replace(/[^\d.,-]/g,'').replace(',','.'))||0;
       if(nm&&(trips>0||net>0))toks.add(tok(nm));});
-    (ju&&ju.uklon_trips||[]).forEach(function(r){var pl=r['Держ номер авто']||'';if(pl)plates.add(npl(pl));var nm=r['Водій']||'';if(nm)toks.add(tok(nm));});
+    (ju&&ju.uklon_trips||[]).forEach(function(r){var pl=npl(r['Держ номер авто']||'');var nm=r['Водій']||'';
+      var t='';Object.keys(r).forEach(function(k){var kl=k.toLowerCase();if(!t&&(kl.indexOf('час')>-1||kl.indexOf('дата')>-1||kl.indexOf('подач')>-1)){t=hhmm(r[k]);}});
+      if(pl){plates.add(pl);if(t)lastP[pl]=later(lastP[pl],t);}
+      if(nm){toks.add(tok(nm));if(t)lastT[tok(nm)]=later(lastT[tok(nm)],t);}});
   }catch(e){}
-  var val={toks:toks,plates:plates};
+  var val={toks:toks,plates:plates,lastT:lastT,lastP:lastP};
   window._workedTodayCache={day:day,ts:Date.now(),val:val};
   return val;
 }
@@ -2383,7 +2392,9 @@ async function renderStatus(silent){
     if(c.overall==='offline'){
       var _wtok=c.driver?((typeof rpt_toks==='function')?rpt_toks(c.driver).join('|'):String(c.driver).toLowerCase()):'';
       var _wt=(_wtok&&worked.toks.has(_wtok))||worked.plates.has(pn);
-      if(_seen[pn]||_wt){c.alert='ok';c.workedToday=true;c.seenToday=_seen[pn]||'';c.overall='worked';}
+      if(_seen[pn]||_wt){c.alert='ok';c.workedToday=true;
+        var _lt=(worked.lastP&&worked.lastP[pn])||(_wtok&&worked.lastT&&worked.lastT[_wtok])||'';
+        c.seenToday=_seen[pn]||'';c.lastTrip=_lt;c.overall='worked';}
       else{
         var idl=(typeof carIdleDays==='function')?carIdleDays(pn):{n:1,exact:false};
         c.idleN=idl.n;c.idleExact=idl.exact;
@@ -2409,7 +2420,7 @@ async function renderStatus(silent){
   list.sort(function(a,b){var d=(ord[a.overall]-ord[b.overall]);if(d)return d;if(a.overall==='offline'){var ad=(aOrd[a.alert]-aOrd[b.alert]);if(ad)return ad;if(a.alert==='ok'&&b.alert==='ok'){var i2=(a.idleN||0)-(b.idleN||0);if(i2)return i2;}else{var idd=(b.idleN||0)-(a.idleN||0);if(idd)return idd;}}return a.plate.localeCompare(b.plate);});
   function cell(s){if(!s)return '<span style="color:var(--muted)">—</span>';return s.dot+' '+s.label;}
   function idleInfo(c){
-    if(c.overall==='worked')return '<span style="font-size:11.5px;font-weight:700;color:#0a7d33">✅ сьогодні працював · зараз не на лінії'+(c.seenToday?(' · востаннє ~'+c.seenToday):'')+'</span>';
+    if(c.overall==='worked'){var _lt=c.seenToday||c.lastTrip||'';return '<span style="font-size:11.5px;font-weight:700;color:#0a7d33">✅ сьогодні працював · зараз не на лінії'+(_lt?(' · '+(c.seenToday?'востаннє на лінії ~':'остання поїздка ~')+_lt):'')+'</span>';}
     if(c.overall!=='offline')return '';
     if(c.reason&&c.alert==='ok')return '<span style="font-size:11.5px;color:var(--muted)">'+c.reason+'</span>';
     var d=c.idleN||1;var txt=c.idleExact?(d<=1?'сьогодні ще не виходив':('не виходив '+d+' дн.')):('не виходив ≥'+d+' дн.');
@@ -2418,7 +2429,7 @@ async function renderStatus(silent){
     return '<span style="font-size:11.5px;color:var(--muted)">'+txt+'</span>';
   }
   var rows=list.map(function(c){var dim=(c.overall==='offline'&&c.alert!=='red'&&c.alert!=='yellow')?' style="opacity:.55"':'';
-    var hideBtn='<button title="Прибрати зі списку" onclick="statusHide(&quot;'+c.plate+'&quot;)" style="border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 5px;opacity:.5">✕</button>';
+    var hideBtn='<button title="Прибрати зі списку" onclick="statusHide(&quot;'+c.plate+'&quot;)" style="border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer;font-size:11px;padding:2px 7px;border-radius:6px;margin-left:6px">✕</button>';
     return '<tr'+dim+'><td style="font-weight:700;white-space:nowrap">'+c.plate+hideBtn+'</td><td>'+(c.driver||'—')+'<div>'+idleInfo(c)+'</div></td><td>'+cell(c.bolt)+'</td><td>'+cell(c.uklon)+'</td></tr>';}).join('');
   var warn='';
   if(errB)warn+='<div style="color:#b7791f;font-size:12.5px">⚠ Bolt: '+errB+'</div>';
@@ -2434,8 +2445,8 @@ async function renderStatus(silent){
     +'<div style="flex:1;min-width:108px;background:var(--panel);border:1px solid '+(nRed?'#f5c6c0':'var(--line)')+';border-radius:11px;padding:10px 12px"><div style="font-size:22px;font-weight:800;color:var(--muted)">'+cnt.offline+'</div><div style="font-size:12px;color:var(--muted)">⚪ Офлайн'+(nRed||nYel?(' · '+(nRed?'<b style="color:#b23b2e">🔴 '+nRed+'</b>':'')+(nRed&&nYel?' ':'')+(nYel?'<b style="color:#8a6100">🟡 '+nYel+'</b>':'')):'')+'</div></div>'
     +'</div>'
     +'<div style="font-size:13px;color:var(--ink2);margin-bottom:8px">На лінії зараз: <b>'+online+'</b> авто з '+list.length+' <span style="color:var(--muted)">(унікальних по обох платформах)</span>'+(hiddenCount?(' · <span style="color:var(--muted)">приховано: '+hiddenCount+' <a href="javascript:void(0)" onclick="statusUnhideAll()" style="color:var(--muted)">показати</a></span>'):'')+'</div>'
-    +(nRed||nYel?'<div style="font-size:12px;color:var(--muted);margin:-2px 0 10px">🔴 3+ днів без лінії — варто подзвонити · 🟡 2 дні — глянути. Ремонт/вихідний/хвороба (з вкладки «Авто») тривогою не рахуються.</div>':'')
-    +(nRed?('<div style="background:#fdecea;border:1px solid #f5c6c0;border-radius:12px;padding:11px 13px;margin:0 0 12px"><div style="font-weight:800;color:#b23b2e;font-size:13.5px;margin-bottom:6px">🔴 Варто подзвонити — давно не виходять:</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+list.filter(function(c){return c.alert==='red';}).sort(function(a,b){return (b.idleN||0)-(a.idleN||0);}).map(function(c){return '<span style="background:#fff;border:1px solid #f5c6c0;border-radius:9px;padding:5px 10px;font-size:12.5px"><b>'+(c.driver||c.plate)+'</b> <span style="color:var(--muted)">'+c.plate+'</span> · <b style="color:#b23b2e">'+(c.idleExact?'':'≥')+(c.idleN||1)+' дн.</b></span>';}).join('')+'</div></div>'):'')
+    +(nRed||nYel?'<div style="font-size:12px;color:var(--muted);margin:-2px 0 10px">🔴 3+ днів без лінії (внизу списку, перед тими, хто стоїть з причиною) · 🟡 2 дні. Ремонт/вихідний/хвороба тривогою не рахуються.</div>':'')
+    
     +'<table class="otable"><thead><tr><th>Авто</th><th>Водій</th><th>Bolt</th><th>Uklon</th></tr></thead><tbody>'+rows+'</tbody></table>';
   if(typeof view!=='undefined'&&view==='status'){window._statusTimer=setTimeout(function(){if(typeof view!=='undefined'&&view==='status')renderStatus(true);},30000);}
 }
