@@ -2344,18 +2344,26 @@ async function renderStatus(silent){
   Object.keys(cars).forEach(function(pn){if(!cars[pn].driver)cars[pn].driver=nameMap[pn]||'';});
   var _notes=(typeof carNotes==='function')?carNotes():{};
   var JUSTIFIED=new Set(['Утримуємо як підмінне','На ремонті / ТО','ДТП / пошкоджено','Водій на вихідному','Водій захворів','Не готове до таксі / готуємо до випуску']);
+  // памʼятаємо, кого сьогодні бачили на лінії (переживає перезавантаження сторінки)
+  var _todayKey=new Date().toLocaleDateString('en-CA');
+  var _seen={};try{var _s=JSON.parse(localStorage.getItem('status_seen')||'{}');if(_s.day===_todayKey)_seen=_s.map||{};}catch(e){}
   var list=Object.keys(cars).map(function(pn){var c=cars[pn];c.overall=_statusOverall(c.bolt&&c.bolt.group,c.uklon&&c.uklon.group);
+    if(c.overall!=='offline'){_seen[pn]=new Date().toTimeString().slice(0,5);}
     c.reason=(_notes[pn]||{}).reason||'';
     if(c.overall==='offline'){
-      var idl=(typeof carIdleDays==='function')?carIdleDays(pn):{n:1,exact:false};
-      c.idleN=idl.n;c.idleExact=idl.exact;
-      if(c.reason&&JUSTIFIED.has(c.reason)){c.alert='ok';}
-      else if(idl.n>=3){c.alert='red';}
-      else if(idl.n>=1&&idl.exact===false){c.alert='red';}
-      else if(idl.n>=2){c.alert='yellow';}
-      else{c.alert='ok';}
+      if(_seen[pn]){c.alert='ok';c.seenToday=_seen[pn];}
+      else{
+        var idl=(typeof carIdleDays==='function')?carIdleDays(pn):{n:1,exact:false};
+        c.idleN=idl.n;c.idleExact=idl.exact;
+        if(c.reason&&JUSTIFIED.has(c.reason)){c.alert='ok';}
+        else if(idl.n>=3){c.alert='red';}
+        else if(idl.n>=1&&idl.exact===false){c.alert='red';}
+        else if(idl.n>=2){c.alert='yellow';}
+        else{c.alert='ok';}
+      }
     } else {c.alert='';c.idleN=0;}
     return c;});
+  try{localStorage.setItem('status_seen',JSON.stringify({day:_todayKey,map:_seen}));}catch(e){}
   var cnt={on_order:0,free:0,break:0,offline:0,other:0};
   list.forEach(function(c){cnt[c.overall]=(cnt[c.overall]||0)+1;});
   var online=cnt.on_order+cnt.free+cnt.break;
@@ -2367,8 +2375,9 @@ async function renderStatus(silent){
   function cell(s){if(!s)return '<span style="color:var(--muted)">—</span>';return s.dot+' '+s.label;}
   function idleInfo(c){
     if(c.overall!=='offline')return '';
+    if(c.seenToday)return '<span style="font-size:11.5px;color:#0a7d33">сьогодні працював · був на лінії о '+c.seenToday+'</span>';
     if(c.reason&&c.alert==='ok')return '<span style="font-size:11.5px;color:var(--muted)">'+c.reason+'</span>';
-    var d=c.idleN||1;var txt=c.idleExact?(d<=1?'сьогодні не виходив':('не виходив '+d+' дн.')):('не виходив ≥'+d+' дн.');
+    var d=c.idleN||1;var txt=c.idleExact?(d<=1?'сьогодні ще не виходив':('не виходив '+d+' дн.')):('не виходив ≥'+d+' дн.');
     if(c.alert==='red')return '<span style="font-size:11.5px;font-weight:800;color:#b23b2e">🔴 '+txt+'</span>';
     if(c.alert==='yellow')return '<span style="font-size:11.5px;font-weight:700;color:#8a6100">🟡 '+txt+'</span>';
     return '<span style="font-size:11.5px;color:var(--muted)">'+txt+'</span>';
