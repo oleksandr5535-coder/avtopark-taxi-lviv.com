@@ -2326,13 +2326,34 @@ function renderBranding(){var el=document.getElementById('branding');if(!el)retu
     +'<div class="br-grand">Разом брендування: <b>'+_m(sT)+' \u20b4</b> <span style="font-weight:400;color:var(--muted)">(Bolt '+_m(sB)+' + Uklon '+_m(sU)+')</span> \u00b7 водіям ('+pct+'%): <b>'+_m(sShare)+' \u20b4</b></div>'
     +tableHtml;}
 function _statusOverall(bg,ug){var gs=[bg,ug].filter(Boolean);if(gs.indexOf('on_order')>=0)return 'on_order';if(gs.indexOf('free')>=0)return 'free';if(gs.indexOf('break')>=0)return 'break';if(gs.indexOf('offline')>=0)return 'offline';return 'other';}
+async function _statusWorkedToday(){
+  // хто СЬОГОДНІ реально мав поїздки (правда з платформ), кеш 10 хв
+  var day=new Date().toLocaleDateString('en-CA');
+  var c=window._workedTodayCache;
+  if(c&&c.day===day&&(Date.now()-c.ts)<10*60*1000)return c.set;
+  var set=new Set();
+  function tok(n){return (typeof rpt_toks==='function')?rpt_toks(n).join('|'):String(n||'').toLowerCase();}
+  try{var rb=await fetch('/api/bolt?date='+day);var jb=await rb.json();
+    var orders=(jb&&(jb.orders||jb.data&&jb.data.orders))||[];
+    if(!orders.length&&typeof extractOrders==='function')orders=extractOrders(jb)||[];
+    orders.forEach(function(o){var nm=o.driver_name||(o.driver&&(o.driver.name||[o.driver.first_name,o.driver.last_name].filter(Boolean).join(' ')))||'';if(nm)set.add(tok(nm));});
+  }catch(e){}
+  try{var ru=await fetch('/api/uklon?date='+day);var ju=await ru.json();
+    (ju&&ju.uklon_agg||[]).forEach(function(r){var nm=r['Водій']||r.driver||'';var trips=parseFloat(r['Завершені поїздки']||r.trips||0)||0;if(nm&&trips>0)set.add(tok(nm));});
+  }catch(e){}
+  window._workedTodayCache={day:day,ts:Date.now(),set:set};
+  return set;
+}
 async function renderStatus(silent){
   var el=document.getElementById('status');if(!el)return;
   if(window._statusTimer){clearTimeout(window._statusTimer);window._statusTimer=null;}
   if(!silent)el.innerHTML='<h1>📡 <span class="accent">Статус</span></h1><p class="sub">Тягну дані з Bolt і Uklon…</p>';
-  var bolt=null,ukl=null,errB='',errU='';
-  try{var rb=await fetch('/api/bolt-status',{headers:{accept:'application/json'}});bolt=await rb.json();}catch(e){errB=(e&&e.message)||'помилка';}
-  try{var ru=await fetch('/api/uklon-status',{headers:{accept:'application/json'}});ukl=await ru.json();}catch(e){errU=(e&&e.message)||'помилка';}
+  var bolt=null,ukl=null,errB='',errU='',workedSet=new Set();
+  try{var _all=await Promise.all([
+    fetch('/api/bolt-status',{headers:{accept:'application/json'}}).then(function(r){return r.json();}).catch(function(e){errB=(e&&e.message)||'помилка';return null;}),
+    fetch('/api/uklon-status',{headers:{accept:'application/json'}}).then(function(r){return r.json();}).catch(function(e){errU=(e&&e.message)||'помилка';return null;}),
+    _statusWorkedToday().catch(function(){return new Set();})
+  ]);bolt=_all[0];ukl=_all[1];workedSet=_all[2]||new Set();}catch(e){}
   if(bolt&&bolt.ok===false){errB=bolt.error||'помилка';bolt=null;}
   if(ukl&&ukl.ok===false){errU=ukl.error||'помилка';ukl=null;}
   var nameMap=(typeof lastDriverByPlate==='function')?lastDriverByPlate():{};
@@ -2351,7 +2372,9 @@ async function renderStatus(silent){
     if(c.overall!=='offline'){_seen[pn]=new Date().toTimeString().slice(0,5);}
     c.reason=(_notes[pn]||{}).reason||'';
     if(c.overall==='offline'){
+      var _wtok=c.driver?((typeof rpt_toks==='function')?rpt_toks(c.driver).join('|'):String(c.driver).toLowerCase()):'';
       if(_seen[pn]){c.alert='ok';c.seenToday=_seen[pn];}
+      else if(_wtok&&workedSet.has(_wtok)){c.alert='ok';c.workedToday=true;}
       else{
         var idl=(typeof carIdleDays==='function')?carIdleDays(pn):{n:1,exact:false};
         c.idleN=idl.n;c.idleExact=idl.exact;
@@ -2376,6 +2399,7 @@ async function renderStatus(silent){
   function idleInfo(c){
     if(c.overall!=='offline')return '';
     if(c.seenToday)return '<span style="font-size:11.5px;color:#0a7d33">сьогодні працював · був на лінії о '+c.seenToday+'</span>';
+    if(c.workedToday)return '<span style="font-size:11.5px;color:#0a7d33">сьогодні працював (є поїздки)</span>';
     if(c.reason&&c.alert==='ok')return '<span style="font-size:11.5px;color:var(--muted)">'+c.reason+'</span>';
     var d=c.idleN||1;var txt=c.idleExact?(d<=1?'сьогодні ще не виходив':('не виходив '+d+' дн.')):('не виходив ≥'+d+' дн.');
     if(c.alert==='red')return '<span style="font-size:11.5px;font-weight:800;color:#b23b2e">🔴 '+txt+'</span>';
@@ -2398,6 +2422,7 @@ async function renderStatus(silent){
     +'</div>'
     +'<div style="font-size:13px;color:var(--ink2);margin-bottom:8px">На лінії зараз: <b>'+online+'</b> авто з '+list.length+' <span style="color:var(--muted)">(унікальних по обох платформах)</span></div>'
     +(nRed||nYel?'<div style="font-size:12px;color:var(--muted);margin:-2px 0 10px">🔴 3+ днів без лінії — варто подзвонити · 🟡 2 дні — глянути. Ремонт/вихідний/хвороба (з вкладки «Авто») тривогою не рахуються.</div>':'')
+    +(nRed?('<div style="background:#fdecea;border:1px solid #f5c6c0;border-radius:12px;padding:11px 13px;margin:0 0 12px"><div style="font-weight:800;color:#b23b2e;font-size:13.5px;margin-bottom:6px">🔴 Варто подзвонити — давно не виходять:</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+list.filter(function(c){return c.alert==='red';}).sort(function(a,b){return (b.idleN||0)-(a.idleN||0);}).map(function(c){return '<span style="background:#fff;border:1px solid #f5c6c0;border-radius:9px;padding:5px 10px;font-size:12.5px"><b>'+(c.driver||c.plate)+'</b> <span style="color:var(--muted)">'+c.plate+'</span> · <b style="color:#b23b2e">'+(c.idleExact?'':'≥')+(c.idleN||1)+' дн.</b></span>';}).join('')+'</div></div>'):'')
     +'<table class="otable"><thead><tr><th>Авто</th><th>Водій</th><th>Bolt</th><th>Uklon</th></tr></thead><tbody>'+rows+'</tbody></table>';
   if(typeof view!=='undefined'&&view==='status'){window._statusTimer=setTimeout(function(){if(typeof view!=='undefined'&&view==='status')renderStatus(true);},30000);}
 }
