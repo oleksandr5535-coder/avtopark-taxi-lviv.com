@@ -2355,9 +2355,11 @@ async function _statusWorkedToday(){
       touchT[tok(nm)]=(touchT[tok(nm)]||0)+1;
       if(trips>0||net>0)doneT[tok(nm)]=(doneT[tok(nm)]||0)+Math.max(1,trips);});
     (ju&&ju.uklon_trips||[]).forEach(function(r){var pl=npl(r['Держ номер авто']||'');var nm=r['Водій']||'';
-      var t='';Object.keys(r).forEach(function(k){var kl=k.toLowerCase();if(!t&&(kl.indexOf('час')>-1||kl.indexOf('дата')>-1||kl.indexOf('подач')>-1)){t=hhmm(r[k]);}});
-      if(pl){touchP[pl]=(touchP[pl]||0)+1;if(t)lastP[pl]=later(lastP[pl],t);}
-      if(nm){touchT[tok(nm)]=(touchT[tok(nm)]||0)+1;if(t)lastT[tok(nm)]=later(lastT[tok(nm)],t);}});
+      var st=(r['Статус']||'').trim();var fin=(st==='Виконано'||st==='Виконується');
+      var t='';var pd=r['Подача']||'';if(pd&&pd.length>=16)t=pd.slice(11,16);
+      if(!t){Object.keys(r).forEach(function(k){var kl=k.toLowerCase();if(!t&&(kl.indexOf('час')>-1||kl.indexOf('дата')>-1||kl.indexOf('подач')>-1)){t=hhmm(r[k]);}});}
+      if(pl){touchP[pl]=(touchP[pl]||0)+1;if(fin)doneP[pl]=(doneP[pl]||0)+1;if(t&&fin)lastP[pl]=later(lastP[pl],t);}
+      if(nm){touchT[tok(nm)]=(touchT[tok(nm)]||0)+1;if(fin)doneT[tok(nm)]=(doneT[tok(nm)]||0)+1;if(t&&fin)lastT[tok(nm)]=later(lastT[tok(nm)],t);}});
   }catch(e){}
   var val={doneT:doneT,doneP:doneP,touchT:touchT,touchP:touchP,lastT:lastT,lastP:lastP};
   window._workedTodayCache={day:day,ts:Date.now(),val:val};
@@ -2393,9 +2395,11 @@ async function renderStatus(silent){
     c.reason=(_notes[pn]||{}).reason||'';
     if(c.overall==='offline'){
       var _wtok=c.driver?((typeof rpt_toks==='function')?rpt_toks(c.driver).join('|'):String(c.driver).toLowerCase()):'';
-      var _done=(worked.doneP&&worked.doneP[pn])||( _wtok&&worked.doneT&&worked.doneT[_wtok])||0;
-      var _touch=(worked.touchP&&worked.touchP[pn])||(_wtok&&worked.touchT&&worked.touchT[_wtok])||0;
-      var _lt=(worked.lastP&&worked.lastP[pn])||(_wtok&&worked.lastT&&worked.lastT[_wtok])||'';
+      function _fz(map){if(!map)return 0;if(_wtok&&map[_wtok])return map[_wtok];if(!_wtok)return 0;var my=_wtok.split('|').filter(Boolean);var best=0;Object.keys(map).forEach(function(k){var ks=k.split('|');var hit=my.every(function(w){return ks.indexOf(w)>-1;})||ks.every(function(w){return my.indexOf(w)>-1;});if(hit&&map[k]>best)best=map[k];});return best;}
+      function _fzT(map){if(!map)return '';if(_wtok&&map[_wtok])return map[_wtok];if(!_wtok)return '';var my=_wtok.split('|').filter(Boolean);var best='';Object.keys(map).forEach(function(k){var ks=k.split('|');var hit=my.every(function(w){return ks.indexOf(w)>-1;})||ks.every(function(w){return my.indexOf(w)>-1;});if(hit&&map[k]>best)best=map[k];});return best;}
+      var _done=(worked.doneP&&worked.doneP[pn])||_fz(worked.doneT)||0;
+      var _touch=(worked.touchP&&worked.touchP[pn])||_fz(worked.touchT)||0;
+      var _lt=(worked.lastP&&worked.lastP[pn])||_fzT(worked.lastT)||'';
       if(_done>0){c.alert='ok';c.workedToday=true;c.doneN=_done;c.seenToday=_seen[pn]||'';c.lastTrip=_lt;c.overall='worked';}
       else if(_touch>0||_seen[pn]){c.alert='yellow';c.triedToday=true;c.touchN=_touch;c.seenToday=_seen[pn]||'';c.lastTrip=_lt;}
       else{
