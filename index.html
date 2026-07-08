@@ -2334,7 +2334,7 @@ async function _statusWorkedToday(){
   var day=new Date().toLocaleDateString('en-CA');
   var c=window._workedTodayCache;
   if(c&&c.day===day&&(Date.now()-c.ts)<10*60*1000)return c.val;
-  var toks=new Set(),plates=new Set(),lastT={},lastP={};
+  var toks=new Set(),plates=new Set(),lastT={},lastP={},doneT={},doneP={},touchT={},touchP={};
   function tok(n){return (typeof rpt_toks==='function')?rpt_toks(n).join('|'):String(n||'').toLowerCase();}
   function npl(p){return (typeof NPL==='function')?NPL(p):String(p||'').toUpperCase();}
   function hhmm(str){var m=String(str||'').match(/(\d{2}):(\d{2})/);return m?(m[1]+':'+m[2]):'';}
@@ -2342,22 +2342,24 @@ async function _statusWorkedToday(){
   try{var rb=await fetch('/api/bolt?date='+day);var jb=await rb.json();
     var orders=(typeof extractOrders==='function')?(extractOrders(jb)||[]):[];
     orders.forEach(function(o){var nm=o.driver_name||'';var pl=npl(o.vehicle_license_plate||o.license_plate||'');
+      var fin=(o.order_status==='finished');
       var ts=o.payment_confirmed_timestamp||o.order_created_timestamp||null;var t='';
       if(ts){try{t=new Intl.DateTimeFormat('uk-UA',{timeZone:'Europe/Kyiv',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(ts*1000));}catch(e){}}
-      if(nm){toks.add(tok(nm));if(t)lastT[tok(nm)]=later(lastT[tok(nm)],t);}
-      if(pl){plates.add(pl);if(t)lastP[pl]=later(lastP[pl],t);}});
+      if(nm){touchT[tok(nm)]=(touchT[tok(nm)]||0)+1;if(fin)doneT[tok(nm)]=(doneT[tok(nm)]||0)+1;if(t)lastT[tok(nm)]=later(lastT[tok(nm)],t);}
+      if(pl){touchP[pl]=(touchP[pl]||0)+1;if(fin)doneP[pl]=(doneP[pl]||0)+1;if(t)lastP[pl]=later(lastP[pl],t);}});
   }catch(e){}
   try{var ru=await fetch('/api/uklon?date='+day);var ju=await ru.json();
-    (ju&&ju.uklon_agg||[]).forEach(function(r){var nm=r['Водій']||r.driver||'';
+    (ju&&ju.uklon_agg||[]).forEach(function(r){var nm=r['Водій']||r.driver||'';if(!nm)return;
       var trips=parseFloat(String(r['Завершені поїздки']||r.trips||'0').replace(',','.'))||0;
       var net=parseFloat(String(r['Чистий дохід|₴']||r['Чистий дохід']||r.net||'0').replace(/[^\d.,-]/g,'').replace(',','.'))||0;
-      if(nm&&(trips>0||net>0))toks.add(tok(nm));});
+      touchT[tok(nm)]=(touchT[tok(nm)]||0)+1;
+      if(trips>0||net>0)doneT[tok(nm)]=(doneT[tok(nm)]||0)+Math.max(1,trips);});
     (ju&&ju.uklon_trips||[]).forEach(function(r){var pl=npl(r['Держ номер авто']||'');var nm=r['Водій']||'';
       var t='';Object.keys(r).forEach(function(k){var kl=k.toLowerCase();if(!t&&(kl.indexOf('час')>-1||kl.indexOf('дата')>-1||kl.indexOf('подач')>-1)){t=hhmm(r[k]);}});
-      if(pl){plates.add(pl);if(t)lastP[pl]=later(lastP[pl],t);}
-      if(nm){toks.add(tok(nm));if(t)lastT[tok(nm)]=later(lastT[tok(nm)],t);}});
+      if(pl){touchP[pl]=(touchP[pl]||0)+1;if(t)lastP[pl]=later(lastP[pl],t);}
+      if(nm){touchT[tok(nm)]=(touchT[tok(nm)]||0)+1;if(t)lastT[tok(nm)]=later(lastT[tok(nm)],t);}});
   }catch(e){}
-  var val={toks:toks,plates:plates,lastT:lastT,lastP:lastP};
+  var val={doneT:doneT,doneP:doneP,touchT:touchT,touchP:touchP,lastT:lastT,lastP:lastP};
   window._workedTodayCache={day:day,ts:Date.now(),val:val};
   return val;
 }
@@ -2369,9 +2371,9 @@ async function renderStatus(silent){
   var _all=[];try{_all=await Promise.all([
     fetch('/api/bolt-status',{headers:{accept:'application/json'}}).then(function(r){return r.json();}).catch(function(e){errB=(e&&e.message)||'помилка';return null;}),
     fetch('/api/uklon-status',{headers:{accept:'application/json'}}).then(function(r){return r.json();}).catch(function(e){errU=(e&&e.message)||'помилка';return null;}),
-    _statusWorkedToday().catch(function(){return {toks:new Set(),plates:new Set()};})
+    _statusWorkedToday().catch(function(){return {doneT:{},doneP:{},touchT:{},touchP:{},lastT:{},lastP:{}};})
   ]);}catch(e){}
-  bolt=_all[0]||null;ukl=_all[1]||null;var worked=_all[2]||{toks:new Set(),plates:new Set()};
+  bolt=_all[0]||null;ukl=_all[1]||null;var worked=_all[2]||{doneT:{},doneP:{},touchT:{},touchP:{},lastT:{},lastP:{}};
   if(bolt&&bolt.ok===false){errB=bolt.error||'помилка';bolt=null;}
   if(ukl&&ukl.ok===false){errU=ukl.error||'помилка';ukl=null;}
   var nameMap=(typeof lastDriverByPlate==='function')?lastDriverByPlate():{};
@@ -2391,10 +2393,11 @@ async function renderStatus(silent){
     c.reason=(_notes[pn]||{}).reason||'';
     if(c.overall==='offline'){
       var _wtok=c.driver?((typeof rpt_toks==='function')?rpt_toks(c.driver).join('|'):String(c.driver).toLowerCase()):'';
-      var _wt=(_wtok&&worked.toks.has(_wtok))||worked.plates.has(pn);
-      if(_seen[pn]||_wt){c.alert='ok';c.workedToday=true;
-        var _lt=(worked.lastP&&worked.lastP[pn])||(_wtok&&worked.lastT&&worked.lastT[_wtok])||'';
-        c.seenToday=_seen[pn]||'';c.lastTrip=_lt;c.overall='worked';}
+      var _done=(worked.doneP&&worked.doneP[pn])||( _wtok&&worked.doneT&&worked.doneT[_wtok])||0;
+      var _touch=(worked.touchP&&worked.touchP[pn])||(_wtok&&worked.touchT&&worked.touchT[_wtok])||0;
+      var _lt=(worked.lastP&&worked.lastP[pn])||(_wtok&&worked.lastT&&worked.lastT[_wtok])||'';
+      if(_done>0){c.alert='ok';c.workedToday=true;c.doneN=_done;c.seenToday=_seen[pn]||'';c.lastTrip=_lt;c.overall='worked';}
+      else if(_touch>0||_seen[pn]){c.alert='yellow';c.triedToday=true;c.touchN=_touch;c.seenToday=_seen[pn]||'';c.lastTrip=_lt;}
       else{
         var idl=(typeof carIdleDays==='function')?carIdleDays(pn):{n:1,exact:false};
         c.idleN=idl.n;c.idleExact=idl.exact;
@@ -2420,7 +2423,8 @@ async function renderStatus(silent){
   list.sort(function(a,b){var d=(ord[a.overall]-ord[b.overall]);if(d)return d;if(a.overall==='offline'){var ad=(aOrd[a.alert]-aOrd[b.alert]);if(ad)return ad;if(a.alert==='ok'&&b.alert==='ok'){var i2=(a.idleN||0)-(b.idleN||0);if(i2)return i2;}else{var idd=(b.idleN||0)-(a.idleN||0);if(idd)return idd;}}return a.plate.localeCompare(b.plate);});
   function cell(s){if(!s)return '<span style="color:var(--muted)">—</span>';return s.dot+' '+s.label;}
   function idleInfo(c){
-    if(c.overall==='worked'){var _lt=c.seenToday||c.lastTrip||'';return '<span style="font-size:11.5px;font-weight:700;color:#0a7d33">✅ сьогодні працював · зараз не на лінії'+(_lt?(' · '+(c.seenToday?'востаннє на лінії ~':'остання поїздка ~')+_lt):'')+'</span>';}
+    if(c.overall==='worked'){var _lt=c.seenToday||c.lastTrip||'';return '<span style="font-size:11.5px;font-weight:700;color:#0a7d33">✅ сьогодні працював · '+(c.doneN||0)+' поїзд. · зараз не на лінії'+(_lt?(' · '+(c.seenToday?'востаннє ~':'остання поїздка ~')+_lt):'')+'</span>';}
+    if(c.triedToday)return '<span style="font-size:11.5px;font-weight:800;color:#a05c00">🟠 виходив, але 0 завершених поїздок'+(c.touchN?(' · '+c.touchN+' замовл. без виконання'):'')+'</span>';
     if(c.overall!=='offline')return '';
     if(c.reason&&c.alert==='ok')return '<span style="font-size:11.5px;color:var(--muted)">'+c.reason+'</span>';
     var d=c.idleN||1;var txt=c.idleExact?(d<=1?'сьогодні ще не виходив':('не виходив '+d+' дн.')):('не виходив ≥'+d+' дн.');
@@ -2457,14 +2461,18 @@ function renderTracker(){var el=document.getElementById('tracker');if(!el)return
  var plates=Object.keys(gc).filter(function(pl){return (typeof plateIsTaxi==='function')?plateIsTaxi(pl,_nm,_pp):true;});
  if(!plates.length){el.innerHTML='<h1>🛰 <span class="accent">Трекер</span></h1><p class="sub">У цьому дні нема даних трекера (zip Wialon не завантажено).</p>';return;}
  // водій по авто (з денних даних)
- var drvBy={};(DATA.drivers||[]).forEach(function(d){if(d.plate_norm)drvBy[d.plate_norm]=d.name;});
+ var drvBy={},workBy={};(DATA.drivers||[]).forEach(function(d){if(!d.plate_norm)return;drvBy[d.plate_norm]=d.name;var w=workBy[d.plate_norm]||(workBy[d.plate_norm]={done:0,cancel:0});w.done+=(d.orders||0);w.cancel+=((d.b_cancel||0)+(d.b_noans||0));});
  var rows=plates.map(function(pl){var c=gc[pl]||{};var km=c.km||0;var online=act.has(pl);var r=raw[pl]||{t:[],s:[]};
+   var w=workBy[pl]||{done:0,cancel:0};
    var offline_drove=(!online&&km>=3);
-   return {pl:pl,car:c.car||'',km:km,online:online,offline_drove:offline_drove,maxspeed:c.maxspeed||null,trips:r.t||[],stops:r.s||[],driver:drvBy[pl]||'',stand_addr:c.stand_addr||c.addr||'',stand_since:c.stand_since||null};});
+   var noWork=(online&&km>=3&&(w.done||0)===0);
+   return {pl:pl,car:c.car||'',km:km,online:online,offline_drove:offline_drove,noWork:noWork,done:w.done||0,cancel:w.cancel||0,maxspeed:c.maxspeed||null,trips:r.t||[],stops:r.s||[],driver:drvBy[pl]||'',stand_addr:c.stand_addr||c.addr||'',stand_since:c.stand_since||null};});
  // сортування: спершу «їздив без лінії» (за км), потім на лінії, потім стояли
- rows.sort(function(a,b){if(a.offline_drove!==b.offline_drove)return a.offline_drove?-1:1;if((b.km-a.km)!==0)return b.km-a.km;return a.pl.localeCompare(b.pl);});
+ function rank(r){return r.offline_drove?0:(r.noWork?1:(r.online?2:3));}
+ rows.sort(function(a,b){var d=rank(a)-rank(b);if(d)return d;if((b.km-a.km)!==0)return b.km-a.km;return a.pl.localeCompare(b.pl);});
  var nOff=rows.filter(function(r){return r.offline_drove;}).length;
- var nOn=rows.filter(function(r){return r.online;}).length;
+ var nNoWork=rows.filter(function(r){return r.noWork;}).length;
+ var nOn=rows.filter(function(r){return r.online&&!r.noWork;}).length;
  var nStand=rows.filter(function(r){return !r.online&&!r.offline_drove;}).length;
  function esc(x){return String(x||'').replace(/</g,'&lt;');}
  function trTable(r){
@@ -2487,11 +2495,12 @@ function renderTracker(){var el=document.getElementById('tracker');if(!el)return
  }
  var body=rows.map(function(r){
    var badge=r.offline_drove?'<span style="background:#fdecea;border:1px solid #f5c6c0;color:#b23b2e;border-radius:7px;padding:2px 8px;font-size:11.5px;font-weight:800">🔴 їздив БЕЗ лінії</span>'
-     :(r.online?'<span style="background:#eaf7ee;border:1px solid #bfe6c9;color:#0a7d33;border-radius:7px;padding:2px 8px;font-size:11.5px;font-weight:700">на лінії</span>'
-     :'<span style="background:var(--soft);color:var(--muted);border-radius:7px;padding:2px 8px;font-size:11.5px;font-weight:700">стояло</span>');
+     :(r.noWork?'<span style="background:#fff3e0;border:1px solid #f0cf9e;color:#a05c00;border-radius:7px;padding:2px 8px;font-size:11.5px;font-weight:800">🟠 виходив, але не возив · 0 поїздок'+(r.cancel?(' · '+r.cancel+' скасував/пропустив'):'')+'</span>'
+     :(r.online?'<span style="background:#eaf7ee;border:1px solid #bfe6c9;color:#0a7d33;border-radius:7px;padding:2px 8px;font-size:11.5px;font-weight:700">на лінії · '+r.done+' поїзд.</span>'
+     :'<span style="background:var(--soft);color:var(--muted);border-radius:7px;padding:2px 8px;font-size:11.5px;font-weight:700">стояло</span>'));
    var sub=[];if(r.car)sub.push(r.car);if(r.driver)sub.push((typeof nameFor==='function')?nameFor(r.driver):r.driver);
    var standTxt=(!r.km&&r.stand_addr)?('<div style="font-size:12px;color:var(--muted);margin-top:3px">📍 '+esc(r.stand_addr)+'</div>'):'';
-   return '<details style="margin:7px 0"><summary style="cursor:pointer;padding:10px 12px;background:var(--panel);border:1px solid '+(r.offline_drove?'#f5c6c0':'var(--line)')+';border-radius:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+   return '<details style="margin:7px 0"><summary style="cursor:pointer;padding:10px 12px;background:var(--panel);border:1px solid '+(r.offline_drove?'#f5c6c0':(r.noWork?'#f0cf9e':'var(--line)'))+';border-radius:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
      +'<b style="font-size:14px">'+r.pl+'</b>'
      +'<span style="color:var(--muted);font-size:12px">'+esc(sub.join(' · '))+'</span>'
      +badge
@@ -2503,10 +2512,11 @@ function renderTracker(){var el=document.getElementById('tracker');if(!el)return
   +'<p class="sub">Рухи авто за трекером — незалежно від роботи на агрегаторах · '+(DATA.date_label||DATA.date||'')+'</p>'
   +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 12px">'
   +'<div style="flex:1;min-width:108px;background:#fdecea;border:1px solid #f5c6c0;border-radius:11px;padding:10px 12px"><div style="font-size:22px;font-weight:800;color:#b23b2e">'+nOff+'</div><div style="font-size:12px;color:#b23b2e">🔴 Їздили без лінії</div></div>'
-  +'<div style="flex:1;min-width:108px;background:#eaf7ee;border:1px solid #bfe6c9;border-radius:11px;padding:10px 12px"><div style="font-size:22px;font-weight:800;color:#0a7d33">'+nOn+'</div><div style="font-size:12px;color:#0a7d33">На лінії</div></div>'
+  +'<div style="flex:1;min-width:108px;background:#fff3e0;border:1px solid #f0cf9e;border-radius:11px;padding:10px 12px"><div style="font-size:22px;font-weight:800;color:#a05c00">'+nNoWork+'</div><div style="font-size:12px;color:#a05c00">🟠 Виходив, не возив</div></div>'
+ +'<div style="flex:1;min-width:108px;background:#eaf7ee;border:1px solid #bfe6c9;border-radius:11px;padding:10px 12px"><div style="font-size:22px;font-weight:800;color:#0a7d33">'+nOn+'</div><div style="font-size:12px;color:#0a7d33">На лінії</div></div>'
   +'<div style="flex:1;min-width:108px;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:10px 12px"><div style="font-size:22px;font-weight:800;color:var(--muted)">'+nStand+'</div><div style="font-size:12px;color:var(--muted)">Стояли</div></div>'
   +'</div>'
-  +'<div style="font-size:12px;color:var(--muted);margin-bottom:8px">🔴 — авто рухалось (≥3 км за трекером), але не виходило на лінію Bolt/Uklon цього дня. Тисни на авто, щоб побачити поїздки та стоянки.</div>'
+  +'<div style="font-size:12px;color:var(--muted);margin-bottom:8px">🔴 — рухалось (≥3 км), на лінію взагалі не виходило. 🟠 — виходило на лінію, каталось, але 0 завершених поїздок (скасування — не робота). Тисни на авто, щоб побачити поїздки та стоянки.</div>'
   +body;
 }
 function renderCoverage(){var el=document.getElementById('coverage');if(!el)return;
