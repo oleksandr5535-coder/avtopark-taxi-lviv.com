@@ -1112,9 +1112,11 @@ function buildData(parts,dayCut){dayCut=(typeof dayCut==='number'&&dayCut>=0)?da
   const vT={},vS={},vMODEL={};
   (parts.wialon_trips_rows||[]).forEach(row=>{if(!row['№']||row['№'].indexOf('.')<0)return;const pl=plateFromGroup(row['Групування']);if(!pl)return;
     const km=F(String(row['Пробіг']).replace(/[^\d.]/g,''));const s0=row['Початок'],s1=row['Кінець'];const sp=parseInt(String(row['Макс. швидкість']||'').replace(/[^\d]/g,''))||0;const pen=F(row['Штраф']);
+    let _a0='',_a1='';Object.keys(row).forEach(k=>{const kl=k.toLowerCase();if(kl.indexOf('місцезнаходж')>-1||kl.indexOf('розташув')>-1||kl.indexOf('адрес')>-1){if(kl.indexOf('почат')>-1)_a0=row[k]||'';else if(kl.indexOf('кінц')>-1||kl.indexOf('кинц')>-1)_a1=row[k]||'';}});
+    const _clnA=a=>String(a||'').replace(/,?\s*Україна.*$/,'').replace(/\s*\d{5}\b/,'').replace(/[\s,]+$/,'');_a0=_clnA(_a0);_a1=_clnA(_a1);
     vMODEL[NPL(pl)]=vMODEL[NPL(pl)]||(row['Групування']||'').replace(/\s*[А-ЯA-Z]{2}\d{4}[А-ЯA-Z]{2}\s*$/,'').trim();
     (vT[NPL(pl)]=vT[NPL(pl)]||[]).push({gs0:s0&&s0!=='-----'?tmin(s0.slice(11,16)):null,gs1:s1&&s1!=='-----'?tmin(s1.slice(11,16)):null,
-      st:s0&&s0.length>=16?s0.slice(11,16):'',en:s1&&s1.length>=16?s1.slice(11,16):'',km,sp:sp,pen:pen});});
+      st:s0&&s0.length>=16?s0.slice(11,16):'',en:s1&&s1.length>=16?s1.slice(11,16):'',km,sp:sp,pen:pen,a0:_a0,a1:_a1});});
   (parts.wialon_stops_rows||[]).forEach(row=>{if(!row['№']||row['№'].indexOf('.')<0)return;const pl=plateFromGroup(row['Групування']);if(!pl)return;
     let a=(row['Місцезнаходження']||'').replace(/,?\s*Україна.*$/,'').replace(/\s*\d{5}\b/,'').replace(/[\s,]+$/,'');
     (vS[NPL(pl)]=vS[NPL(pl)]||[]).push({m0:tmin((row['Початок']||'').slice(0,5)),st:(row['Початок']||'').slice(0,5),dur:row['Тривалість']||'',addr:a});});
@@ -1214,7 +1216,7 @@ function buildData(parts,dayCut){dayCut=(typeof dayCut==='number'&&dayCut>=0)?da
   try{var _np=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());var _gg=function(t){return _np.find(function(x){return x.type===t}).value};var _today=_gg('year')+'-'+_gg('month')+'-'+_gg('day');var _nowMin=(+_gg('hour'))*60+(+_gg('minute'));if(date===_today&&maxT>_nowMin)maxT=_nowMin;}catch(e){}
 let dlabel='';if(date){const mo=+date.slice(5,7)-1,dy=+date.slice(8,10);dlabel=dy+' '+(MONTHS[mo]||'');}
 const win=(dlabel?dlabel+' · ':'')+`станом на ~${fmtM(maxT)}`;
-  const gps_raw={};Object.keys(vT).forEach(pl=>{gps_raw[pl]=gps_raw[pl]||{t:[],s:[]};gps_raw[pl].t=(vT[pl]||[]).map(t=>({st:t.st,en:t.en,km:Math.round((t.km||0)*10)/10,sp:t.sp||0}));});Object.keys(vS).forEach(pl=>{gps_raw[pl]=gps_raw[pl]||{t:[],s:[]};gps_raw[pl].s=(vS[pl]||[]).map(s=>({st:s.st,dur:s.dur,addr:s.addr}));});
+  const gps_raw={};Object.keys(vT).forEach(pl=>{gps_raw[pl]=gps_raw[pl]||{t:[],s:[]};gps_raw[pl].t=(vT[pl]||[]).map(t=>({st:t.st,en:t.en,km:Math.round((t.km||0)*10)/10,sp:t.sp||0,a0:t.a0||'',a1:t.a1||''}));});Object.keys(vS).forEach(pl=>{gps_raw[pl]=gps_raw[pl]||{t:[],s:[]};gps_raw[pl].s=(vS[pl]||[]).map(s=>({st:s.st,dur:s.dur,addr:s.addr}));});
   return {drivers,med:M,dayq,fleet_revph:Math.round(fleet),window:win,date:date,date_label:dlabel,now_min:maxT,active_plates:[...active].sort(),plan_default:3000,idle_cars:idle_cars,price_by_hour:priceFare.map((f,i)=>priceKm[i]>0?Math.round(f/priceKm[i]*10)/10:null),gps_km_by_plate:gps_km_by_plate,gps_cars:gps_cars,stop_spots:stop_spots,gps_raw:gps_raw};
 }
 function fmtM(m){m=Math.round(m);return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');}
@@ -2340,14 +2342,39 @@ async function renderStatus(silent){
   add(bolt&&bolt.drivers,'bolt');
   add(ukl&&ukl.drivers,'uklon');
   Object.keys(cars).forEach(function(pn){if(!cars[pn].driver)cars[pn].driver=nameMap[pn]||'';});
-  var list=Object.keys(cars).map(function(pn){var c=cars[pn];c.overall=_statusOverall(c.bolt&&c.bolt.group,c.uklon&&c.uklon.group);return c;});
+  var _notes=(typeof carNotes==='function')?carNotes():{};
+  var JUSTIFIED=new Set(['Утримуємо як підмінне','На ремонті / ТО','ДТП / пошкоджено','Водій на вихідному','Водій захворів','Не готове до таксі / готуємо до випуску']);
+  var list=Object.keys(cars).map(function(pn){var c=cars[pn];c.overall=_statusOverall(c.bolt&&c.bolt.group,c.uklon&&c.uklon.group);
+    c.reason=(_notes[pn]||{}).reason||'';
+    if(c.overall==='offline'){
+      var idl=(typeof carIdleDays==='function')?carIdleDays(pn):{n:1,exact:false};
+      c.idleN=idl.n;c.idleExact=idl.exact;
+      if(c.reason&&JUSTIFIED.has(c.reason)){c.alert='ok';}
+      else if(idl.n>=3){c.alert='red';}
+      else if(idl.n>=1&&idl.exact===false){c.alert='red';}
+      else if(idl.n>=2){c.alert='yellow';}
+      else{c.alert='ok';}
+    } else {c.alert='';c.idleN=0;}
+    return c;});
   var cnt={on_order:0,free:0,break:0,offline:0,other:0};
   list.forEach(function(c){cnt[c.overall]=(cnt[c.overall]||0)+1;});
   var online=cnt.on_order+cnt.free+cnt.break;
+  var nRed=list.filter(function(c){return c.alert==='red';}).length;
+  var nYel=list.filter(function(c){return c.alert==='yellow';}).length;
   var ord={on_order:0,free:1,break:2,other:3,offline:4};
-  list.sort(function(a,b){return (ord[a.overall]-ord[b.overall])||a.plate.localeCompare(b.plate);});
+  var aOrd={red:0,yellow:1,ok:2,'':3};
+  list.sort(function(a,b){var d=(ord[a.overall]-ord[b.overall]);if(d)return d;if(a.overall==='offline'){var ad=(aOrd[a.alert]-aOrd[b.alert]);if(ad)return ad;var idd=(b.idleN||0)-(a.idleN||0);if(idd)return idd;}return a.plate.localeCompare(b.plate);});
   function cell(s){if(!s)return '<span style="color:var(--muted)">—</span>';return s.dot+' '+s.label;}
-  var rows=list.map(function(c){var dim=(c.overall==='offline')?' style="opacity:.5"':'';return '<tr'+dim+'><td style="font-weight:700">'+c.plate+'</td><td>'+(c.driver||'—')+'</td><td>'+cell(c.bolt)+'</td><td>'+cell(c.uklon)+'</td></tr>';}).join('');
+  function idleInfo(c){
+    if(c.overall!=='offline')return '';
+    if(c.reason&&c.alert==='ok')return '<span style="font-size:11.5px;color:var(--muted)">'+c.reason+'</span>';
+    var d=c.idleN||1;var txt=c.idleExact?(d<=1?'сьогодні не виходив':('не виходив '+d+' дн.')):('не виходив ≥'+d+' дн.');
+    if(c.alert==='red')return '<span style="font-size:11.5px;font-weight:800;color:#b23b2e">🔴 '+txt+'</span>';
+    if(c.alert==='yellow')return '<span style="font-size:11.5px;font-weight:700;color:#8a6100">🟡 '+txt+'</span>';
+    return '<span style="font-size:11.5px;color:var(--muted)">'+txt+'</span>';
+  }
+  var rows=list.map(function(c){var dim=(c.overall==='offline'&&c.alert!=='red'&&c.alert!=='yellow')?' style="opacity:.55"':'';
+    return '<tr'+dim+'><td style="font-weight:700">'+c.plate+'</td><td>'+(c.driver||'—')+'<div>'+idleInfo(c)+'</div></td><td>'+cell(c.bolt)+'</td><td>'+cell(c.uklon)+'</td></tr>';}).join('');
   var warn='';
   if(errB)warn+='<div style="color:#b7791f;font-size:12.5px">⚠ Bolt: '+errB+'</div>';
   if(errU)warn+='<div style="color:#b7791f;font-size:12.5px">⚠ Uklon: '+errU+'</div>';
@@ -2358,9 +2385,10 @@ async function renderStatus(silent){
     +'<div style="flex:1;min-width:108px;background:#eaf1fb;border:1px solid #c7dbf5;border-radius:11px;padding:10px 12px"><div style="font-size:22px;font-weight:800;color:#1f5fbf">'+cnt.on_order+'</div><div style="font-size:12px;color:#1f5fbf">🔵 На замовленні</div></div>'
     +'<div style="flex:1;min-width:108px;background:#eaf7ee;border:1px solid #bfe6c9;border-radius:11px;padding:10px 12px"><div style="font-size:22px;font-weight:800;color:#0a7d33">'+cnt.free+'</div><div style="font-size:12px;color:#0a7d33">🟢 Вільні</div></div>'
     +'<div style="flex:1;min-width:108px;background:#fff6e6;border:1px solid #f0d9a8;border-radius:11px;padding:10px 12px"><div style="font-size:22px;font-weight:800;color:#8a6100">'+cnt.break+'</div><div style="font-size:12px;color:#8a6100">🟠 Перерва</div></div>'
-    +'<div style="flex:1;min-width:108px;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:10px 12px"><div style="font-size:22px;font-weight:800;color:var(--muted)">'+cnt.offline+'</div><div style="font-size:12px;color:var(--muted)">⚪ Офлайн</div></div>'
+    +'<div style="flex:1;min-width:108px;background:var(--panel);border:1px solid '+(nRed?'#f5c6c0':'var(--line)')+';border-radius:11px;padding:10px 12px"><div style="font-size:22px;font-weight:800;color:var(--muted)">'+cnt.offline+'</div><div style="font-size:12px;color:var(--muted)">⚪ Офлайн'+(nRed||nYel?(' · '+(nRed?'<b style="color:#b23b2e">🔴 '+nRed+'</b>':'')+(nRed&&nYel?' ':'')+(nYel?'<b style="color:#8a6100">🟡 '+nYel+'</b>':'')):'')+'</div></div>'
     +'</div>'
     +'<div style="font-size:13px;color:var(--ink2);margin-bottom:8px">На лінії зараз: <b>'+online+'</b> авто з '+list.length+' <span style="color:var(--muted)">(унікальних по обох платформах)</span></div>'
+    +(nRed||nYel?'<div style="font-size:12px;color:var(--muted);margin:-2px 0 10px">🔴 3+ днів без лінії — варто подзвонити · 🟡 2 дні — глянути. Ремонт/вихідний/хвороба (з вкладки «Авто») тривогою не рахуються.</div>':'')
     +'<table class="otable"><thead><tr><th>Авто</th><th>Водій</th><th>Bolt</th><th>Uklon</th></tr></thead><tbody>'+rows+'</tbody></table>';
   if(typeof view!=='undefined'&&view==='status'){window._statusTimer=setTimeout(function(){if(typeof view!=='undefined'&&view==='status')renderStatus(true);},30000);}
 }
@@ -2383,10 +2411,19 @@ function renderTracker(){var el=document.getElementById('tracker');if(!el)return
  function esc(x){return String(x||'').replace(/</g,'&lt;');}
  function trTable(r){
    var t=(r.trips||[]).filter(function(x){return (x.km||0)>0.2;});
-   var s=r.stops||[];
+   var s=(r.stops||[]).slice();
    if(!t.length&&!s.length)return '<p style="color:var(--muted);font-size:12px;margin:6px 0 0">Детальні поїздки не збережені для цього дня (зʼявляться для нових завантажень).</p>';
-   var th='<table class="otable" style="margin-top:6px;font-size:12.5px"><thead><tr><th>Час</th><th class="r">Км</th><th class="r">Макс</th></tr></thead><tbody>';
-   var tr=t.map(function(x){return '<tr><td>'+esc(x.st)+' → '+esc(x.en)+'</td><td class="r">'+(x.km||0)+'</td><td class="r">'+(x.sp?x.sp+' км/г':'—')+'</td></tr>';}).join('');
+   function tm(x){var p=String(x||'').split(':');return p.length>=2?((+p[0])*60+(+p[1])):null;}
+   s.sort(function(a,b){return (tm(a.st)||0)-(tm(b.st)||0);});
+   function stopAt(min,tol){if(min==null)return null;var best=null,bd=1e9;s.forEach(function(x){var m0=tm(x.st);if(m0==null)return;var d=Math.abs(m0-min);if(d<=tol&&d<bd){bd=d;best=x;}});return best;}
+   function stopBefore(min){if(min==null)return null;var best=null;s.forEach(function(x){var m0=tm(x.st);if(m0==null)return;if(m0<=min&&(!best||m0>tm(best.st)))best=x;});return best;}
+   var th='<table class="otable" style="margin-top:6px;font-size:12.5px"><thead><tr><th>Час</th><th>Маршрут</th><th class="r">Км</th><th class="r">Макс</th></tr></thead><tbody>';
+   var tr=t.map(function(x){
+     var from=x.a0||'';var to=x.a1||'';
+     if(!to){var sd=stopAt(tm(x.en),4);if(sd)to=sd.addr||'';}
+     if(!from){var so=stopBefore(tm(x.st));if(so)from=so.addr||'';}
+     var route=(from||to)?('<div style="font-size:12px;line-height:1.45">'+(from?('<span style="color:var(--muted)">з</span> '+esc(from)+'<br>'):'')+(to?('<span style="color:var(--muted)">до</span> <b>'+esc(to)+'</b>'):'')+'</div>'):'<span style="color:var(--muted)">—</span>';
+     return '<tr><td style="white-space:nowrap">'+esc(x.st)+' → '+esc(x.en)+'</td><td>'+route+'</td><td class="r">'+(x.km||0)+'</td><td class="r">'+(x.sp?x.sp+' км/г':'—')+'</td></tr>';}).join('');
    var sh=s.length?('<h4 style="font-size:12px;color:var(--muted);margin:8px 0 3px">Стоянки</h4><table class="otable" style="font-size:12.5px"><thead><tr><th>З</th><th>Тривалість</th><th>Місце</th></tr></thead><tbody>'+s.map(function(x){return '<tr><td>'+esc(x.st)+'</td><td>'+esc(x.dur)+'</td><td>'+esc(x.addr)+'</td></tr>';}).join('')+'</tbody></table>'):'';
    return (t.length?th+tr+'</tbody></table>':'')+sh;
  }
