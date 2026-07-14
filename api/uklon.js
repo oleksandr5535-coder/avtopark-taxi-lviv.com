@@ -159,6 +159,19 @@ export default async function handler(req, res) {
     const token = await auth(id, secret);
     const H = { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json' };
 
+    // Діагностика: /api/uklon?date=YYYY-MM-DD&debug=1 -> повертає ЛИШЕ сире перше замовлення
+    // (без сотень поїздок), щоб знайти точну назву поля з методом («Швидкий пошук», «Ланцюжок»…).
+    if (req.query && (req.query.debug === '1' || req.query.debug === 'true')) {
+      const ordItemsD = await fetchAllOrders(fleetId, from, to, H);
+      const sample = ordItemsD.find(o => (o.status || '').toLowerCase() === 'completed') || ordItemsD[0] || null;
+      res.status(200).send(JSON.stringify({
+        ok: true, date: dateStr, count_orders: ordItemsD.length,
+        _sample_keys: sample ? Object.keys(sample) : [],
+        _sample_order: sample,
+      }, null, 2));
+      return;
+    }
+
     const aggItems = await fetchAllReport(fleetId, from, to, H);
 
     const ordItems = await fetchAllOrders(fleetId, from, to, H);
@@ -169,14 +182,6 @@ export default async function handler(req, res) {
       uklon_trips: ordersToTrips(ordItems),
       count_drivers: aggItems.length, count_orders: ordItems.length,
     };
-
-    // Діагностика: /api/uklon?date=YYYY-MM-DD&debug=1 -> покаже сире перше замовлення,
-    // щоб знайти точну назву поля з методом («Швидкий пошук», «Ланцюжок»…).
-    if (req.query && (req.query.debug === '1' || req.query.debug === 'true')) {
-      const sample = ordItems.find(o => (o.status || '').toLowerCase() === 'completed') || ordItems[0] || null;
-      out._sample_order = sample;
-      out._sample_keys = sample ? Object.keys(sample) : [];
-    }
 
     res.status(200).send(JSON.stringify(out));
   } catch (err) {
