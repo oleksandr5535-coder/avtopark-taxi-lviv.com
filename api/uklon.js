@@ -103,15 +103,22 @@ function findMethod(obj, depth) {
   }
   return '';
 }
-// Основне: читаємо acceptance_method напряму (як віддає Uklon API), мапимо в укр. підпис.
-// Невідомий код показуємо як є (щоб побачити нове значення), запасний варіант — глибокий пошук.
+// Класифікатор коду acceptance_method за ключовими словами (стійкий до нових варіантів).
+// Порядок важливий: спершу специфічні режими, потім фільтр/пошук, потім пропозиція.
+function classifyAcc(code) {
+  const s = String(code == null ? '' : code).toLowerCase();
+  if (!s) return '';
+  if (s.indexOf('chain') >= 0) return 'Ланцюжок';
+  if (s.indexOf('prebook') >= 0 || s.indexOf('preorder') >= 0 || s.indexOf('scheduled') >= 0 || s.indexOf('reserve') >= 0) return 'Попереднє';
+  if (s.indexOf('radar') >= 0) return 'Радар';
+  if (s.indexOf('filter') >= 0 || s.indexOf('loop') >= 0 || s.indexOf('search') >= 0 || s.indexOf('fast') >= 0 || s.indexOf('home') >= 0) return 'Швидкий пошук';
+  if (s.indexOf('offer') >= 0 || s.indexOf('manual') >= 0) return 'Пропозиція';
+  return String(code).trim();   // зовсім невідоме — покажемо сире, щоб додати згодом
+}
+// Основне: читаємо acceptance_method напряму (як віддає Uklon API), класифікуємо в укр. підпис.
 function methodOf(o) {
   const am = o && (o.acceptance_method != null ? o.acceptance_method : o.acceptanceMethod);
-  if (am != null && am !== '') {
-    const k = normCode(am);
-    if (ACC_METHOD[k]) return ACC_METHOD[k];
-    return String(am).trim();
-  }
+  if (am != null && am !== '') return classifyAcc(am);
   return findMethod(o, 0);
 }
 
@@ -222,7 +229,7 @@ export default async function handler(req, res) {
 
     const out = {
       ok: true, date: dateStr,
-      _v: 'uklon-method-2', _method_found: methodFound + '/' + trips.length,
+      _v: 'uklon-method-3', _method_found: methodFound + '/' + trips.length,
       uklon_agg: reportToAgg(aggItems),
       uklon_trips: trips,
       count_drivers: aggItems.length, count_orders: ordItems.length,
