@@ -2929,7 +2929,8 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
     +'.cmp-econ{font-size:12.5px;color:var(--ink);background:var(--bg,#f7f6f2);border-radius:8px;padding:8px 10px;margin:6px 0;line-height:1.5}'
     +'.cmp-rec{font-size:13px;line-height:1.42;padding:6px 0;border-top:1px solid var(--line)}'
     +'.cmp-rec:first-of-type{border-top:none}.cmp-rec.good{color:var(--good)}.cmp-rec.ok{color:var(--muted)}'
-    +'.cmp-sub{font-size:12px;color:var(--muted)}';
+    +'.cmp-sub{font-size:12px;color:var(--muted)}'
+    +'.pdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-left:3px;vertical-align:middle}.pdots{white-space:nowrap}';
   try{var _st=document.createElement('style');_st.textContent=_css;document.head.appendChild(_st);}catch(e){}
 
   function f0(x){return (x==null||isNaN(x))?'—':Math.round(x).toLocaleString('uk-UA');}
@@ -3028,9 +3029,8 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
 
   function fleetMed(rows){
     var elig=rows.filter(function(a){return a.orders>=8;});
-    var med={};METRICS.forEach(function(m){if(m.better)med[m.k]=median(elig.map(function(a){return a[m.k];}));});
-    med.kmTrip=median(elig.map(function(a){return a.kmTrip;}));
-    med.pricePk=median(elig.map(function(a){return a.pricePk;}));
+    var MEDKEYS=['netDay','net','gross','perTrip','tips','online','work','idle','util','deadhead','pickupWait','ordPerH','kmP','kmG','emptyKm','emptyPct','realPk','pricePk','maxSpeed','penaltyDay','econPct','premPct','cancelPct','cashPct','perHour','kmTrip'];
+    var med={};MEDKEYS.forEach(function(k){med[k]=median(elig.map(function(a){return a[k];}));});
     return med;
   }
 
@@ -3081,6 +3081,7 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
   window.cmpPickRange=function(k){if(!window._cmpPend){window._cmpFrom=k;window._cmpTo=k;window._cmpPend=true;}else{if(k<window._cmpFrom){window._cmpTo=window._cmpFrom;window._cmpFrom=k;}else{window._cmpTo=k;}window._cmpPend=false;}window.renderCompare();};
   window.cmpPreset=function(n){var ad=allDays();if(!ad.length)return;window._cmpTo=ad[ad.length-1];if(n==='all'){window._cmpFrom=ad[0];}else{var f=shiftDay(window._cmpTo,-(n-1));window._cmpFrom=(f<ad[0])?ad[0]:f;}window._cmpPend=false;window._cmpCalOpen=false;window.renderCompare();};
   window.cmpToggleTaxi=function(v){window._cmpTaxiOnly=v;window.renderCompare();};
+  window.cmpGroup=function(g){window._cmpGroup=g;window.renderCompare();};
 
   function calHtml(){
     ensureRange();
@@ -3124,60 +3125,83 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
     var cal=window._cmpCalOpen?calHtml():'';
 
     var head='<div class="sect"><h3>Порівняння водіїв</h3>'+ctrl+cal
-      +'<p style="color:var(--muted);font-size:12.5px;margin:-2px 0 10px">Період '+dlab(window._cmpFrom)+' – '+dlab(window._cmpTo)+' · '+agg.ndays+' дн. · водіїв: '+agg.rows.length+'. «₴/км факт» — чистими за реальний км (Wialon, з порожнім). Кольори — відносно медіани парку. Клік по заголовку — сортування.</p>';
+      +'<p style="color:var(--muted);font-size:12.5px;margin:-2px 0 10px">Період '+dlab(window._cmpFrom)+' – '+dlab(window._cmpTo)+' · '+agg.ndays+' дн. · водіїв: '+agg.rows.length+'. Перемикай групу колонок нижче. Крапки біля імені — платформи (Bolt зелена / Uklon фіолетова). Кольори — відносно медіани парку. Клік по заголовку — сортування.</p>';
 
     if(!agg.rows.length){el.innerHTML=head+'<p style="color:var(--muted)">За цей період і фільтр немає водіїв.</p></div>';return;}
 
-    var th='<th style="text-align:left;position:sticky;left:0;background:var(--panel)">Водій</th>'+METRICS.map(function(m){var on=(s.k===m.k);return '<th class="r" onclick="cmpSort(\''+m.k+'\')" style="cursor:pointer;white-space:nowrap'+(on?';color:var(--accent,#1E6E42)':'')+'">'+m.lab+(on?(s.dir<0?' ▾':' ▴'):'')+'</th>';}).join('');
-    var body=rows.map(function(a){
-      var tds=METRICS.map(function(m){var v=a[m.k];var col=cellCol(v,med[m.k],m.better);return '<td class="r" style="white-space:nowrap'+(col?';color:'+col+';font-weight:700':'')+'">'+m.fmt(v)+'</td>';}).join('');
-      return '<tr><td style="text-align:left;position:sticky;left:0;background:var(--panel);font-weight:700">'+esc(a.name)+'</td>'+tds+'</tr>';
-    }).join('');
-    var medrow='<tr style="border-top:2px solid var(--line)"><td style="text-align:left;position:sticky;left:0;background:var(--panel);font-weight:700;color:var(--muted)">Медіана парку</td>'+METRICS.map(function(m){return '<td class="r" style="color:var(--muted);white-space:nowrap">'+(m.better?m.fmt(med[m.k]):'—')+'</td>';}).join('')+'</tr>';
-    var table='<div class="tscroll"><table class="otable cmp-table"><thead><tr>'+th+'</tr></thead><tbody>'+body+medrow+'</tbody></table></div></div>';
+    // ---- одна таблиця з перемикачем груп колонок ----
+    var MDEF={
+      days:{lab:'Днів',better:null,fmt:f0}, orders:{lab:'Поїзд.',better:null,fmt:f0},
+      netDay:{lab:'₴/день',better:'hi',fmt:f0}, net:{lab:'Чисте, ₴',better:'hi',fmt:f0}, gross:{lab:'Валове, ₴',better:'hi',fmt:f0},
+      bNet:{lab:'Bolt чисте',better:null,fmt:f0}, uNet:{lab:'Uklon чисте',better:null,fmt:f0},
+      cashPct:{lab:'готівка',better:'lo',fmt:fp}, perTrip:{lab:'₴/поїзд',better:'hi',fmt:f0}, tips:{lab:'чайові',better:'hi',fmt:f0},
+      online:{lab:'на лінії, год',better:null,fmt:f1}, work:{lab:'за кермом, год',better:null,fmt:f1}, idle:{lab:'простій, год',better:'lo',fmt:f1},
+      util:{lab:'утиліз.',better:'hi',fmt:fp}, deadhead:{lab:"під'їзд, хв",better:'lo',fmt:f1}, pickupWait:{lab:'очікув., хв',better:'lo',fmt:f1}, ordPerH:{lab:'замов/год',better:'hi',fmt:f1},
+      kmP:{lab:'пас. км',better:null,fmt:f0}, kmG:{lab:'всього км',better:null,fmt:f0}, emptyKm:{lab:'порожній км',better:'lo',fmt:f0}, emptyPct:{lab:'порожній %',better:'lo',fmt:fp},
+      realPk:{lab:'₴/км факт',better:'hi',fmt:f1}, pricePk:{lab:'₴/км пас',better:'hi',fmt:f1}, maxSpeed:{lab:'макс',better:'lo',fmt:f0}, penaltyDay:{lab:'штраф/день',better:'lo',fmt:f0},
+      tariffs:{lab:'Тарифи',bar:true}, econPct:{lab:'Економ %',better:null,fmt:fp}, premPct:{lab:'Комфорт %',better:'hi',fmt:fp},
+      methods:{lab:'Методи',bar:true}, cancelPct:{lab:'скасув.',better:'lo',fmt:fp}
+    };
+    var GROUPS={
+      money:['netDay','net','gross','bNet','uNet','cashPct','perTrip','tips'],
+      time:['online','work','idle','util','deadhead','pickupWait','ordPerH'],
+      km:['kmP','kmG','emptyKm','emptyPct','realPk','pricePk','maxSpeed','penaltyDay'],
+      mix:['tariffs','econPct','premPct','methods','cancelPct'],
+      all:['netDay','net','gross','bNet','uNet','cashPct','perTrip','tips','online','work','idle','util','deadhead','pickupWait','ordPerH','kmP','kmG','emptyKm','emptyPct','realPk','pricePk','maxSpeed','penaltyDay','tariffs','econPct','premPct','methods','cancelPct']
+    };
+    var GLAB={money:'Гроші',time:'Час',km:'Пробіг',mix:'Тарифи+Методи',all:'Все'};
+    var grp=window._cmpGroup||(window._cmpGroup='money');
+    if(!GROUPS[grp])grp=window._cmpGroup='money';
+    var cols=['days','orders'].concat(GROUPS[grp]);
 
-    // Повні профілі по всіх водіях (сортування за чистим заробітком)
-    var profs=agg.rows.slice().sort(function(a,b){return (b.net||0)-(a.net||0);});
-    function fh(x){return (x==null||isNaN(x))?'—':f1(x)+' год';}
-    var recHtml='<div class="sect"><h3>Профілі водіїв</h3>'
-      +'<p style="color:var(--muted);font-size:12.5px;margin:-2px 0 10px">Повна картина по кожному за вибраний період — гроші, платформи, поїздки, час і пробіг. Позначка «до уваги» = є про що поговорити.</p>';
-    recHtml+=profs.map(function(a){
-      var r=(a.orders>=8)?recFor(a,med):{flags:[],good:[]};
-      var badge=r.flags.length?'<span class="badge q-low">'+r.flags.length+' до уваги</span>':(a.orders>=8?'<span class="badge q-good">ок</span>':'<span class="badge">мало даних</span>');
-      // платформи
-      var plats=[];
-      if(a.bTrips>0||a.bNet>0)plats.push('<span class="badge" style="background:#e6efe9;color:#0a7d33;border:none">Bolt</span>');
-      if(a.uTrips>0||a.uNet>0)plats.push('<span class="badge" style="background:#eae7f5;color:#5b4b9a;border:none">Uklon</span>');
-      var tar=mixBar([{v:a.tEcon,c:'#C9C5BA',lab:'Економ'},{v:a.tStd,c:'#9AA6B2',lab:'Стандарт'},{v:a.tPrem,c:'#1E6E42',lab:'Комфорт'},{v:a.tDeliv,c:'var(--warn,#B5651D)',lab:'Доставка'}]);
-      var mk=Object.keys(a.meth).sort(function(x,y){return a.meth[y]-a.meth[x];});
-      var mcol={'Швидкий пошук':'#1E6E42','Ланцюжок':'#9AA6B2','Пропозиція':'#C9A24B','Радар':'#B5651D','Попереднє':'#7C8AA0'};
-      var meth=mk.length?mixBar(mk.map(function(x){return {v:a.meth[x],c:mcol[x]||'#B0B0B0',lab:x};})):'<div class="cmp-sub" style="margin-bottom:8px">Метод: немає даних</div>';
-      // гроші по платформах
-      var moneyRows='';
-      if(a.bTrips>0||a.bNet>0)moneyRows+='<div>Bolt: <b>'+f0(a.bGross)+'</b> / '+f0(a.bNet)+' ₴ · '+a.bTrips+' поїзд.</div>';
-      if(a.uTrips>0||a.uNet>0)moneyRows+='<div>Uklon: <b>'+f0(a.uGross)+'</b> / '+f0(a.uNet)+' ₴ · '+a.uTrips+' поїзд.</div>';
-      var money='<div class="cmp-econ"><div style="font-weight:700;margin-bottom:3px">💰 Гроші (валове / чисте)</div>'
-        +moneyRows
-        +'<div>Оплата: готівка '+fp(a.cashPct)+' · картка '+fp(a.cardPct)+(a.mixPct?' · змішана '+fp(a.mixPct):'')+(a.tips?' · чайові '+f0(a.tips)+' ₴':'')+'</div>'
-        +'<div>Середня поїздка: <b>'+f0(a.perTrip)+' ₴</b> / '+f1(a.kmTrip)+' км</div></div>';
-      var time='<div class="cmp-econ"><div style="font-weight:700;margin-bottom:3px">⏱ Час</div>'
-        +'<div>На лінії <b>'+fh(a.online)+'</b> · за кермом '+fh(a.work)+' · простій '+fh(a.idle)+' (утил. '+fp(a.util)+')</div>'
-        +'<div>Під\'їзд до клієнта: '+(a.deadhead!=null?'<b>'+f1(a.deadhead)+' хв</b>':'—')+' · очікування на посадці: '+(a.pickupWait!=null?f1(a.pickupWait)+' хв':'—')+'</div></div>';
-      var km='<div class="cmp-econ"><div style="font-weight:700;margin-bottom:3px">🛣 Пробіг</div>'
-        +'<div>З пасажиром <b>'+f0(a.kmP)+' км</b> · всього (Wialon) '+(a.hasGps?f0(a.kmG)+' км':'—')+' · порожній '+(a.emptyKm!=null?f0(a.emptyKm)+' км ('+fp(a.emptyPct)+')':'—')+' · доїзд — <span class="cmp-sub">(скоро, з Wialon)</span></div>'
-        +'<div>₴/км: <b>'+f1(a.realPk)+'</b> факт. · '+f1(a.pricePk)+' з пасажиром · макс '+(a.maxSpeed?f0(a.maxSpeed)+' км/год':'—')+(a.gpsPenalty?' · штраф '+f0(a.gpsPenalty):'')+'</div></div>';
-      var items='';
-      if(r.flags.length)items+='<div style="margin-top:8px">'+r.flags.map(function(t){return '<div class="cmp-rec">⚠ '+esc(t)+'</div>';}).join('')+(r.good.length?r.good.map(function(t){return '<div class="cmp-rec good">✓ '+esc(t)+'</div>';}).join(''):'')+'</div>';
-      else if(r.good.length)items='<div style="margin-top:8px">'+r.good.map(function(t){return '<div class="cmp-rec good">✓ '+esc(t)+'</div>';}).join('')+'</div>';
-      var big='<div style="text-align:right"><div style="font-size:20px;font-weight:820">'+f0(a.net)+' ₴</div><div class="cmp-sub">чистими · валове '+f0(a.gross)+'</div></div>';
-      var sub='<div class="cmp-sub" style="margin-top:3px">'+a.orders+' поїзд. · '+a.days+' дн. · '+f0(a.perHour)+' ₴/год</div>';
-      return '<div class="cmp-card"><div class="cmp-card-h"><div><b style="font-size:15px">'+esc(a.name)+'</b> '+plats.join(' ')+' '+badge+sub+'</div>'+big+'</div>'
-        +'<div class="cmp-sub" style="margin:4px 0 2px">Тарифи (за що возить)</div>'+tar
-        +'<div class="cmp-sub" style="margin-bottom:2px">Як бере замовлення</div>'+meth
-        +money+time+km+items+'</div>';
+    var TCOL=[{k:'tEcon',c:'#C9C5BA',lab:'Економ'},{k:'tStd',c:'#9AA6B2',lab:'Стандарт'},{k:'tPrem',c:'#1E6E42',lab:'Комфорт'},{k:'tDeliv',c:'#B5651D',lab:'Доставка'}];
+    var MCOL={'Швидкий пошук':'#1E6E42','Ланцюжок':'#9AA6B2','Пропозиція':'#C9A24B','Радар':'#B5651D','Попереднє':'#7C8AA0'};
+    function barCell(parts,tot){ if(!tot){return '<td class="r cmp-sub">—</td>';}
+      var top=parts.slice().sort(function(x,y){return (y.v||0)-(x.v||0);})[0];
+      var b='<div style="display:flex;height:8px;width:84px;border-radius:5px;overflow:hidden;margin-left:auto">'+parts.map(function(p){return '<i style="width:'+((p.v||0)/tot*100)+'%;background:'+p.c+'"></i>';}).join('')+'</div><div class="cmp-sub" style="text-align:right;margin-top:2px">'+esc(top.lab)+' '+Math.round((top.v||0)/tot*100)+'%</div>';
+      return '<td>'+b+'</td>';
+    }
+    function tariffCell(a){return barCell(TCOL.map(function(t){return {v:a[t.k],c:t.c,lab:t.lab};}),a.tt||0);}
+    function methodCell(a){var mk=Object.keys(a.meth);var tot=mk.reduce(function(s,x){return s+a.meth[x];},0);return barCell(mk.map(function(x){return {v:a.meth[x],c:MCOL[x]||'#B0B0B0',lab:x};}),tot);}
+
+    // сортування: тільки числові колонки; якщо поточний ключ не в групі — беремо перший числовий
+    if(!s.k||cols.indexOf(s.k)<0||MDEF[s.k].bar){var firstNum=cols.filter(function(c){return !MDEF[c].bar&&c!=='days'&&c!=='orders';})[0]||'net';s.k=firstNum;}
+    var rows2=agg.rows.slice().sort(function(a,b){var va=a[s.k],vb=b[s.k];if(va==null&&vb==null)return 0;if(va==null)return 1;if(vb==null)return -1;return (va-vb)*s.dir;});
+
+    var switcher='<div class="cmp-ctrl" style="margin:2px 0 10px">'+Object.keys(GLAB).map(function(g){return '<button class="cmp-btn'+(grp===g?' on':'')+'" onclick="cmpGroup(\''+g+'\')">'+GLAB[g]+'</button>';}).join('')+'</div>';
+
+    function th(m){var def=MDEF[m];if(def.bar)return '<th class="r" style="white-space:nowrap">'+def.lab+'</th>';var on=(s.k===m);return '<th class="r" onclick="cmpSort(\''+m+'\')" style="cursor:pointer;white-space:nowrap'+(on?';color:var(--accent,#1E6E42)':'')+'">'+def.lab+(on?(s.dir<0?' ▾':' ▴'):'')+'</th>';}
+    var thead='<th style="text-align:left;position:sticky;left:0;background:var(--panel);z-index:2">Водій</th>'+cols.map(th).join('');
+    var tbody=rows2.map(function(a){
+      var plats='';
+      if(a.bTrips>0||a.bNet>0)plats+='<span class="pdot" style="background:#0a7d33" title="Bolt"></span>';
+      if(a.uTrips>0||a.uNet>0)plats+='<span class="pdot" style="background:#5b4b9a" title="Uklon"></span>';
+      var cells=cols.map(function(m){
+        if(m==='tariffs')return tariffCell(a);
+        if(m==='methods')return methodCell(a);
+        var def=MDEF[m];var v=a[m];var col=cellCol(v,med[m],def.better);
+        return '<td class="r" style="white-space:nowrap'+(col?';color:'+col+';font-weight:700':'')+'">'+def.fmt(v)+'</td>';
+      }).join('');
+      return '<tr><td style="text-align:left;position:sticky;left:0;background:var(--panel);font-weight:700;z-index:1">'+esc(a.name)+' <span class="pdots">'+plats+'</span></td>'+cells+'</tr>';
     }).join('');
-    recHtml+='</div>';
-    el.innerHTML=head+table+recHtml;
+    var medcells=cols.map(function(m){var def=MDEF[m];if(def.bar||!def.better)return '<td class="r cmp-sub">—</td>';return '<td class="r cmp-sub" style="white-space:nowrap">'+def.fmt(med[m])+'</td>';}).join('');
+    var medrow='<tr style="border-top:2px solid var(--line)"><td style="text-align:left;position:sticky;left:0;background:var(--panel);font-weight:700;color:var(--muted)">Медіана</td>'+medcells+'</tr>';
+    var table='<div class="tscroll"><table class="otable cmp-table"><thead><tr>'+thead+'</tr></thead><tbody>'+tbody+medrow+'</tbody></table></div>';
+
+    var legend='';
+    if(grp==='mix'||grp==='all'){legend='<div class="cmp-mixlab" style="margin-top:8px">Тарифи: '+TCOL.map(function(t){return '<span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'+t.c+';margin-right:3px"></i>'+t.lab+'</span>';}).join('')+' &nbsp;·&nbsp; Методи: '+Object.keys(MCOL).map(function(m){return '<span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'+MCOL[m]+';margin-right:3px"></i>'+m+'</span>';}).join('')+'</div>';}
+
+    // слім-рекомендації: тільки те, «про що поговорити»
+    var recs=agg.rows.filter(function(a){return a.orders>=8;}).map(function(a){return {a:a,r:recFor(a,med)};}).filter(function(o){return o.r.flags.length;});
+    recs.sort(function(x,y){return y.r.flags.length-x.r.flags.length;});
+    var recHtml='';
+    if(recs.length){
+      recHtml='<div class="sect"><h3>Про що поговорити</h3><p style="color:var(--muted);font-size:12.5px;margin:-2px 0 10px">Водії, у яких є відхилення від норми парку.</p>'
+        +recs.map(function(o){var a=o.a;return '<div class="cmp-card"><div class="cmp-card-h"><div><b>'+esc(a.name)+'</b> <span class="badge q-low">'+o.r.flags.length+'</span></div><div class="cmp-sub">чистими '+f0(a.net)+' ₴ · '+a.orders+' поїзд. · '+f0(a.perHour)+' ₴/год</div></div>'+o.r.flags.map(function(t){return '<div class="cmp-rec">⚠ '+esc(t)+'</div>';}).join('')+(o.r.good.length?o.r.good.map(function(t){return '<div class="cmp-rec good">✓ '+esc(t)+'</div>';}).join(''):'')+'</div>';}).join('')
+        +'</div>';
+    }
+
+    el.innerHTML=head+switcher+table+legend+'</div>'+recHtml;
   };
 
   if(typeof window.showView==='function'){
