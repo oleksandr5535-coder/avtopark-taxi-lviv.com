@@ -1730,7 +1730,7 @@ function weekDriverData(name,mon){var _nk=rpt_toks(name).join('|');var keys=week
  keys.forEach(function(k){var rec={date:k,has:false,net:0,gross:0,orders:0,online:0,pace:null,done:false};var dayPlan=0;
   if(DAYS&&DAYS[k]){var H=(typeof rptHy==='function')?rptHy(k):DAYS[k],drv=(H&&H.drivers)||[];
    drv.forEach(function(o){if(rpt_toks(o.name).join('|')!==_nk)return;if(!((o.net||0)>0||(o.orders||0)>0||(o.online||0)>0))return;
-    rec.has=true;rec.net+=o.net||0;rec.gross+=o.gross||0;rec.orders+=o.orders||0;rec.online+=o.online||0;dayPlan+=planOf(o);
+    rec.has=true;rec.o=o;rec.net+=o.net||0;rec.gross+=o.gross||0;rec.orders+=o.orders||0;rec.online+=o.online||0;dayPlan+=planOf(o);
     T.net+=o.net||0;T.gross+=o.gross||0;T.orders+=o.orders||0;T.online+=o.online||0;T.idle+=o.idle||0;
     T.cash+=(o.b_cash||0)+(o.u_cash||0);T.km+=(o.b_km||0)+(o.u_km||0);
     T.bNet+=o.b_net||0;T.bGross+=o.b_gross||0;T.bCash+=o.b_cash||0;T.bKm+=o.b_km||0;T.bComp+=o.b_comp||0;
@@ -1748,7 +1748,7 @@ function renderWeekDriver(name){var el=document.getElementById('week');if(!el)re
  if(!weekMon){el.innerHTML='<h1>Аналіз за <span class="accent">тиждень</span></h1><p class="sub">Ще нема даних.</p>';return;}
  var W=weekDriverData(name,weekMon),T=W.T,keys=weekKeys(weekMon),DL=['Пн','Вт','Ср','Чт','Пт','Сб','Нд'],monL=_wkLab(keys[0]),sunL=_wkLab(keys[6]);
  var dayRows=W.days.map(function(r,i){if(!r.has)return '<tr class="wk-off"><td>'+DL[i]+' '+_wkLab(r.date)+'</td><td class="r">\u2014</td><td class="r">\u2014</td><td class="r">\u2014</td><td class="r">\u2014</td><td class="r">\u2014</td><td>не виходив</td></tr>';
-  return '<tr><td>'+DL[i]+' '+_wkLab(r.date)+'</td><td class="r"><b>'+gv(r.net)+'</b></td><td class="r">'+gv(r.gross)+'</td><td class="r">'+r.orders+'</td><td class="r">'+H(r.online)+'</td><td class="r">'+(r.pace==null?'\u2014':r.pace)+'</td><td>'+(r.done?'<span class="badge q-good">план \u2713</span>':'<span class="badge q-low">недобір</span>')+'</td></tr>';}).join('');
+  return '<tr><td>'+DL[i]+' '+_wkLab(r.date)+'</td><td class="r"><b>'+gv(r.net)+'</b></td><td class="r">'+gv(r.gross)+'</td><td class="r">'+r.orders+'</td><td class="r">'+H(r.online)+'</td><td class="r">'+(r.pace==null?'\u2014':r.pace)+'</td><td>'+(r.done?'<span class="badge q-good">план \u2713</span>':'<span class="badge q-low">недобір</span>')+'</td></tr>'+'<tr><td colspan="7" style="padding:0 8px 12px">'+dayMiniCard(r.o)+'</td></tr>';}).join('');
  var discRows=T.bOffer>0?'<div class="mrow"><span class="k">Усього пропозицій</span><span class="v">'+T.bOffer+'</span></div><div class="mrow"><span class="k">Прийнято</span><span class="v">'+T.bComp+(T.acceptPct!=null?' · '+T.acceptPct+'%':'')+'</span></div><div class="mrow"><span class="k">Відмінив</span><span class="v">'+T.bCancel+'</span></div><div class="mrow"><span class="k">Не відповів</span><span class="v">'+T.bNoans+'</span></div>':'<div class="mrow"><span class="k" style="color:var(--muted)">Немає даних історії Bolt за цей тиждень</span><span class="v">—</span></div>';var _stops=Object.keys(T.stopMap).map(function(k){return T.stopMap[k];}).sort(function(a,b){return (b.n-a.n)||(b.min-a.min);}).slice(0,8);function _hm2(m){m=Math.round(m);return m>=60?(Math.floor(m/60)+' год '+(m%60)+' хв'):(m+' хв');}var trk=T.hasGps?'<div class="sect"><h3>Трекер · GPS за тиждень</h3><div class="eff">'+'<div class="c"><div class="v">'+(T.gpsKm?Math.round(T.gpsKm)+' км':'—')+'</div><div class="l">GPS пробіг</div></div>'+'<div class="c"><div class="v">'+(T.deadEst?'~'+Math.round(T.deadEst)+' км':'—')+'</div><div class="l">доїзд (оцінка)</div></div>'+'<div class="c"><div class="v">'+(T.unexpl?Math.round(T.unexpl)+' км':'—')+'</div><div class="l">без замовлень</div></div>'+'<div class="c"><div class="v">'+T.stopN+'</div><div class="l">стоянок</div></div></div>'+(_stops.length?'<h4 class="sub3">Часті стоянки</h4><div style="overflow-x:auto"><table class="otable"><thead><tr><th>Місце</th><th class="r">Разів</th><th class="r">Сумарно</th></tr></thead><tbody>'+_stops.map(function(st){return '<tr><td>'+rpt_esc(st.addr)+'</td><td class="r">'+st.n+'</td><td class="r">'+_hm2(st.min)+'</td></tr>';}).join('')+'</tbody></table></div>':'<p style="color:var(--muted);font-size:12.5px">Стоянок не зафіксовано.</p>')+'</div>':'<div class="sect"><h3>Трекер · GPS за тиждень</h3><p style="color:var(--muted);font-size:12.5px">Немає даних трекера за цей тиждень (потрібні файли Wialon у днях тижня).</p></div>';
  el.innerHTML='<button class="back" id="back" onclick="renderWeek()">\u2039 До тижня</button>'
   +'<h1>'+rpt_esc(nameFor(name))+'</h1><p class="sub">Тиждень '+monL+' \u2013 '+sunL+' \u00b7 '+T.days+' дн. відпрацьовано</p>'
@@ -1811,6 +1811,22 @@ function dayDashboard(){
    +'</div>';
 }
 function hmd(h){if(h==null)return '—';var m=Math.round(h*60);var hh=Math.floor(m/60),mm=m%60;return hh>0?(hh+'г'+(mm?' '+mm+'хв':'')):(mm+'хв');}
+function dayMiniCard(o){if(!o)return '';
+  function catStr(c){c=c||{};var k=Object.keys(c).filter(function(x){return x&&x!=='\u2014';}).sort(function(a,b){return c[b]-c[a];});return k.length?k.map(function(x){return x+' '+c[x];}).join(' \u00b7 '):'\u2014';}
+  var pkm=Math.round(o.km_total||0),gkm=Math.round(o.gps_km||0),ekm=Math.max(0,gkm-pkm);
+  var kmv='з пасажиром <b>'+pkm+' км</b>'+((o.has_gps&&o.gps_km)?(' \u00b7 Wialon '+gkm+' км \u00b7 порожній '+ekm+' км'):'')+' \u00b7 '+(o.real_pk!=null?('<b>'+o.real_pk.toFixed(1)+' \u20b4/км</b> факт'):(o.gross_pk!=null?o.gross_pk.toFixed(1)+' \u20b4/км':'\u2014'))+(o.real_pk!=null&&o.km_total&&o.net?(' \u00b7 '+(o.net/o.km_total).toFixed(1)+' з пас.'):'');
+  var cg=o.cash_g||0,cdg=o.card_g||0,mg=o.mix_g||0,tg=cg+cdg+mg;
+  var payv='готівка '+gv(cg)+' \u20b4'+(tg>0?' ('+Math.round(cg/tg*100)+'%)':'')+' \u00b7 картка '+gv(cdg)+' \u20b4'+(mg>0?(' \u00b7 змішана '+gv(mg)+' \u20b4'):'');
+  var row=function(k,v){return '<div style="display:flex;gap:8px;padding:3px 0"><span style="min-width:78px;color:var(--muted);flex:none">'+k+'</span><span style="color:var(--ink)">'+v+'</span></div>';};
+  return '<div style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:6px 0 2px;background:var(--panel)">'
+    +shiftBar(o)
+    +'<div style="font-size:12.5px;line-height:1.5;margin-top:8px">'
+    +row('Пробіг',kmv)
+    +row('Категорії',catStr(o.cats))
+    +row('Метод',catStr(o.methods))
+    +row('Оплата',payv)
+    +row('Подача',"під'їзд "+(o.deadhead_min!=null?o.deadhead_min+' хв':'\u2014')+' \u00b7 очікування '+(o.pickup_wait!=null?o.pickup_wait+' хв':'\u2014'))
+    +'</div></div>';}
 function shiftBar(o){
   if(o.span==null)return '';
   var span=o.span||0,pas=Math.max(0,o.work||0),emp=o.gps_idle?Math.max(0,o.empty||0):0,idle=Math.max(0,o.idle||0);
