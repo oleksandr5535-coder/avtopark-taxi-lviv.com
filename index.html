@@ -1676,14 +1676,22 @@ function weekStep(dir){if(!weekMon)return;var d=new Date(weekMon+'T00:00:00');d.
 function weekAgg(mon,all){var keys=weekKeys(mon);var present=keys.filter(function(k){return DAYS&&DAYS[k];});var map={};
  keys.forEach(function(k){if(!(DAYS&&DAYS[k]))return;var H=(typeof rptHy==='function')?rptHy(k):DAYS[k];var drv=(H&&H.drivers)||[];var dayAgg={};
   drv.forEach(function(o){if(!(((all)||isTaxi(o))&&!isHidden(o.name)))return;if(!((o.net||0)>0||(o.orders||0)>0||(o.online||0)>0))return;
-   var nk=rpt_toks(o.name).join('|');var d=dayAgg[nk]||(dayAgg[nk]={name:o.name,net:0,gross:0,orders:0,online:0,idle:0,cash:0,km:0,plan:0,bGross:0,bGrossFin:0,bComp:0,uOrd:0,plate_norm:''});
-   d.net+=o.net||0;d.gross+=o.gross||0;d.orders+=o.orders||0;d.online+=o.online||0;d.idle+=o.idle||0;d.cash+=(o.b_cash||0)+(o.u_cash||0);d.km+=(o.b_km||0)+(o.u_km||0);d.bGross+=o.b_gross||0;d.bGrossFin+=(o.b_gross_fin!=null?o.b_gross_fin:(o.b_gross||0));d.bComp+=o.b_comp||0;d.uOrd+=o.u_orders||0;d.plan+=planOf(o);if(o.plate_norm)d.plate_norm=o.plate_norm;});
-  Object.keys(dayAgg).forEach(function(nk){var d=dayAgg[nk];var m=map[nk]||(map[nk]={name:d.name,net:0,gross:0,orders:0,online:0,idle:0,cash:0,km:0,days:0,done:0,planSum:0,perDay:{},bGross:0,bGrossFin:0,bComp:0,uOrd:0,plate_norm:''});
-   m.net+=d.net;m.gross+=d.gross;m.orders+=d.orders;m.online+=d.online;m.idle+=d.idle;m.cash+=d.cash;m.km+=d.km;m.bGross+=d.bGross;m.bGrossFin+=d.bGrossFin;m.bComp+=d.bComp;m.uOrd+=d.uOrd;if(d.plate_norm)m.plate_norm=d.plate_norm;
+   var nk=rpt_toks(o.name).join('|');var d=dayAgg[nk]||(dayAgg[nk]={name:o.name,net:0,gross:0,orders:0,online:0,idle:0,cash:0,km:0,plan:0,bGross:0,bGrossFin:0,bComp:0,uOrd:0,plate_norm:'',kmTotal:0,gpsKm:0});
+   d.net+=o.net||0;d.gross+=o.gross||0;d.orders+=o.orders||0;d.online+=o.online||0;d.idle+=o.idle||0;d.cash+=(o.b_cash||0)+(o.u_cash||0);d.km+=(o.b_km||0)+(o.u_km||0);d.bGross+=o.b_gross||0;d.bGrossFin+=(o.b_gross_fin!=null?o.b_gross_fin:(o.b_gross||0));d.bComp+=o.b_comp||0;d.uOrd+=o.u_orders||0;d.plan+=planOf(o);d.kmTotal+=o.km_total||0;d.gpsKm+=o.gps_km||0;if(o.plate_norm)d.plate_norm=o.plate_norm;});
+  Object.keys(dayAgg).forEach(function(nk){var d=dayAgg[nk];var m=map[nk]||(map[nk]={name:d.name,net:0,gross:0,orders:0,online:0,idle:0,cash:0,km:0,days:0,done:0,planSum:0,perDay:{},bGross:0,bGrossFin:0,bComp:0,uOrd:0,plate_norm:'',kmTotal:0,gpsKm:0});
+   m.net+=d.net;m.gross+=d.gross;m.orders+=d.orders;m.online+=d.online;m.idle+=d.idle;m.cash+=d.cash;m.km+=d.km;m.bGross+=d.bGross;m.bGrossFin+=d.bGrossFin;m.bComp+=d.bComp;m.uOrd+=d.uOrd;m.kmTotal+=d.kmTotal;m.gpsKm+=d.gpsKm;if(d.plate_norm)m.plate_norm=d.plate_norm;
    m.days++;m.planSum+=d.plan;var dn=d.plan>0?(d.net>=d.plan):false;if(dn)m.done++;m.perDay[k]={net:d.net,done:dn};});});
  var list=Object.keys(map).map(function(n){var m=map[n];m.pace=m.online>0?Math.round(m.net/m.online):null;m.pct=m.planSum>0?Math.round(m.net/m.planSum*100):null;return m;}).sort(function(a,b){return b.net-a.net;});
  return {keys:keys,present:present,list:list};}
 
+function bordurAll(){var m={};try{m=JSON.parse(localStorage.getItem('bordur_all')||'{}')||{};}catch(e){m={};}
+  if(!window._bordurMigrated){window._bordurMigrated=true;var changed=false;try{for(var i=localStorage.length-1;i>=0;i--){var lk=localStorage.key(i);if(lk&&lk.indexOf('bordur:')===0){var kk=lk.slice(7);var vv=parseFloat(localStorage.getItem(lk))||0;if(vv&&m[kk]==null){m[kk]=vv;changed=true;}localStorage.removeItem(lk);}}}catch(e){}if(changed){try{localStorage.setItem('bordur_all',JSON.stringify(m));}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('bordur',m);}}
+  return m;}
+function bordurMapSave(m){try{localStorage.setItem('bordur_all',JSON.stringify(m));}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('bordur',m);}
+function bordurK(tok){return weekMon+':'+tok;}
+function bordurGet(tok){var v=bordurAll()[bordurK(tok)];return v?(parseFloat(v)||0):0;}
+function bordurSet(tok,v){v=parseFloat(String(v==null?'':v).replace(',','.'))||0;var m=bordurAll();var k=bordurK(tok);if(v)m[k]=v;else delete m[k];bordurMapSave(m);}
+function setBordur(enc,v){var tok=decodeURIComponent(enc);bordurSet(tok,v);if(typeof renderWeek==='function')renderWeek();}
 function renderWeek(){var el=document.getElementById('week');if(!el)return;
  if(!DAYS||!Object.keys(DAYS).length){el.innerHTML='<h1>Аналіз за <span class="accent">тиждень</span></h1><p class="sub">Ще нема даних.</p>';return;}
   if(weekMon&&!/^\d{4}-\d{2}-\d{2}$/.test(weekMon))weekMon=null;
@@ -1697,14 +1705,25 @@ function renderWeek(){var el=document.getElementById('week');if(!el)return;
  if(!A.present.length){el.innerHTML=head+'<p class="sub">За цей тиждень нема даних. Гортай \u2039 \u203a до тижня з даними.</p>';return;}
  var T=A.list.reduce(function(a,m){a.net+=m.net;a.gross+=m.gross;a.orders+=m.orders;a.online+=m.online;return a;},{net:0,gross:0,orders:0,online:0});
  function strip(m){return '<div class="wk-strip">'+A.keys.map(function(k,i){var pd=m.perDay[k];var cls=pd?(pd.done?'d':'u'):'n';var ti=DL[i]+' '+_wkLab(k)+(pd?(': '+Math.round(pd.net)+' \u20b4'):' \u2014');return '<span class="wk-cell '+cls+'" title="'+ti+'">'+DL[i].slice(0,1)+'</span>';}).join('')+'</div>';}
- var rows=A.list.map(function(m){return '<tr class="wk-row" data-n="'+encodeURIComponent(m.name)+'" onclick="openWeekDriver(this.dataset.n)"><td><div class="wk-nm">'+rpt_esc(nameFor(m.name))+' \u203a</div>'+strip(m)+'</td>'
-  +'<td class="r"><b>'+gv(m.net)+'</b></td><td class="r">'+m.done+'/'+m.days+'</td><td class="r">'+(m.pct==null?'\u2014':m.pct+'%')+'</td>'
-  +'<td class="r">'+(m.pace==null?'\u2014':m.pace)+'</td><td class="r">'+m.orders+'</td><td class="r">'+H(m.online)+'</td><td class="r">'+gv(m.cash)+'</td><td class="r">'+((function(){var _bv=weekBrandVal(m);return _bv<0?'<span class="wk-brand off">\u2014</span>':(_bv>0?'<span class="wk-brand">'+Math.round(_bv)+'\u20b4</span>':'0');})())+'</td></tr>';}).join('');
+ var TT={net:0,cash:0,card:0,brand:0,cardBrand:0,bord:0,kmP:0,kmG:0,orders:0,online:0};
+ var rows=A.list.map(function(m){var tok=rpt_toks(m.name).join('|');var bv=weekBrandVal(m);var brand=bv<0?0:bv;var card=(m.net||0)-(m.cash||0);var cardBrand=card+brand;var bord=bordurGet(tok);
+  TT.net+=m.net||0;TT.cash+=m.cash||0;TT.card+=card;TT.brand+=brand;TT.cardBrand+=cardBrand;TT.bord+=bord;TT.kmP+=m.kmTotal||0;TT.kmG+=m.gpsKm||0;TT.orders+=m.orders||0;TT.online+=m.online||0;
+  var brandCell=bv<0?'<span class="wk-brand off">\u2014</span>':(bv>0?'<span class="wk-brand">'+Math.round(bv)+'\u20b4</span>':'0');
+  return '<tr class="wk-row" data-n="'+encodeURIComponent(m.name)+'" onclick="openWeekDriver(this.dataset.n)"><td><div class="wk-nm">'+rpt_esc(nameFor(m.name))+' \u203a</div>'+strip(m)+'</td>'
+   +'<td class="r"><b>'+gv(m.net)+'</b></td><td class="r">'+m.done+'/'+m.days+'</td><td class="r">'+(m.pct==null?'\u2014':m.pct+'%')+'</td>'
+   +'<td class="r">'+(m.pace==null?'\u2014':m.pace)+'</td><td class="r">'+m.orders+'</td><td class="r">'+H(m.online)+'</td><td class="r">'+gv(m.cash)+'</td>'
+   +'<td class="r"><input type="text" value="'+(bord||'')+'" placeholder="0" onclick="event.stopPropagation()" onchange="setBordur(&quot;'+encodeURIComponent(tok)+'&quot;,this.value)" style="width:60px;text-align:right;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);font-family:inherit;font-size:12.5px"></td>'
+   +'<td class="r"'+(card<0?' style="color:var(--bad)"':'')+'>'+gv(card)+'</td>'
+   +'<td class="r">'+brandCell+'</td>'
+   +'<td class="r"><b>'+gv(cardBrand)+'</b></td>'
+   +'<td class="r">'+(m.kmTotal?Math.round(m.kmTotal)+' км':'\u2014')+'</td>'
+   +'<td class="r">'+(m.gpsKm?Math.round(m.gpsKm)+' км':'\u2014')+'</td></tr>';}).join('');
+ var totRow='<tr style="border-top:2px solid var(--line);font-weight:800"><td>ПІДСУМОК</td><td class="r">'+gv(TT.net)+'</td><td class="r">\u2014</td><td class="r">\u2014</td><td class="r">\u2014</td><td class="r">'+TT.orders+'</td><td class="r">'+H(TT.online)+'</td><td class="r">'+gv(TT.cash)+'</td><td class="r">'+gv(TT.bord)+'</td><td class="r">'+gv(TT.card)+'</td><td class="r">'+gv(TT.brand)+'</td><td class="r">'+gv(TT.cardBrand)+'</td><td class="r">'+Math.round(TT.kmP)+' км</td><td class="r">'+Math.round(TT.kmG)+' км</td></tr>'
  el.innerHTML=head
   +'<div class="ovhero"><div class="oh-card oh-net"><div class="oh-l">Чиста каса за тиждень</div><div class="oh-big">'+gv(T.net)+' \u20b4</div><div class="oh-sub">'+A.list.length+' водіїв \u00b7 '+T.orders+' поїздок</div></div>'
   +'<div class="oh-card oh-cash"><div class="oh-l">Валове</div><div class="oh-big">'+gv(T.gross)+' \u20b4</div><div class="oh-sub">'+H(T.online)+' год онлайн</div></div></div>'
   +'<div class="wk-legend"><span class="wk-cell d"></span> виконав план <span class="wk-cell u"></span> недобрав <span class="wk-cell n"></span> не виходив</div>'
-  +'<div style="overflow-x:auto"><table class="otable wk-table"><thead><tr><th>Водій \u00b7 тиждень</th><th class="r">Чистими</th><th class="r">План дн.</th><th class="r">% тиж.</th><th class="r">\u20b4/год</th><th class="r">Поїзд</th><th class="r">Онлайн</th><th class="r">Готів</th><th class="r">Брендув.</th></tr></thead><tbody>'+rows+'</tbody></table></div>';}
+  +'<div style="overflow-x:auto"><table class="otable wk-table"><thead><tr><th>Водій · тиждень</th><th class="r">Чистими</th><th class="r">План дн.</th><th class="r">% тиж.</th><th class="r">₴/год</th><th class="r">Поїзд</th><th class="r">Онлайн</th><th class="r">Готів</th><th class="r">Бордюр</th><th class="r">Залишок карта</th><th class="r">Брендув.</th><th class="r">Карта+бренд</th><th class="r">Км замовл.</th><th class="r">Км трекер</th></tr></thead><tbody>'+rows+totRow+'</tbody></table></div>';}
 
 function _durMin(x){if(!x)return 0;x=String(x);var d=x.match(/(\d+)\s*дн/),h=x.match(/(\d+)\s*год/),m=x.match(/(\d+)\s*хв/);return (d?+d[1]*1440:0)+(h?+h[1]*60:0)+(m?+m[1]:0);}
 function weekDriverData(name,mon){var _nk=rpt_toks(name).join('|');var keys=weekKeys(mon),days=[],T={net:0,gross:0,orders:0,online:0,idle:0,cash:0,km:0,bNet:0,bGross:0,bCash:0,bKm:0,bComp:0,uNet:0,uGross:0,uCash:0,uKm:0,uOrd:0,tips:0,bOffer:0,bCancel:0,bNoans:0,tEcon:0,tStd:0,tPrem:0,tDeliv:0,cats:{},kmTotal:0,unacc:0,maxSpeed:0,utilW:0,dhW:0,dhN:0,gpsKm:0,unexpl:0,deadEst:0,hasGps:false,stopN:0,stopMap:{},days:0,done:0,planSum:0};
@@ -2896,7 +2915,7 @@ async function cloudLoadDays(){if(!supa)return;try{const r=await supa.from("app_
 async function cloudSaveDay(d){if(!supa||!d||!d.date)return;try{await supa.from("app_data").upsert({key:"day:"+d.date,value:d});}catch(e){console.error(e);}}
 async function cloudDeleteAllDays(){if(!supa)return;try{await supa.from("app_data").delete().like("key","day:%");}catch(e){console.error(e);}}
 async function cloudSaveKV(k,v){if(!supa)return;try{await supa.from("app_data").upsert({key:"kv:"+k,value:v});}catch(e){console.error(e);}}
-async function cloudLoadKV(){if(!supa)return;try{const r=await supa.from("app_data").select("key,value").in("key",["kv:fleet","kv:notes","kv:drvpass","kv:planfuel"]);if(r.error){console.error(r.error);return;}(r.data||[]).forEach(x=>{if(x.key==="kv:fleet"&&typeof x.value==="string"){try{localStorage.setItem("fleet_plates",x.value);}catch(e){}}if(x.key==="kv:notes"&&x.value){try{localStorage.setItem("cars_notes",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:drvpass"&&x.value){try{localStorage.setItem("drv_pass",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:planfuel"&&x.value){try{localStorage.setItem("plan_fuel",JSON.stringify(x.value));}catch(e){}}});}catch(e){console.error(e);}}
+async function cloudLoadKV(){if(!supa)return;try{const r=await supa.from("app_data").select("key,value").in("key",["kv:fleet","kv:notes","kv:drvpass","kv:planfuel","kv:bordur"]);if(r.error){console.error(r.error);return;}(r.data||[]).forEach(x=>{if(x.key==="kv:fleet"&&typeof x.value==="string"){try{localStorage.setItem("fleet_plates",x.value);}catch(e){}}if(x.key==="kv:notes"&&x.value){try{localStorage.setItem("cars_notes",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:drvpass"&&x.value){try{localStorage.setItem("drv_pass",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:planfuel"&&x.value){try{localStorage.setItem("plan_fuel",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:bordur"&&x.value){try{localStorage.setItem("bordur_all",JSON.stringify(x.value));}catch(e){}}});}catch(e){console.error(e);}}
 function showLogin(b){var el=document.getElementById("login");if(el)el.style.display=b?"flex":"none";}
 function revealForm(){var l=document.getElementById("loginLoading"),f=document.getElementById("loginForm");if(l)l.style.display="none";if(f)f.style.display="block";}
 async function startCloud(){await cloudLoadDays();await cloudLoadKV();try{loadDays();}catch(e){}var ks=Object.keys(DAYS).sort();if(ks.length){DATA=hydrate(DAYS[ks[ks.length-1]]);boot();}else{showUploaderOnly();}}
