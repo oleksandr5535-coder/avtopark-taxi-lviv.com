@@ -128,6 +128,12 @@ function ordersToTrips(items) {
   const payMap = f => { f = (f || '').toLowerCase(); if (f === 'cash') return 'Готівка'; if (f.indexOf('mix') >= 0) return 'Змішаний'; return 'Безготівковий'; };
   return (items || []).map(o => {
     const pay = o.payment || {}, drv = o.driver || {}, veh = o.vehicle || {};
+    // Доїзд до клієнта у хвилинах: acceptedAt -> pickupTime (беремо лише правдоподібні значення 0..60 хв)
+    let deadheadMin = '';
+    if (o.acceptedAt && o.pickupTime) {
+      const dm = Math.round((o.pickupTime - o.acceptedAt) / 60);
+      if (dm >= 0 && dm <= 60) deadheadMin = String(dm);
+    }
     return {
       'Водій': drv.fullName || '',
       'Держ номер авто': veh.licencePlate || '',
@@ -135,6 +141,7 @@ function ordersToTrips(items) {
       'Статус': stMap(o.status),
       'Тип продукту': PROD[(veh.productType || '').toLowerCase()] || veh.productType || '',
       'Метод': methodOf(o),
+      'Доїзд хв': deadheadMin,
       'Тип оплати': payMap(pay.feeType || pay.paymentType),
       'Відст. за маршрутом, км': (pay.distance != null) ? String(pay.distance) : '',
       'Вартість замовлення, грн': (pay.cost != null) ? String(pay.cost) : '',
@@ -229,7 +236,7 @@ export default async function handler(req, res) {
 
     const out = {
       ok: true, date: dateStr,
-      _v: 'uklon-method-3', _method_found: methodFound + '/' + trips.length,
+      _v: 'uklon-method-4', _method_found: methodFound + '/' + trips.length,
       uklon_agg: reportToAgg(aggItems),
       uklon_trips: trips,
       count_drivers: aggItems.length, count_orders: ordItems.length,
