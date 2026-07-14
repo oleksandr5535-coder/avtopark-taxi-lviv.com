@@ -54,24 +54,65 @@ const UMETHOD = {
   chain:'Ланцюжок', chained:'Ланцюжок', orderchain:'Ланцюжок', chainorder:'Ланцюжок', consecutive:'Ланцюжок',
   prebooked:'Попереднє', preliminary:'Попереднє', scheduled:'Попереднє', reserve:'Попереднє', reserved:'Попереднє', preorder:'Попереднє', prearranged:'Попереднє',
 };
-// пробуємо ймовірні поля сирого замовлення; лишаємо порожнім, якщо не впізнали (щоб не показувати сміття)
-function methodOf(o) {
-  const cands = [
-    o.acquisitionType, o.acquisition_type, o.assignmentType, o.assignment_type,
-    o.acquisition, o.searchType, o.search_type, o.orderType, o.order_type,
-    o.method, o.orderChainType, o.order_chain_type,
-    (o.isChain || o.is_chain || o.chain ? 'chain' : null),
-    o.source, o.type,
-  ];
-  for (let i = 0; i < cands.length; i++) {
-    const v = cands[i];
-    if (v == null || v === '') continue;
-    const s = String(v).trim();
-    if (/[а-яіїєґ]/i.test(s)) return s;                       // вже українською — беремо як є
-    const k = s.toLowerCase().replace(/[\s_-]+/g, '');
-    if (UMETHOD[k]) return UMETHOD[k];                        // впізнаний код
+// acceptance_method (як Uklon віддає в API) -> укр. підпис (як у порталі)
+const ACC_METHOD = {
+  byhomefilter:'Швидкий пошук', homefilter:'Швидкий пошук', fastsearch:'Швидкий пошук', bysearch:'Швидкий пошук', search:'Швидкий пошук', fast:'Швидкий пошук', quicksearch:'Швидкий пошук', byfilter:'Швидкий пошук',
+  chain:'Ланцюжок', bychain:'Ланцюжок', orderchain:'Ланцюжок', bychainorder:'Ланцюжок',
+  offer:'Пропозиція', byoffer:'Пропозиція', manual:'Пропозиція', bymanual:'Пропозиція', byoffermanual:'Пропозиція',
+  radar:'Радар', byradar:'Радар',
+  prebooked:'Попереднє', byprebooked:'Попереднє', scheduled:'Попереднє', preorder:'Попереднє', reserve:'Попереднє', byprebook:'Попереднє',
+};
+
+// Глибокий пошук методу отримання замовлення в сирому об'єкті замовлення.
+// Не залежить від точної назви поля: рекурсивно обходимо весь об'єкт.
+const METHOD_KEY_RE = /(acquisition|acceptance|assignment|pipeline|ordertype|order_type|searchtype|search_type|obtain|receiv|method|chain)/i;
+function normCode(s) { return String(s).toLowerCase().replace(/[\s_-]+/g, ''); }
+function mapMethodVal(v) {
+  if (v == null || v === '') return '';
+  const s = String(v).trim();
+  if (!s) return '';
+  if (/[а-яіїєґ]/i.test(s)) return s.length <= 40 ? s : '';   // вже українською — беремо як є
+  const k = normCode(s);
+  if (ACC_METHOD[k]) return ACC_METHOD[k];
+  if (UMETHOD[k]) return UMETHOD[k];                          // впізнаний код
+  return '';
+}
+function findMethod(obj, depth) {
+  if (obj == null || typeof obj !== 'object' || depth > 5) return '';
+  // Крок 1: ключі, що схожі на поле методу
+  for (const key of Object.keys(obj)) {
+    if (!METHOD_KEY_RE.test(key)) continue;
+    const val = obj[key];
+    if (key.toLowerCase().indexOf('chain') >= 0 && (val === true || val === 'true')) return 'Ланцюжок';
+    if (typeof val === 'string' || typeof val === 'number') {
+      const m = mapMethodVal(val);
+      if (m) return m;
+      const s = String(val).trim();                          // невідомий код, але з поля-методу — показуємо як є
+      if (s && s.length <= 40 && !/^\d+$/.test(s) && s !== 'true' && s !== 'false') return s;
+    }
   }
-  return '';                                                 // невідомо — ловимо через ?debug=1
+  // Крок 2: значення, що точно збігаються зі словником методів (де б не лежали)
+  for (const key of Object.keys(obj)) {
+    const val = obj[key];
+    if (typeof val === 'string') { const m = mapMethodVal(val); if (m && !/[а-яіїєґ]/i.test(val)) return m; }
+  }
+  // Крок 3: рекурсія у вкладені об'єкти
+  for (const key of Object.keys(obj)) {
+    const val = obj[key];
+    if (val && typeof val === 'object') { const r = findMethod(val, (depth || 0) + 1); if (r) return r; }
+  }
+  return '';
+}
+// Основне: читаємо acceptance_method напряму (як віддає Uklon API), мапимо в укр. підпис.
+// Невідомий код показуємо як є (щоб побачити нове значення), запасний варіант — глибокий пошук.
+function methodOf(o) {
+  const am = o && (o.acceptance_method != null ? o.acceptance_method : o.acceptanceMethod);
+  if (am != null && am !== '') {
+    const k = normCode(am);
+    if (ACC_METHOD[k]) return ACC_METHOD[k];
+    return String(am).trim();
+  }
+  return findMethod(o, 0);
 }
 
 function ordersToTrips(items) {
@@ -176,10 +217,14 @@ export default async function handler(req, res) {
 
     const ordItems = await fetchAllOrders(fleetId, from, to, H);
 
+    const trips = ordersToTrips(ordItems);
+    const methodFound = trips.filter(t => t['Метод']).length;
+
     const out = {
       ok: true, date: dateStr,
+      _v: 'uklon-method-2', _method_found: methodFound + '/' + trips.length,
       uklon_agg: reportToAgg(aggItems),
-      uklon_trips: ordersToTrips(ordItems),
+      uklon_trips: trips,
       count_drivers: aggItems.length, count_orders: ordItems.length,
     };
 
