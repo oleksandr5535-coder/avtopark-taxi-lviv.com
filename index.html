@@ -2914,16 +2914,33 @@ async function checkAuth(){if(!supa){startLocal();return;}try{const sx=await sup
 try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark':'light';var _tt0=document.getElementById('themeToggle');if(_tt0)_tt0.querySelectorAll('button').forEach(function(b){b.classList.toggle('on',b.dataset.themeVal===_t0);});}catch(e){}checkAuth();
 </script>
 <script>
-/* ===== Вкладка «Порівняння водіїв» ===== */
+/* ===== Вкладка «Порівняння водіїв» (v2: період, таксі-фільтр, реальна ₴/км, тарифи, методи, рекомендації) ===== */
 (function(){
-  var _css='.cmp-table td,.cmp-table th{padding:7px 9px;font-size:12.5px}.cmp-card{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0 0 10px;background:var(--panel)}.cmp-card-h{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}.cmp-rec{font-size:13px;line-height:1.42;padding:6px 0;border-top:1px solid var(--line)}.cmp-rec:first-of-type{border-top:none}.cmp-rec.good{color:var(--good)}.cmp-rec.ok{color:var(--muted)}';
+  var _css='.cmp-ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:-2px 0 10px}'
+    +'.cmp-btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:9px;padding:8px 12px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer}'
+    +'.cmp-btn.on{background:#eaf7ee;border-color:#bfe6c9;color:#0a7d33}'
+    +'.cmp-cal{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:12px;width:300px;max-width:92vw;box-shadow:0 14px 34px rgba(0,0,0,.16);margin:0 0 12px}'
+    +'.cmp-table td,.cmp-table th{padding:7px 9px;font-size:12.5px}'
+    +'.cmp-card{border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin:0 0 11px;background:var(--panel)}'
+    +'.cmp-card-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:9px;flex-wrap:wrap}'
+    +'.cmp-mix{display:flex;height:9px;border-radius:6px;overflow:hidden;margin:5px 0 3px}'
+    +'.cmp-mix i{display:block;height:100%}'
+    +'.cmp-mixlab{font-size:11.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 12px;margin-bottom:9px}'
+    +'.cmp-econ{font-size:12.5px;color:var(--ink);background:var(--bg,#f7f6f2);border-radius:8px;padding:8px 10px;margin:6px 0;line-height:1.5}'
+    +'.cmp-rec{font-size:13px;line-height:1.42;padding:6px 0;border-top:1px solid var(--line)}'
+    +'.cmp-rec:first-of-type{border-top:none}.cmp-rec.good{color:var(--good)}.cmp-rec.ok{color:var(--muted)}'
+    +'.cmp-sub{font-size:12px;color:var(--muted)}';
   try{var _st=document.createElement('style');_st.textContent=_css;document.head.appendChild(_st);}catch(e){}
+
   function f0(x){return (x==null||isNaN(x))?'—':Math.round(x).toLocaleString('uk-UA');}
   function f1(x){return (x==null||isNaN(x))?'—':(Math.round(x*10)/10).toLocaleString('uk-UA');}
   function fp(x){return (x==null||isNaN(x))?'—':Math.round(x*100)+'%';}
   function esc(s){return (typeof rpt_esc==='function')?rpt_esc(s):String(s==null?'':s);}
   function median(arr){var v=arr.filter(function(x){return x!=null&&!isNaN(x);}).sort(function(a,b){return a-b;});if(!v.length)return null;var m=Math.floor(v.length/2);return v.length%2?v[m]:(v[m-1]+v[m])/2;}
   function cellCol(val,med,better){if(!better||val==null||med==null||isNaN(val)||isNaN(med)||med===0)return '';var r=val/med;var good,bad;if(better==='hi'){good=r>=1.08;bad=r<=0.92;}else{good=r<=0.92;bad=r>=1.08;}return good?'var(--good)':(bad?'var(--bad)':'');}
+  function dlab(k){if(typeof isoDateLabel==='function')return isoDateLabel(k);var p=String(k).split('-');return p[2]+'.'+p[1];}
+  function allDays(){if(typeof DAYS==='undefined')return [];return Object.keys(DAYS).filter(function(k){return /^\d{4}-\d{2}-\d{2}$/.test(k);}).sort();}
+  function shiftDay(k,n){var p=k.split('-');var d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
 
   var METRICS=[
     {k:'days',       lab:'Днів',        better:null, fmt:f0},
@@ -2931,115 +2948,182 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
     {k:'perHour',    lab:'₴/год',       better:'hi', fmt:f0},
     {k:'ordPerH',    lab:'замов/год',   better:'hi', fmt:f1},
     {k:'util',       lab:'утиліз.',     better:'hi', fmt:fp},
-    {k:'pricePerKm', lab:'₴/км',        better:'hi', fmt:f1},
+    {k:'realPk',     lab:'₴/км факт',   better:'hi', fmt:f1},
+    {k:'perTrip',    lab:'₴/поїзд',     better:'hi', fmt:f0},
     {k:'emptyPct',   lab:'порожній',    better:'lo', fmt:fp},
     {k:'deadhead',   lab:"під'їзд, хв", better:'lo', fmt:f1},
     {k:'cashPct',    lab:'готівка',     better:'lo', fmt:fp},
     {k:'cancelPct',  lab:'скасув.',     better:'lo', fmt:fp},
-    {k:'penaltyDay', lab:'штраф/день',  better:'lo', fmt:f0},
-    {k:'maxSpeed',   lab:'макс, км/год',better:'lo', fmt:f0}
+    {k:'penaltyDay', lab:'штраф/день',  better:'lo', fmt:f0}
   ];
 
+  function ensureRange(){
+    var ad=allDays(); if(!ad.length)return;
+    if(!window._cmpTo||ad.indexOf(window._cmpTo)<0)window._cmpTo=ad[ad.length-1];
+    if(!window._cmpFrom||ad.indexOf(window._cmpFrom)<0){var f=shiftDay(window._cmpTo,-29);window._cmpFrom=(f<ad[0])?ad[0]:f;}
+    if(window._cmpFrom>window._cmpTo){var t=window._cmpFrom;window._cmpFrom=window._cmpTo;window._cmpTo=t;}
+    if(window._cmpTaxiOnly===undefined)window._cmpTaxiOnly=true;
+  }
+
   function aggregate(){
-    if(typeof DAYS==='undefined')return {rows:[],from:null,to:null,ndays:0};
-    var keys=Object.keys(DAYS).filter(function(k){return /^\d{4}-\d{2}-\d{2}$/.test(k);}).sort();
-    if(!keys.length)return {rows:[],from:null,to:null,ndays:0};
+    ensureRange();
+    var ad=allDays().filter(function(k){return k>=window._cmpFrom&&k<=window._cmpTo;});
+    if(!ad.length)return {rows:[],ndays:0};
+    var pp=(typeof drvPass==='function')?drvPass():{};
+    var nm=(typeof lastDriverByPlate==='function')?lastDriverByPlate():{};
+    window._cmpHyd=window._cmpHyd||{};
     var byKey={};
-    keys.forEach(function(dk){
-      var day=DAYS[dk]; var D=(day&&day._parts&&typeof hydrate==='function')?hydrate(day):day;
+    ad.forEach(function(dk){
+      var day=DAYS[dk]; var ck=dk+'|'+((day&&day._ts)||0);
+      var D=window._cmpHyd[ck]; if(!D){D=(day&&day._parts&&typeof hydrate==='function')?hydrate(day):day;window._cmpHyd[ck]=D;}
       var drv=(D&&D.drivers)||[];
       drv.forEach(function(o){
         if(!o||!o.name)return;
         var active=((o.online||0)>0)||((o.orders||0)>0)||((o.net||0)>0);
         if(!active)return;
         var key=(typeof rpt_toks==='function')?rpt_toks(o.name).join('|'):o.name;
-        var a=byKey[key]||(byKey[key]={key:key,name:o.name,days:0,net:0,gross:0,orders:0,online:0,work:0,kmP:0,kmG:0,hasGps:false,cashG:0,cardG:0,mixG:0,bOffer:0,bComp:0,bCancel:0,bNoans:0,dhSum:0,dhW:0,pwSum:0,pwW:0,maxSpeed:0,gpsOver:0,gpsPenalty:0,tEcon:0,tStd:0,tPrem:0,tDeliv:0,tips:0,dset:{}});
+        var a=byKey[key]||(byKey[key]={key:key,name:o.name,plate:o.plate_norm||'',days:0,net:0,gross:0,orders:0,online:0,work:0,kmP:0,kmG:0,hasGps:false,cashG:0,cardG:0,mixG:0,bOffer:0,bComp:0,bCancel:0,bNoans:0,dhSum:0,dhW:0,maxSpeed:0,gpsOver:0,gpsPenalty:0,tEcon:0,tStd:0,tPrem:0,tDeliv:0,tips:0,meth:{},dset:{}});
         if((o.name||'').length>(a.name||'').length)a.name=o.name;
+        if(!a.plate&&o.plate_norm)a.plate=o.plate_norm;
         a.dset[dk]=1;
-        a.net+=o.net||0; a.gross+=o.gross||0; a.orders+=o.orders||0;
-        a.online+=o.online||0; a.work+=o.work||0;
-        a.kmP+=o.km_total||0;
+        a.net+=o.net||0;a.gross+=o.gross||0;a.orders+=o.orders||0;a.online+=o.online||0;a.work+=o.work||0;a.kmP+=o.km_total||0;
         if(o.has_gps&&o.gps_km!=null){a.kmG+=o.gps_km||0;a.hasGps=true;}
-        a.cashG+=o.cash_g||0; a.cardG+=o.card_g||0; a.mixG+=o.mix_g||0;
-        a.bOffer+=o.b_offer||0; a.bComp+=o.b_comp||0; a.bCancel+=o.b_cancel||0; a.bNoans+=o.b_noans||0;
+        a.cashG+=o.cash_g||0;a.cardG+=o.card_g||0;a.mixG+=o.mix_g||0;
+        a.bOffer+=o.b_offer||0;a.bComp+=o.b_comp||0;a.bCancel+=o.b_cancel||0;a.bNoans+=o.b_noans||0;
         if(o.deadhead_min!=null){a.dhSum+=o.deadhead_min*(o.orders||1);a.dhW+=(o.orders||1);}
-        if(o.pickup_wait!=null){a.pwSum+=o.pickup_wait*(o.orders||1);a.pwW+=(o.orders||1);}
         if(o.gps_maxspeed!=null)a.maxSpeed=Math.max(a.maxSpeed,o.gps_maxspeed);
-        a.gpsOver+=o.gps_over||0; a.gpsPenalty+=o.gps_penalty||0;
-        a.tEcon+=o.t_econ||0; a.tStd+=o.t_std||0; a.tPrem+=o.t_prem||0; a.tDeliv+=o.t_deliv||0;
-        a.tips+=o.tips||0;
+        a.gpsOver+=o.gps_over||0;a.gpsPenalty+=o.gps_penalty||0;
+        a.tEcon+=o.t_econ||0;a.tStd+=o.t_std||0;a.tPrem+=o.t_prem||0;a.tDeliv+=o.t_deliv||0;a.tips+=o.tips||0;
+        var mm=o.methods||{};Object.keys(mm).forEach(function(m){a.meth[m]=(a.meth[m]||0)+mm[m];});
       });
     });
     var rows=Object.keys(byKey).map(function(k){
-      var a=byKey[k]; a.days=Object.keys(a.dset).length;
+      var a=byKey[k];a.days=Object.keys(a.dset).length;
       a.netDay=a.days>0?a.net/a.days:null;
       a.perHour=a.online>0?a.net/a.online:null;
       a.ordPerH=a.online>0?a.orders/a.online:null;
       a.util=a.online>0?a.work/a.online:null;
-      a.pricePerKm=a.kmP>0?a.net/a.kmP:null;
+      a.pricePk=a.kmP>0?a.net/a.kmP:null;
+      a.realPk=(a.hasGps&&a.kmG>0)?a.net/a.kmG:null;
+      a.perTrip=a.orders>0?a.net/a.orders:null;
+      a.kmTrip=a.orders>0?a.kmP/a.orders:null;
       a.emptyPct=(a.hasGps&&a.kmG>0)?Math.max(0,(a.kmG-a.kmP))/a.kmG:null;
       a.deadhead=a.dhW>0?a.dhSum/a.dhW:null;
-      var pay=a.cashG+a.cardG+a.mixG; a.cashPct=pay>0?a.cashG/pay:null;
-      var bd=a.bComp+a.bCancel+a.bNoans; a.cancelPct=(a.bOffer>0&&bd>0)?a.bCancel/bd:null;
-      var tt=a.tEcon+a.tStd+a.tPrem+a.tDeliv; a.premPct=tt>0?a.tPrem/tt:null;
+      var pay=a.cashG+a.cardG+a.mixG;a.cashPct=pay>0?a.cashG/pay:null;a.cardPct=pay>0?a.cardG/pay:null;a.mixPct=pay>0?a.mixG/pay:null;
+      var bd=a.bComp+a.bCancel+a.bNoans;a.cancelPct=(a.bOffer>0&&bd>0)?a.bCancel/bd:null;
+      a.tt=a.tEcon+a.tStd+a.tPrem+a.tDeliv;a.premPct=a.tt>0?a.tPrem/a.tt:null;a.econPct=a.tt>0?a.tEcon/a.tt:null;
       a.penaltyDay=a.days>0?a.gpsPenalty/a.days:null;
       return a;
     });
-    return {rows:rows,from:keys[0],to:keys[keys.length-1],ndays:keys.length};
+    if(window._cmpTaxiOnly&&typeof plateIsTaxi==='function'){
+      rows=rows.filter(function(a){return a.plate?plateIsTaxi(a.plate,nm,pp):true;});
+    }
+    return {rows:rows,ndays:ad.length};
   }
 
   function fleetMed(rows){
-    var elig=rows.filter(function(a){return a.orders>=5;});
-    var med={};
-    METRICS.forEach(function(m){if(m.better)med[m.k]=median(elig.map(function(a){return a[m.k];}));});
+    var elig=rows.filter(function(a){return a.orders>=8;});
+    var med={};METRICS.forEach(function(m){if(m.better)med[m.k]=median(elig.map(function(a){return a[m.k];}));});
+    med.kmTrip=median(elig.map(function(a){return a.kmTrip;}));
+    med.pricePk=median(elig.map(function(a){return a.pricePk;}));
     return med;
   }
 
   function recFor(a,med){
-    var flags=[],good=[];
-    function pctPP(v){return Math.round((v||0)*100);}
+    var flags=[],good=[];function pp(v){return Math.round((v||0)*100);}
     if(a.util!=null&&med.util!=null&&a.util<=med.util*0.85&&a.util<0.62)
-      flags.push('Багато простою — на замовленнях лише '+pctPP(a.util)+'% часу (парк '+pctPP(med.util)+'%). Активніше брати, менше стояти без замовлень.');
+      flags.push('Багато простою — на замовленнях лише '+pp(a.util)+'% часу (парк '+pp(med.util)+'%). Активніше брати, менше стояти.');
     if(a.ordPerH!=null&&med.ordPerH!=null&&a.ordPerH<=med.ordPerH*0.8)
-      flags.push('Мало замовлень на годину ('+f1(a.ordPerH)+' проти '+f1(med.ordPerH)+' по парку). Працювати в гарячі години та зони попиту.');
+      flags.push('Мало замовлень на годину ('+f1(a.ordPerH)+' проти '+f1(med.ordPerH)+' по парку). Працювати в гарячі години та зони.');
     if(a.cancelPct!=null&&a.cancelPct>=0.08&&(med.cancelPct==null||a.cancelPct>med.cancelPct))
-      flags.push('Скасовує '+pctPP(a.cancelPct)+'% замовлень — перебирає. Це б\'є по рейтингу і доступі до вигідних замовлень.');
+      flags.push('Скасовує '+pp(a.cancelPct)+'% — перебирає замовлення. Б\'є по рейтингу і доступі до вигідних поїздок.');
     if(a.cashPct!=null&&a.cashPct>0.45&&(med.cashPct==null||a.cashPct>=med.cashPct+0.10))
-      flags.push('Готівки '+pctPP(a.cashPct)+'% — багато (парк '+pctPP(med.cashPct)+'%). Спрямовувати на безготівку для контролю каси.');
+      flags.push('Готівки '+pp(a.cashPct)+'% (парк '+pp(med.cashPct)+'%) — багато. Спрямовувати на безготівку для контролю каси.');
     if(a.deadhead!=null&&med.deadhead!=null&&a.deadhead>=med.deadhead*1.25&&a.deadhead>=6)
-      flags.push('Довгий під\'їзд до клієнта '+f1(a.deadhead)+' хв (парк '+f1(med.deadhead)+'). Стояти ближче до попиту, не брати далеких подач.');
+      flags.push('Довгий під\'їзд '+f1(a.deadhead)+' хв (парк '+f1(med.deadhead)+'). Стояти ближче до попиту, не брати далеких подач.');
     if(a.emptyPct!=null&&med.emptyPct!=null&&a.emptyPct>=med.emptyPct+0.08&&a.emptyPct>=0.4)
-      flags.push('Порожній пробіг '+pctPP(a.emptyPct)+'% (парк '+pctPP(med.emptyPct)+'%) — багато катання без пасажира. Менше роз\'їжджати між замовленнями.');
+      flags.push('Порожній пробіг '+pp(a.emptyPct)+'% (парк '+pp(med.emptyPct)+'%) — багато катання без пасажира.');
     if((a.maxSpeed>=95)||((a.penaltyDay||0)>=15000))
       flags.push('Гонить (макс '+f0(a.maxSpeed)+' км/год, штраф ~'+f0(a.penaltyDay)+'/день) — ризик ДТП, пального і скарг. Проговорити.');
-    if(a.pricePerKm!=null&&med.pricePerKm!=null&&a.pricePerKm<=med.pricePerKm*0.85)
-      flags.push('Низька ціна км ('+f1(a.pricePerKm)+' проти '+f1(med.pricePerKm)+') — бере багато коротких невигідних. Балансувати довшими поїздками.');
+    // форма поїздок
+    if(a.kmTrip!=null&&med.kmTrip!=null&&a.realPk!=null&&med.realPk!=null){
+      if(a.kmTrip<=med.kmTrip*0.8&&a.realPk>=med.realPk*0.95) good.push('Короткі, але прибуткові поїздки (сер. '+f1(a.kmTrip)+' км, '+f1(a.realPk)+' ₴/факт.км) — ефективно.');
+      else if(a.kmTrip>=med.kmTrip*1.25&&a.realPk<=med.realPk*0.9) flags.push('Довгі, але дешеві поїздки (сер. '+f1(a.kmTrip)+' км, лише '+f1(a.realPk)+' ₴/факт.км) — багато порожнього повернення. Брати ближчі замовлення.');
+    }
+    // тарифний клас
+    if(a.econPct!=null&&a.econPct>=0.85&&a.tt>=10)
+      flags.push('Майже лише Економ ('+pp(a.econPct)+'%). За авто/рейтингом пробувати Комфорт — вища ціна за км.');
+    if(a.premPct!=null&&med.premPct!=null&&a.premPct>=Math.max(0.25,med.premPct*1.4))
+      good.push('Багато Комфорту ('+pp(a.premPct)+'%) — вища дохідність км.');
     // похвала
     if(a.perHour!=null&&med.perHour!=null&&a.perHour>=med.perHour*1.12)
       good.push('Одна з найкращих виручок за годину ('+f0(a.perHour)+' ₴/год) — тримати темп.');
     if(a.cancelPct!=null&&a.cancelPct<=0.03&&a.orders>=15)
-      good.push('Дисциплінований: майже не скасовує ('+pctPP(a.cancelPct)+'%).');
-    if(a.util!=null&&med.util!=null&&a.util>=med.util*1.12)
-      good.push('Висока утилізація ('+pctPP(a.util)+'%) — мало простоює.');
+      good.push('Дисциплінований: майже не скасовує ('+pp(a.cancelPct)+'%).');
     return {flags:flags,good:good};
   }
 
-  window.cmpSort=function(k){var s=window._cmpSort||{k:'perHour',dir:-1};if(s.k===k)s.dir=-s.dir;else{s.k=k;s.dir=(k==='days')?-1:-1;}window._cmpSort=s;renderCompare();};
+  function mixBar(parts){ // parts: [{v,c,lab}]
+    var tot=parts.reduce(function(s,p){return s+(p.v||0);},0)||1;
+    var bar='<div class="cmp-mix">'+parts.map(function(p){return '<i style="width:'+((p.v||0)/tot*100)+'%;background:'+p.c+'"></i>';}).join('')+'</div>';
+    var lab='<div class="cmp-mixlab">'+parts.filter(function(p){return (p.v||0)>0;}).map(function(p){return '<span>'+esc(p.lab)+' '+Math.round((p.v||0)/tot*100)+'%</span>';}).join('')+'</div>';
+    return bar+lab;
+  }
+
+  window.cmpSort=function(k){var s=window._cmpSort||{k:'perHour',dir:-1};if(s.k===k)s.dir=-s.dir;else{s.k=k;s.dir=-1;}window._cmpSort=s;window.renderCompare();};
+  window.cmpCalToggle=function(){window._cmpCalOpen=!window._cmpCalOpen;window.renderCompare();};
+  window.cmpCalStep=function(d){ensureRange();var ym=window._cmpCalYM||window._cmpTo.slice(0,7);var y=+ym.slice(0,4),m=+ym.slice(5,7)-1;var nd=new Date(Date.UTC(y,m+d,1));window._cmpCalYM=nd.getUTCFullYear()+'-'+String(nd.getUTCMonth()+1).padStart(2,'0');window.renderCompare();};
+  window.cmpPickRange=function(k){if(!window._cmpPend){window._cmpFrom=k;window._cmpTo=k;window._cmpPend=true;}else{if(k<window._cmpFrom){window._cmpTo=window._cmpFrom;window._cmpFrom=k;}else{window._cmpTo=k;}window._cmpPend=false;}window.renderCompare();};
+  window.cmpPreset=function(n){var ad=allDays();if(!ad.length)return;window._cmpTo=ad[ad.length-1];if(n==='all'){window._cmpFrom=ad[0];}else{var f=shiftDay(window._cmpTo,-(n-1));window._cmpFrom=(f<ad[0])?ad[0]:f;}window._cmpPend=false;window._cmpCalOpen=false;window.renderCompare();};
+  window.cmpToggleTaxi=function(v){window._cmpTaxiOnly=v;window.renderCompare();};
+
+  function calHtml(){
+    ensureRange();
+    var ym=window._cmpCalYM||window._cmpTo.slice(0,7);
+    var y=+ym.slice(0,4),m=+ym.slice(5,7);
+    var MONF=['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+    var has={};allDays().forEach(function(k){has[k]=1;});
+    var first=new Date(Date.UTC(y,m-1,1));var startWd=(first.getUTCDay()+6)%7;var dim=new Date(Date.UTC(y,m,0)).getUTCDate();
+    var DL=['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+    var head='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px"><button type="button" onclick="cmpCalStep(-1)" style="border:1px solid var(--line);background:var(--panel);border-radius:8px;width:34px;height:34px;font-size:17px;cursor:pointer;color:var(--ink);font-family:inherit">‹</button><b style="font-size:14.5px">'+MONF[m-1]+' '+y+'</b><button type="button" onclick="cmpCalStep(1)" style="border:1px solid var(--line);background:var(--panel);border-radius:8px;width:34px;height:34px;font-size:17px;cursor:pointer;color:var(--ink);font-family:inherit">›</button></div>';
+    var wd='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px">'+DL.map(function(d){return '<div style="text-align:center;font-size:11px;color:var(--muted);font-weight:700">'+d+'</div>';}).join('')+'</div>';
+    var cells='';for(var i=0;i<startWd;i++)cells+='<div></div>';
+    for(var day=1;day<=dim;day++){
+      var k=y+'-'+String(m).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+      var h=!!has[k];var inR=(k>=window._cmpFrom&&k<=window._cmpTo);var ep=(k===window._cmpFrom||k===window._cmpTo);
+      var st='display:flex;align-items:center;justify-content:center;height:36px;border-radius:9px;font-size:13.5px;font-weight:700;';
+      if(ep){st+='background:var(--amber,#B5651D);color:#fff;cursor:pointer';}
+      else if(inR&&h){st+='background:#cdeed7;color:#0a7d33;cursor:pointer';}
+      else if(h){st+='background:#eaf7ee;color:#0a7d33;border:1px solid #bfe6c9;cursor:pointer';}
+      else{st+='color:var(--muted);opacity:.4';}
+      if(h){cells+='<div role="button" onclick="cmpPickRange(&quot;'+k+'&quot;)" style="'+st+'">'+day+'</div>';}
+      else{cells+='<div style="'+st+'">'+day+'</div>';}
+    }
+    var grid='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">'+cells+'</div>';
+    var presets='<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap"><button class="cmp-btn" onclick="cmpPreset(7)">7 днів</button><button class="cmp-btn" onclick="cmpPreset(30)">30 днів</button><button class="cmp-btn" onclick="cmpPreset(\'all\')">Весь період</button></div>';
+    var hint='<div style="font-size:11px;color:var(--muted);margin-top:8px">Тапни початок і кінець діапазону. Зелені — є дані.</div>';
+    return '<div class="cmp-cal">'+head+wd+grid+presets+hint+'</div>';
+  }
 
   window.renderCompare=function(){
     var el=document.getElementById('compare'); if(!el)return;
-    var agg=aggregate();
-    if(!agg.rows.length){el.innerHTML='<div class="sect"><h3>Порівняння водіїв</h3><p style="color:var(--muted)">Немає збережених днів для порівняння. Завантаж хоча б один день.</p></div>';return;}
-    var med=fleetMed(agg.rows);
+    if(!allDays().length){el.innerHTML='<div class="sect"><h3>Порівняння водіїв</h3><p style="color:var(--muted)">Немає збережених днів. Завантаж хоча б один день.</p></div>';return;}
+    ensureRange();
+    var agg=aggregate();var med=fleetMed(agg.rows);
     var s=window._cmpSort||(window._cmpSort={k:'perHour',dir:-1});
     var rows=agg.rows.slice().sort(function(a,b){var va=a[s.k],vb=b[s.k];if(va==null&&vb==null)return 0;if(va==null)return 1;if(vb==null)return -1;return (va-vb)*s.dir;});
-    function dlab(k){if(typeof isoDateLabel==='function')return isoDateLabel(k);var p=String(k).split('-');return p[2]+'.'+p[1];}
-    var period=dlab(agg.from)+' – '+dlab(agg.to)+' · '+agg.ndays+' дн.';
 
-    var head='<div class="sect"><h3>Порівняння водіїв</h3>'
-      +'<p style="color:var(--muted);font-size:12.5px;margin:-4px 0 10px">Період: '+period+'. Кольори — відносно медіани парку (зелений краще, червоний гірше). Натисни заголовок, щоб сортувати. Медіана рахується по водіях із ≥5 поїздками.</p>';
+    var periodBtn='<button class="cmp-btn'+(window._cmpCalOpen?' on':'')+'" onclick="cmpCalToggle()">📅 '+dlab(window._cmpFrom)+' – '+dlab(window._cmpTo)+' ▾</button>';
+    var taxiTgl='<button class="cmp-btn'+(window._cmpTaxiOnly?' on':'')+'" onclick="cmpToggleTaxi(true)">Лише таксі</button><button class="cmp-btn'+(!window._cmpTaxiOnly?' on':'')+'" onclick="cmpToggleTaxi(false)">Всі</button>';
+    var ctrl='<div class="cmp-ctrl">'+periodBtn+'<span style="flex:1"></span>'+taxiTgl+'</div>';
+    var cal=window._cmpCalOpen?calHtml():'';
 
-    var th='<th style="text-align:left;position:sticky;left:0;background:var(--panel)">Водій</th>'+METRICS.map(function(m){var on=(s.k===m.k);return '<th class="r cmp-th" onclick="cmpSort(\''+m.k+'\')" style="cursor:pointer;white-space:nowrap'+(on?';color:var(--accent,#1E6E42)':'')+'">'+m.lab+(on?(s.dir<0?' ▾':' ▴'):'')+'</th>';}).join('');
+    var head='<div class="sect"><h3>Порівняння водіїв</h3>'+ctrl+cal
+      +'<p style="color:var(--muted);font-size:12.5px;margin:-2px 0 10px">Період '+dlab(window._cmpFrom)+' – '+dlab(window._cmpTo)+' · '+agg.ndays+' дн. · водіїв: '+agg.rows.length+'. «₴/км факт» — чистими за реальний км (Wialon, з порожнім). Кольори — відносно медіани парку. Клік по заголовку — сортування.</p>';
+
+    if(!agg.rows.length){el.innerHTML=head+'<p style="color:var(--muted)">За цей період і фільтр немає водіїв.</p></div>';return;}
+
+    var th='<th style="text-align:left;position:sticky;left:0;background:var(--panel)">Водій</th>'+METRICS.map(function(m){var on=(s.k===m.k);return '<th class="r" onclick="cmpSort(\''+m.k+'\')" style="cursor:pointer;white-space:nowrap'+(on?';color:var(--accent,#1E6E42)':'')+'">'+m.lab+(on?(s.dir<0?' ▾':' ▴'):'')+'</th>';}).join('');
     var body=rows.map(function(a){
       var tds=METRICS.map(function(m){var v=a[m.k];var col=cellCol(v,med[m.k],m.better);return '<td class="r" style="white-space:nowrap'+(col?';color:'+col+';font-weight:700':'')+'">'+m.fmt(v)+'</td>';}).join('');
       return '<tr><td style="text-align:left;position:sticky;left:0;background:var(--panel);font-weight:700">'+esc(a.name)+'</td>'+tds+'</tr>';
@@ -3047,34 +3131,46 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
     var medrow='<tr style="border-top:2px solid var(--line)"><td style="text-align:left;position:sticky;left:0;background:var(--panel);font-weight:700;color:var(--muted)">Медіана парку</td>'+METRICS.map(function(m){return '<td class="r" style="color:var(--muted);white-space:nowrap">'+(m.better?m.fmt(med[m.k]):'—')+'</td>';}).join('')+'</tr>';
     var table='<div class="tscroll"><table class="otable cmp-table"><thead><tr>'+th+'</tr></thead><tbody>'+body+medrow+'</tbody></table></div></div>';
 
-    // Рекомендації
-    var recs=agg.rows.filter(function(a){return a.orders>=5;}).map(function(a){var r=recFor(a,med);return {a:a,r:r};});
-    recs.sort(function(x,y){return y.r.flags.length-x.r.flags.length;});
-    var recHtml='<div class="sect"><h3>Рекомендації по водіях</h3>'
-      +'<p style="color:var(--muted);font-size:12.5px;margin:-4px 0 10px">Згенеровано з відхилень від медіани парку. Спершу — ті, кому варто приділити увагу.</p>';
-    if(!recs.length)recHtml+='<p style="color:var(--muted)">Замало даних для рекомендацій (потрібно ≥5 поїздок).</p>';
+    // Профілі + рекомендації
+    var recs=agg.rows.filter(function(a){return a.orders>=8;}).map(function(a){return {a:a,r:recFor(a,med)};});
+    recs.sort(function(x,y){return (y.r.flags.length-x.r.flags.length)|| (y.a.net-x.a.net);});
+    var recHtml='<div class="sect"><h3>Профіль і рекомендації</h3>'
+      +'<p style="color:var(--muted);font-size:12.5px;margin:-2px 0 10px">Що показувати водієві. Спершу — кому варто приділити увагу. Тарифи й методи — за що і як він возить.</p>';
+    if(!recs.length)recHtml+='<p style="color:var(--muted)">Замало даних (потрібно ≥8 поїздок за період).</p>';
     recHtml+=recs.map(function(o){
       var a=o.a,r=o.r;
       var badge=r.flags.length?'<span class="badge q-low">'+r.flags.length+' до уваги</span>':'<span class="badge q-good">ок</span>';
+      var tar=mixBar([{v:a.tEcon,c:'#C9C5BA',lab:'Економ'},{v:a.tStd,c:'#9AA6B2',lab:'Стандарт'},{v:a.tPrem,c:'#1E6E42',lab:'Комфорт'},{v:a.tDeliv,c:'var(--warn,#B5651D)',lab:'Доставка'}]);
+      var mk=Object.keys(a.meth).sort(function(x,y){return a.meth[y]-a.meth[x];});
+      var mcol={'Швидкий пошук':'#1E6E42','Ланцюжок':'#9AA6B2','Пропозиція':'#C9A24B','Радар':'#B5651D','Попереднє':'#7C8AA0'};
+      var meth=mk.length?mixBar(mk.map(function(x){return {v:a.meth[x],c:mcol[x]||'#B0B0B0',lab:x};})):'<div class="cmp-sub" style="margin-bottom:8px">Метод: немає даних</div>';
+      var econ='<div class="cmp-econ">'
+        +'₴/км: <b>'+f1(a.realPk)+'</b> факт. · '+f1(a.pricePk)+' з пасажиром'
+        +' &nbsp;·&nbsp; середня поїздка <b>'+f0(a.perTrip)+' ₴</b> / '+f1(a.kmTrip)+' км'
+        +' &nbsp;·&nbsp; під\'їзд '+(a.deadhead!=null?f1(a.deadhead)+' хв':'—')
+        +' &nbsp;·&nbsp; макс '+(a.maxSpeed?f0(a.maxSpeed)+' км/год':'—')
+        +'<br>оплата: готівка '+fp(a.cashPct)+' · картка '+fp(a.cardPct)+(a.mixPct?' · змішана '+fp(a.mixPct):'')
+        +' &nbsp;·&nbsp; порожній '+(a.emptyPct!=null?fp(a.emptyPct):'—')+'</div>';
       var items='';
-      if(r.flags.length)items+=r.flags.map(function(t){return '<div class="cmp-rec bad">⚠ '+esc(t)+'</div>';}).join('');
+      if(r.flags.length)items+=r.flags.map(function(t){return '<div class="cmp-rec">⚠ '+esc(t)+'</div>';}).join('');
       if(r.good.length)items+=r.good.map(function(t){return '<div class="cmp-rec good">✓ '+esc(t)+'</div>';}).join('');
-      if(!items)items='<div class="cmp-rec ok">Показники в межах норми парку — суттєвих зауважень немає.</div>';
-      var sub='чистими '+f0(a.net)+' ₴ · '+a.orders+' поїзд. · '+a.days+' дн. · '+f0(a.perHour)+' ₴/год';
-      return '<div class="cmp-card"><div class="cmp-card-h"><div><b>'+esc(a.name)+'</b> '+badge+'</div><div style="font-size:12px;color:var(--muted)">'+sub+'</div></div>'+items+'</div>';
+      if(!items)items='<div class="cmp-rec ok">Показники в межах норми — суттєвих зауважень немає.</div>';
+      var sub='чистими '+f0(a.net)+' ₴ · '+a.orders+' поїзд. · '+a.days+' дн. · '+f0(a.perHour)+' ₴/год · утил. '+fp(a.util);
+      return '<div class="cmp-card"><div class="cmp-card-h"><div><b>'+esc(a.name)+'</b> '+badge+'</div><div class="cmp-sub">'+sub+'</div></div>'
+        +'<div class="cmp-sub" style="margin-bottom:2px">Тарифи</div>'+tar
+        +'<div class="cmp-sub" style="margin-bottom:2px">Як бере замовлення</div>'+meth
+        +econ+items+'</div>';
     }).join('');
     recHtml+='</div>';
-
     el.innerHTML=head+table+recHtml;
   };
 
-  // hook showView, щоб вкладка «compare» показувалась і рендерилась
   if(typeof window.showView==='function'){
     var _origShowView=window.showView;
     window.showView=function(v){
       var c=document.getElementById('compare'); if(c)c.classList.add('hide');
       _origShowView.apply(this,arguments);
-      if(v==='compare'){ if(c)c.classList.remove('hide'); try{renderCompare();}catch(e){console.error('renderCompare',e);} }
+      if(v==='compare'){ if(c)c.classList.remove('hide'); try{window.renderCompare();}catch(e){console.error('renderCompare',e);} }
     };
   }
 })();
