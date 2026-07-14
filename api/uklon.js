@@ -47,6 +47,33 @@ const PROD = {
   comfort:'Комфорт', comfortplus:'Комфорт', premium:'Комфорт', business:'Бізнес',
   delivery:'Доставка',
 };
+
+// метод отримання замовлення -> укр. підпис (як у порталі: «Швидкий пошук», «Ланцюжок», …)
+const UMETHOD = {
+  fast:'Швидкий пошук', fastsearch:'Швидкий пошук', fastorder:'Швидкий пошук', instant:'Швидкий пошук', search:'Швидкий пошук', regular:'Швидкий пошук', usual:'Швидкий пошук', standard:'Швидкий пошук', quick:'Швидкий пошук',
+  chain:'Ланцюжок', chained:'Ланцюжок', orderchain:'Ланцюжок', chainorder:'Ланцюжок', consecutive:'Ланцюжок',
+  prebooked:'Попереднє', preliminary:'Попереднє', scheduled:'Попереднє', reserve:'Попереднє', reserved:'Попереднє', preorder:'Попереднє', prearranged:'Попереднє',
+};
+// пробуємо ймовірні поля сирого замовлення; лишаємо порожнім, якщо не впізнали (щоб не показувати сміття)
+function methodOf(o) {
+  const cands = [
+    o.acquisitionType, o.acquisition_type, o.assignmentType, o.assignment_type,
+    o.acquisition, o.searchType, o.search_type, o.orderType, o.order_type,
+    o.method, o.orderChainType, o.order_chain_type,
+    (o.isChain || o.is_chain || o.chain ? 'chain' : null),
+    o.source, o.type,
+  ];
+  for (let i = 0; i < cands.length; i++) {
+    const v = cands[i];
+    if (v == null || v === '') continue;
+    const s = String(v).trim();
+    if (/[а-яіїєґ]/i.test(s)) return s;                       // вже українською — беремо як є
+    const k = s.toLowerCase().replace(/[\s_-]+/g, '');
+    if (UMETHOD[k]) return UMETHOD[k];                        // впізнаний код
+  }
+  return '';                                                 // невідомо — ловимо через ?debug=1
+}
+
 function ordersToTrips(items) {
   const fmtDate = ts => { const p = new Intl.DateTimeFormat('en-CA', { timeZone:'Europe/Kyiv', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false }).formatToParts(new Date(ts * 1000)); const g = t => p.find(x => x.type === t).value; return g('day')+'.'+g('month')+'.'+g('year')+' '+g('hour')+':'+g('minute'); };
   const stMap = s => { s = (s || '').toLowerCase(); if (s === 'completed') return 'Виконано'; if (s === 'running' || s === 'waiting_for_processing') return 'Виконується'; return 'Скасовано'; };
@@ -59,7 +86,7 @@ function ordersToTrips(items) {
       'Подача': o.pickupTime ? fmtDate(o.pickupTime) : '',
       'Статус': stMap(o.status),
       'Тип продукту': PROD[(veh.productType || '').toLowerCase()] || veh.productType || '',
-      'Метод': '',
+      'Метод': methodOf(o),
       'Тип оплати': payMap(pay.feeType || pay.paymentType),
       'Відст. за маршрутом, км': (pay.distance != null) ? String(pay.distance) : '',
       'Вартість замовлення, грн': (pay.cost != null) ? String(pay.cost) : '',
@@ -136,12 +163,22 @@ export default async function handler(req, res) {
 
     const ordItems = await fetchAllOrders(fleetId, from, to, H);
 
-    res.status(200).send(JSON.stringify({
+    const out = {
       ok: true, date: dateStr,
       uklon_agg: reportToAgg(aggItems),
       uklon_trips: ordersToTrips(ordItems),
       count_drivers: aggItems.length, count_orders: ordItems.length,
-    }));
+    };
+
+    // Діагностика: /api/uklon?date=YYYY-MM-DD&debug=1 -> покаже сире перше замовлення,
+    // щоб знайти точну назву поля з методом («Швидкий пошук», «Ланцюжок»…).
+    if (req.query && (req.query.debug === '1' || req.query.debug === 'true')) {
+      const sample = ordItems.find(o => (o.status || '').toLowerCase() === 'completed') || ordItems[0] || null;
+      out._sample_order = sample;
+      out._sample_keys = sample ? Object.keys(sample) : [];
+    }
+
+    res.status(200).send(JSON.stringify(out));
   } catch (err) {
     res.status(200).send(JSON.stringify({ ok: false, error: err.message }));
   }
