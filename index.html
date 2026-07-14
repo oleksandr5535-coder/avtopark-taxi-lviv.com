@@ -1104,7 +1104,7 @@ function buildData(parts,dayCut){dayCut=(typeof dayCut==='number'&&dayCut>=0)?da
     const p=r['Подача'],t=p&&p.length>=16?p.slice(11,16):null;const mn=t?tmin(t):null;const s=r['Статус'];if(p&&p.length>=10){const dd=p.slice(0,10);dateCount[dd]=(dateCount[dd]||0)+1;}
     if(mn!=null)d.times.push(mn);const done=(s==='Виконано'||s==='Виконується');
     if(done&&mn!=null)d.hourly[Math.floor(mn/60)]++;
-    const uti=tier(r['Тип продукту']);if(done)d.tier[uti]++;const me=r['Метод']||'';if(done&&me)d.meth[me]=(d.meth[me]||0)+1;
+    const uti=tier(r['Тип продукту']);if(done)d.tier[uti]++;var _un=(r['Тип продукту']||'—').trim()||'—';if(done)d.cats[_un]=(d.cats[_un]||0)+1;var me=r['Метод'];if(me==null){for(var _mk in r){var _ml=_mk.toLowerCase();if(_ml.indexOf('оплат')<0&&(_ml.indexOf('метод')>=0||_ml.indexOf('джерел')>=0||_ml.indexOf('канал')>=0||(_ml.indexOf('спос')>=0&&_ml.indexOf('отрим')>=0))){me=r[_mk];break;}}}me=(me||'').toString().trim();if(done&&me)d.meth[me]=(d.meth[me]||0)+1;
     const ukm=F(r['Відст. за маршрутом, км']);if(done&&mn!=null&&ukm>0){const h=Math.floor(mn/60);priceFare[h]+=F(r['Вартість замовлення, грн']);priceKm[h]+=ukm;}
     if(done){d._u_km_t=(d._u_km_t||0)+ukm;if(payClass(r['Тип оплати'])==='cash')d._u_cash_t=(d._u_cash_t||0)+F(r['Вартість замовлення, грн']);}d.trips.push({t:t||'',plat:'Uklon',km:ukm,fare:F(r['Вартість замовлення, грн']),st:done?'ok':'cancel',pay:payClass(r['Тип оплати']),tier:uti});});
 
@@ -1946,8 +1946,9 @@ ${prodBlock(o)}<div class="sect"><h3>Ритм дня · поїздки за го
 <div class="mrow"><span class="k">Uklon · валове / чисте</span><span class="v">${gv(o.u_gross)} / ${gv(o.u_net)} ₴</span></div>
 <div class="mrow"><span class="k">Чайові</span><span class="v">${o.tips?gv(o.tips)+' ₴':'—'}</span></div>
 <div class="mrow"><span class="k">Пробіг з пасажиром</span><span class="v">${o.km_total?o.km_total.toFixed(0)+' км':'—'}</span></div>
+${(function(){var gk=o.gps_km,kt=o.km_total;if(gk==null)return '<div class="mrow"><span class="k">Пробіг всього (Wialon)</span><span class="v">—</span></div>';var emp=(kt!=null)?Math.max(0,Math.round((gk-kt)*10)/10):null;var sh=(emp!=null&&gk>0)?Math.round(emp/gk*100):null;var col=sh==null?'':(sh>=60?'var(--bad)':sh>=40?'var(--warn)':'var(--good)');return '<div class="mrow"><span class="k">Пробіг всього (Wialon)</span><span class="v">'+gk.toFixed(0)+' км</span></div>'+'<div class="mrow"><span class="k">Порожній пробіг</span><span class="v" style="color:'+col+'">'+(emp!=null?emp.toFixed(0)+' км'+(sh!=null?' ('+sh+'%)':''):'—')+'</span></div>';})()}
 <div class="mrow"><span class="k">Ціна км (валова)</span><span class="v">${o.gross_pk!=null?o.gross_pk.toFixed(1)+' ₴/км':'—'}</span></div>
-<div class="mrow tot"><span class="k">Ціна км чистими</span><span class="v hl">${o.real_pk!=null?o.real_pk.toFixed(1)+' ₴/км':'—'}</span></div></div>
+<div class="mrow tot"><span class="k">Ціна км чистими</span><span class="v hl">${o.real_pk!=null?o.real_pk.toFixed(1)+' ₴/км':'—'}</span></div>${(o.gps_km&&o.net)?`<div class="mrow"><span class="k">Ціна км (весь пробіг)</span><span class="v">${(o.net/o.gps_km).toFixed(1)} ₴/км</span></div>`:''}</div>
 <div class="panel"><h4>Дисципліна прийняття (Bolt)</h4>${disc}
 <div style="margin-top:13px"><div class="mrow"><span class="k">Усього пропозицій</span><span class="v">${off}</span></div>
 <div class="mrow"><span class="k">Прийнято</span><span class="v">${off?Math.round(c/off*100):0}%</span></div></div></div></div>
