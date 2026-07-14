@@ -1359,13 +1359,16 @@ function rpt_hms2sec(v){v=String(v||'').trim();var m=v.match(/(\d+):(\d{2}):(\d{
 function rpt_sec2hms(x){x=Math.round(x);function p(n){return String(n).padStart(2,'0');}return p(Math.floor(x/3600))+':'+p(Math.floor(x%3600/60))+':'+p(x%60);}
 function rpt_C(n){if(n==null||n==='')return '';return (Math.round(n*100)/100).toFixed(2).replace('.',',');}
 function rpt_num(n){if(n==null||n==='')return '';var r=Math.round(n*100)/100;return r===Math.round(r)?String(Math.round(r)):String(r).replace('.',',');}
-function rpt_toks(n){return (n||'').toLowerCase().replace(/[\u2019'`]/g,'').split(/\s+/).filter(Boolean).sort();}
+function rpt_toks(n){var _r=(n||'').toLowerCase().replace(/[\u2019'`]/g,'').split(/\s+/).filter(Boolean);var _t=_r;if(_r.length>=3){var _f=_r.filter(function(x){return !/(ович|йович|ьович|евич|івна|ївна|иївна)$/.test(x);});if(_f.length>=2)_t=_f;}return _t.sort();}
+function nkey(name){return rpt_toks(name).join('|');}
+function passIndex(){var m=(typeof drvPass==='function')?drvPass():{};var idx={};Object.keys(m).forEach(function(k){var nk=nkey(k);idx[nk]=Object.assign({},idx[nk],m[k]);});return idx;}
+function dP(name){return passIndex()[nkey(name)]||{};}
 function drvNames(){try{return JSON.parse(localStorage.getItem('drv_names')||'{}')}catch(e){return{}}}
 function setDrvNames(m){try{localStorage.setItem('drv_names',JSON.stringify(m))}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('drv_names',m);}
 function nameFor(nm){var k=rpt_toks(nm).join('|');var ov=drvNames();if(ov[k])return ov[k];var fl=(typeof rpt_flMap==='function')?rpt_flMap():{};var lf=(typeof rpt_uklonLF==='function')?rpt_uklonLF():true;return (typeof rpt_name==='function')?rpt_name(nm,fl,lf):nm;}
 function renderDriverNames(){var box=document.getElementById('drvNamesBox');if(!box)return;var seen={},list=[];try{Object.keys(DAYS||{}).forEach(function(k){var d=DAYS[k],drv=(d&&d.drivers)||[];drv.forEach(function(o){if(!o||!o.name)return;var key=rpt_toks(o.name).join('|');if(!key||seen[key])return;seen[key]=1;list.push({key:key,raw:o.name});});});}catch(e){}var ov=drvNames();Object.keys(ov).forEach(function(key){if(!seen[key]){seen[key]=1;list.push({key:key,raw:ov[key]});}});var fl=(typeof rpt_flMap==='function')?rpt_flMap():{},lf=(typeof rpt_uklonLF==='function')?rpt_uklonLF():true;list.sort(function(a,b){return (a.raw||'').localeCompare(b.raw||'','uk');});if(!list.length){box.innerHTML='<p class="sub">Поки немає завантажених водіїв — завантаж дані хоча б за один день.</p>';return;}var html='<div class="dn-list">';list.forEach(function(it){var cur=ov[it.key]||rpt_name(it.raw,fl,lf);html+='<div class="dn-row"><input class="dn-inp" data-key="'+it.key+'" value="'+rpt_esc(cur)+'"></div>';});html+='</div><button id="dnSave" class="btnf" style="margin-top:12px">Зберегти імена</button> <span id="dnMsg" class="sub"></span>';box.innerHTML=html;var b=document.getElementById('dnSave');if(b)b.onclick=function(){var m=drvNames();box.querySelectorAll('.dn-inp').forEach(function(inp){var key=inp.getAttribute('data-key'),v=(inp.value||'').trim();if(v)m[key]=v;else delete m[key];});setDrvNames(m);var msg=document.getElementById('dnMsg');if(msg)msg.textContent='Збережено ✓';if(typeof renderReport==='function')renderReport();var wk=document.getElementById('week');if(wk&&!wk.classList.contains('hide')&&typeof renderWeek==='function')renderWeek();};}
 function rpt_flMap(D){D=D||DATA;var m={};var src=[].concat((D&&D._parts&&D._parts.bolt_income)||[],(D&&D._parts&&D._parts.bolt_hist)||[]);src.forEach(function(r){var v=r&&r['Водій'];if(v)m[rpt_toks(v).join('|')]=v;});return m;}
-function rpt_name(name,fl,lastFirst){var k=rpt_toks(name).join('|');var _ov=drvNames();if(_ov[k])return _ov[k];if(fl[k])return fl[k];var p=(name||'').trim().split(/\s+/);if(p.length===2&&lastFirst!==false)return p[1]+' '+p[0];return name;}function rpt_uklonLF(D){if(!D||!D._parts)return true;var bolt=[].concat(D._parts.bolt_income||[],D._parts.bolt_hist||[]),bmap={};bolt.forEach(function(r){var v=r&&r['Водій'];if(v){var p=v.trim().split(/\s+/);if(p.length===2)bmap[rpt_toks(v).join('|')]=p;}});var agg=D._parts.uklon_agg||[];for(var i=0;i<agg.length;i++){var v=agg[i]&&agg[i]['Водій'];if(!v)continue;var bp=bmap[rpt_toks(v).join('|')];if(!bp)continue;var up=v.trim().split(/\s+/);if(up.length!==2)continue;var u0=up[0].toLowerCase();if(u0===bp[1].toLowerCase())return true;if(u0===bp[0].toLowerCase())return false;}return true;}function rptGlobalLF(){var ks=rptDates();for(var i=0;i<ks.length;i++){var H=rptHy(ks[i]);if(!H||!H._parts)continue;var lf=rpt_uklonLF(H);var b=[].concat(H._parts.bolt_income||[],H._parts.bolt_hist||[]),bmap={};b.forEach(function(r){var v=r&&r['Водій'];if(v){var p=v.trim().split(/\s+/);if(p.length===2)bmap[rpt_toks(v).join('|')]=p;}});var agg=H._parts.uklon_agg||[];for(var j=0;j<agg.length;j++){var v=agg[j]&&agg[j]['Водій'];if(!v)continue;var bp=bmap[rpt_toks(v).join('|')];if(!bp)continue;var up=v.trim().split(/\s+/);if(up.length!==2)continue;var u0=up[0].toLowerCase();if(u0===bp[1].toLowerCase())return true;if(u0===bp[0].toLowerCase())return false;}}return true;}
+function rpt_name(name,fl,lastFirst){var k=rpt_toks(name).join('|');var _ov=drvNames();if(_ov[k])return _ov[k];if(fl&&fl[k])return fl[k];var raw=(name||'').trim().split(/\s+/).filter(Boolean);var p=raw;if(raw.length>=3){var f=raw.filter(function(x){return !/(ович|йович|ьович|евич|івна|ївна|иївна)$/i.test(x);});if(f.length>=2)p=f;}if(p.length===2&&lastFirst!==false)return p[1]+' '+p[0];return p.join(' ');}function rpt_uklonLF(D){if(!D||!D._parts)return true;var bolt=[].concat(D._parts.bolt_income||[],D._parts.bolt_hist||[]),bmap={};bolt.forEach(function(r){var v=r&&r['Водій'];if(v){var p=v.trim().split(/\s+/);if(p.length===2)bmap[rpt_toks(v).join('|')]=p;}});var agg=D._parts.uklon_agg||[];for(var i=0;i<agg.length;i++){var v=agg[i]&&agg[i]['Водій'];if(!v)continue;var bp=bmap[rpt_toks(v).join('|')];if(!bp)continue;var up=v.trim().split(/\s+/);if(up.length!==2)continue;var u0=up[0].toLowerCase();if(u0===bp[1].toLowerCase())return true;if(u0===bp[0].toLowerCase())return false;}return true;}function rptGlobalLF(){var ks=rptDates();for(var i=0;i<ks.length;i++){var H=rptHy(ks[i]);if(!H||!H._parts)continue;var lf=rpt_uklonLF(H);var b=[].concat(H._parts.bolt_income||[],H._parts.bolt_hist||[]),bmap={};b.forEach(function(r){var v=r&&r['Водій'];if(v){var p=v.trim().split(/\s+/);if(p.length===2)bmap[rpt_toks(v).join('|')]=p;}});var agg=H._parts.uklon_agg||[];for(var j=0;j<agg.length;j++){var v=agg[j]&&agg[j]['Водій'];if(!v)continue;var bp=bmap[rpt_toks(v).join('|')];if(!bp)continue;var up=v.trim().split(/\s+/);if(up.length!==2)continue;var u0=up[0].toLowerCase();if(u0===bp[1].toLowerCase())return true;if(u0===bp[0].toLowerCase())return false;}}return true;}
 // ===== ЗВІТ: стан і кеш =====
 var rptMode='day', rptDayKey=null, rptDrvKey=null, rptDrvKeys=[], rptFrom='', rptTo='';
 var _rptHy={};
@@ -1853,8 +1856,8 @@ function morningPanel(){
     if(typeof plateIsTaxi==='function'&&!plateIsTaxi(pl,nameOf,pass))return;
     if(started.has(pl)){working++;return;}
     var g=gc[pl];
-    if(g&&((g.day_km!=null?g.day_km:g.km)||0)>=5)roaming.push({plate:pl,km:(g.day_km!=null?g.day_km:g.km),name:nameOf[pl]});
-    else noGo.push({plate:pl,name:nameOf[pl]});
+    if(g&&((g.day_km!=null?g.day_km:g.km)||0)>=5)roaming.push({plate:pl,km:(g.day_km!=null?g.day_km:g.km),name:carDriverName(pl)});
+    else noGo.push({plate:pl,name:carDriverName(pl)});
   });
   var fset=new Set(fleet),unmarked=[],seenU=new Set();
   (A||[]).forEach(function(o){var pl=o.plate_norm;if(pl&&!fset.has(pl)&&(o.start_h!=null)&&!seenU.has(pl)){seenU.add(pl);unmarked.push({plate:pl,name:o.name});}});
@@ -2651,8 +2654,8 @@ function renderHistory(){var el=document.getElementById('history');if(!el)return
   }).join('');
   el.innerHTML=head+body;}
 function driverAutoPlate(name){try{if(typeof A!=='undefined'&&A){for(var i=0;i<A.length;i++){if(A[i]&&A[i].name===name&&A[i].plate_norm)return A[i].plate_norm;}}var KS=Object.keys((typeof DAYS!=='undefined'&&DAYS)||{}).sort();for(var j=KS.length-1;j>=0;j--){var dr=(DAYS[KS[j]]&&DAYS[KS[j]].drivers)||[];for(var q=0;q<dr.length;q++){if(dr[q]&&dr[q].name===name&&dr[q].plate_norm)return dr[q].plate_norm;}}}catch(e){}return '';}
-function isHidden(name){try{var pz=drvPass()[name];return !!(pz&&pz.hidden);}catch(e){return false;}}
-function plateIsTaxi(pl,nm,pp){pp=pp||((typeof drvPass==='function')?drvPass():{});nm=nm||{};for(var k in pp){if(pp[k]&&pp[k].plate===pl&&!pp[k].hidden){return ((pp[k].type||'taxi')==='taxi');}}var lp=nm[pl];if(lp){var e=pp[lp]||{};if(e.hidden)return true;return ((e.type||'taxi')==='taxi');}return true;}
+function isHidden(name){try{var pz=dP(name);return !!(pz&&pz.hidden);}catch(e){return false;}}
+function plateIsTaxi(pl,nm,pp){pp=pp||((typeof drvPass==='function')?drvPass():{});nm=nm||{};for(var k in pp){if(pp[k]&&pp[k].plate===pl&&!pp[k].hidden){return ((pp[k].type||'taxi')==='taxi');}}var lp=nm[pl];if(lp){var e=(typeof dP==='function')?dP(lp):(pp[lp]||{});if(e.hidden)return true;return ((e.type||'taxi')==='taxi');}return true;}
 function plateCategory(pl,nm,pp){pp=pp||((typeof drvPass==='function')?drvPass():{});nm=nm||{};for(var k in pp){if(pp[k]&&pp[k].plate===pl&&!pp[k].hidden){return pp[k].type||'taxi';}}var lp=nm[pl];if(lp){var e=pp[lp]||{};if(!e.hidden)return e.type||'taxi';}return 'taxi';}
 function carCatSummary(){var fleet=(typeof getFleet==='function')?getFleet():[];var nm=(typeof lastDriverByPlate==='function')?lastDriverByPlate():{};var pp=(typeof drvPass==='function')?drvPass():{};var r={total:fleet.length,taxi:0,rent:0,lease:0};fleet.forEach(function(pl){var c=plateCategory(pl,nm,pp);if(c==='rent')r.rent++;else if(c==='lease')r.lease++;else r.taxi++;});return r;}
 function renderCarCatSum(){var el=document.getElementById('carCatSum');if(!el)return;var x=carCatSummary();function card(n,l,c){return '<div style="flex:1;min-width:68px;text-align:center;background:#fff;border:1px solid #eee;border-radius:10px;padding:8px 6px"><div style="font-size:20px;font-weight:800;color:'+c+'">'+n+'</div><div style="font-size:11px;color:#777;margin-top:2px">'+l+'</div></div>';}el.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap">'+card(x.total,'усього','#333')+card(x.taxi,'Таксі','#2b8659')+card(x.rent,'Оренда','#c77d2e')+card(x.lease,'Лізинг','#7a6cc7')+'</div>';}
@@ -2673,26 +2676,39 @@ function planSetAmt(k,v){var amt=plansGet();amt[k]=Math.max(0,parseInt(v)||0);sa
 function planAdd(){var k='c'+Date.now();var amt=plansGet();amt[k]=3000;savePlans(amt);var nm=planNames();nm[k]='Новий план';var ord=planOrder().slice();if(ord.indexOf(k)<0)ord.push(k);savePlanMeta(nm,ord);if(typeof renderSettings==='function')renderSettings();if(typeof renderPass==='function')renderPass();}
 function planDelete(k){if(k==='std')return;var amt=plansGet();delete amt[k];savePlans(amt);var nm=planNames();delete nm[k];var ord=planOrder().filter(function(x){return x!==k;});savePlanMeta(nm,ord);if(typeof renderSettings==='function')renderSettings();if(typeof renderPass==='function')renderPass();if(typeof kpis==='function')kpis();}
 function savePlans(p){try{localStorage.setItem('plan_fuel',JSON.stringify(p))}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('planfuel',p);}
-function PLAN(f){var v=plansGet()[f];return (v!=null?v:((typeof TARGET!=='undefined'&&TARGET)||3000));}function fuelOfPlate(pl,nm,pp){pp=pp||((typeof drvPass==='function')?drvPass():{});nm=nm||((typeof lastDriverByPlate==='function')?lastDriverByPlate():{});for(var k in pp){if(pp[k]&&pp[k].plate===pl&&!pp[k].hidden)return pp[k].fuel||'std';}var lp=nm[pl];if(lp&&pp[lp])return pp[lp].fuel||'std';return 'std';}function planForPlate(pl,nm,pp){return PLAN(fuelOfPlate(pl,nm,pp));}
+function PLAN(f){var v=plansGet()[f];return (v!=null?v:((typeof TARGET!=='undefined'&&TARGET)||3000));}function fuelOfPlate(pl,nm,pp){pp=pp||((typeof drvPass==='function')?drvPass():{});nm=nm||((typeof lastDriverByPlate==='function')?lastDriverByPlate():{});for(var k in pp){if(pp[k]&&pp[k].plate===pl&&!pp[k].hidden)return pp[k].fuel||'std';}var lp=nm[pl];var _e=(typeof dP==='function')?dP(lp):(pp[lp]||{});if(lp&&_e&&_e.fuel)return _e.fuel||'std';return 'std';}function planForPlate(pl,nm,pp){return PLAN(fuelOfPlate(pl,nm,pp));}
 function drvPass(){try{return JSON.parse(localStorage.getItem('drv_pass')||'{}')}catch(e){return{}}}
-function saveDrvPass(name,patch){const m=drvPass();m[name]=Object.assign({},m[name],patch);try{localStorage.setItem('drv_pass',JSON.stringify(m))}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('drvpass',m);}
-function ownOf(o){const p=drvPass()[o&&o.name]||{};return p.type||'taxi';}
+function saveDrvPass(name,patch){var m=drvPass();var nk=nkey(name);var hit=false;Object.keys(m).forEach(function(k){if(nkey(k)===nk){m[k]=Object.assign({},m[k],patch);hit=true;}});if(!hit)m[name]=Object.assign({},patch);try{localStorage.setItem('drv_pass',JSON.stringify(m))}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('drvpass',m);}
+function ownOf(o){const p=dP(o&&o.name);return p.type||'taxi';}
 function isTaxi(o){return ownOf(o)==='taxi';}
-function planOf(o){const p=drvPass()[o&&o.name]||{};return PLAN(p.fuel||'std');}
+function planOf(o){const p=dP(o&&o.name);return PLAN(p.fuel||'std');}
 function saveCarNote(pl,o){const n=carNotes();n[pl]=o;try{localStorage.setItem('cars_notes',JSON.stringify(n))}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('notes',n);}
+function driverList(){var s={},out=[];try{if(typeof A!=='undefined'&&A)A.forEach(function(o){if(o&&o.name){var k=nkey(o.name);if(!s[k]){s[k]=1;out.push(o.name);}}});}catch(e){}try{Object.keys(drvPass()).forEach(function(n){var k=nkey(n);if(!s[k]){s[k]=1;out.push(n);}});}catch(e){}out.sort(function(a,b){return nameFor(a).localeCompare(nameFor(b),'uk');});return out;}
+function carDriver(plate){var nt=(typeof carNotes==='function'?carNotes()[plate]:null)||{};
+  if(nt.driver==='__none__')return '';
+  if(nt.driver)return nt.driver;
+  if(nt.reason==='Готове авто — немає водія')return '';
+  var m=(typeof lastDriverByPlate==='function')?lastDriverByPlate():{};var hist=m[plate]||'';
+  if(hist){var ap=(dP(hist)||{}).plate;if(ap&&ap!==plate)return '';}
+  return hist;}
+function carDriverName(plate){var d=carDriver(plate);return d?nameFor(d):'';}
 const REASONS=['Готове авто — немає водія','Водій на вихідному','Водій захворів','Утримуємо як підмінне','Не готове до таксі / готуємо до випуску','На ремонті / ТО','ДТП / пошкоджено','Інше'];
 const OUT_OF_SERVICE=new Set(['Не готове до таксі / готуємо до випуску','На ремонті / ТО','ДТП / пошкоджено']);
 function isOOS(pl){const n=carNotes()[pl];return !!(n&&OUT_OF_SERVICE.has(n.reason));}
 function outService(){const seen=new Set();const out=[];const gc=DATA.gps_cars||{};var _nm=(typeof lastDriverByPlate==='function')?lastDriverByPlate():{},_pp=(typeof drvPass==='function')?drvPass():{};Object.keys(gc).forEach(pl=>{if(!isOOS(pl))return;if(!plateIsTaxi(pl,_nm,_pp))return;seen.add(pl);const c=gc[pl];out.push({plate:pl,car:c.car,gps_km:c.km,addr:c.addr,dur:c.dur,gps:true});});getFleet().forEach(p=>{if(seen.has(p)||!isOOS(p))return;if(!plateIsTaxi(p,_nm,_pp))return;seen.add(p);out.push({plate:p,car:'',gps:false});});return out;}
 function carCard(c,notes){const nt=notes[c.plate]||{};const opts='<option value="">— причина —</option>'+REASONS.map(r=>`<option value="${r}" ${r===(nt.reason||'')?'selected':''}>${r}</option>`).join('');
-return `<div class="carcard"><div class="carhd"><b>${c.plate}</b>${c.car?' · '+c.car:''}${c.driver?' · '+c.driver:''}<span class="cstate">${carStat(c)}</span></div>
-<div class="carnote"><select class="creason" data-pl="${c.plate}">${opts}</select><textarea class="cdesc" data-pl="${c.plate}" placeholder="Опис: чому не їздило">${nt.desc||''}</textarea></div></div>`;}
+var _curD=(nt.driver!=null?nt.driver:'');var _auto=carDriver(c.plate);
+var _dopts='<option value="">авто'+(_auto?' ('+rpt_esc(nameFor(_auto))+')':'')+'</option>'+'<option value="__none__"'+(_curD==='__none__'?' selected':'')+'>— немає водія —</option>'+driverList().map(function(n){var sel=(_curD&&_curD!=='__none__'&&nkey(_curD)===nkey(n))?' selected':'';return '<option value="'+encodeURIComponent(n)+'"'+sel+'>'+rpt_esc(nameFor(n))+'</option>';}).join('');
+var _dname=carDriverName(c.plate);
+return `<div class="carcard"><div class="carhd"><b>${c.plate}</b>${c.car?' · '+c.car:''}${_dname?' · '+rpt_esc(_dname):''}<span class="cstate">${carStat(c)}</span></div>
+<div class="carnote"><select class="cdriver" data-pl="${c.plate}" title="Водій на авто">${_dopts}</select><select class="creason" data-pl="${c.plate}">${opts}</select><textarea class="cdesc" data-pl="${c.plate}" placeholder="Опис: чому не їздило">${nt.desc||''}</textarea></div></div>`;}
 function renderPass(){
   var el=document.getElementById('passList');if(!el)return;
   var pass=drvPass();var names=[];
   if(typeof A!=='undefined'&&A&&A.length){A.forEach(function(o){if(o&&o.name&&names.indexOf(o.name)<0)names.push(o.name);});}
   Object.keys(pass).forEach(function(n){if(names.indexOf(n)<0)names.push(n);});
   names.sort(function(a,b){return a.localeCompare(b,'uk');});
+  var _sn={},_reps=[];names.forEach(function(n){var _k=nkey(n);if(_sn[_k])return;_sn[_k]=1;_reps.push(n);});names=_reps;
   if(!names.length){el.innerHTML='<div class="phint2">Спершу онови дані (Bolt/Uklon) — і тут зʼявляться водії.</div>';return;}
   var TYPE=[['taxi','Таксі'],['rent','Оренда'],['lease','Лізинг']];
   var FUEL=planList().map(function(pl){return [pl.key,pl.name+' '+pl.amount];});
@@ -2705,12 +2721,12 @@ function renderPass(){
     if(sel&&!has){o+='<option value="'+sel+'" selected>'+sel+'</option>';}
     return '<select class="pp-car" title="Авто водія" style="border:1px solid var(--line);border-radius:7px;padding:5px 6px;font-size:13px;max-width:118px">'+o+'</select>';
   }
-  var visible=names.filter(function(n){return !(pass[n]&&pass[n].hidden);});
-  var hidden=names.filter(function(n){return pass[n]&&pass[n].hidden;});
+  var visible=names.filter(function(n){var _q=dP(n);return !(_q&&_q.hidden);});
+  var hidden=names.filter(function(n){var _q=dP(n);return _q&&_q.hidden;});
   var html='';
   visible.forEach(function(n){
-    var p=pass[n]||{};var type=p.type||'taxi';var fuel=p.fuel||'std';var rentCls=(type!=='taxi')?' pp-rent':'';
-    html+='<div class="passrow" data-n="'+encodeURIComponent(n)+'"><span class="pp-plate">'+n+'</span>';
+    var p=dP(n)||{};var type=p.type||'taxi';var fuel=p.fuel||'std';var rentCls=(type!=='taxi')?' pp-rent':'';
+    html+='<div class="passrow" data-n="'+encodeURIComponent(n)+'"><span class="pp-plate">'+rpt_esc(nameFor(n))+'</span>';
     html+='<select class="pp-type">'+TYPE.map(function(t){return '<option value="'+t[0]+'"'+(t[0]===type?' selected':'')+'>'+t[1]+'</option>';}).join('')+'</select>';
     html+='<select class="pp-fuel"'+(type!=='taxi'?' disabled':'')+'>'+FUEL.map(function(f){return '<option value="'+f[0]+'"'+(f[0]===fuel?' selected':'')+'>'+f[1]+'</option>';}).join('')+'</select>';
     html+=carSelect(n,p);
@@ -2720,7 +2736,7 @@ function renderPass(){
   });
   if(hidden.length){
     html+='<div class="pp-hidwrap" style="margin-top:10px"><div class="pp-hidh" style="cursor:pointer;font-size:13px;font-weight:700;color:#888">Приховані ('+hidden.length+') ▾</div><div class="pp-hidbox hide" style="margin-top:6px">';
-    hidden.forEach(function(n){html+='<div class="passrow" data-n="'+encodeURIComponent(n)+'" style="opacity:.7;margin-bottom:6px"><span class="pp-plate">'+n+'</span><span style="font-size:12px;color:#999">прихований</span><button class="pp-restore" style="margin-left:auto;border:1px solid var(--line);background:#fff;border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer">↩ повернути</button></div>';});
+    hidden.forEach(function(n){html+='<div class="passrow" data-n="'+encodeURIComponent(n)+'" style="opacity:.7;margin-bottom:6px"><span class="pp-plate">'+rpt_esc(nameFor(n))+'</span><span style="font-size:12px;color:#999">прихований</span><button class="pp-restore" style="margin-left:auto;border:1px solid var(--line);background:#fff;border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer">↩ повернути</button></div>';});
     html+='</div></div>';
   }
   el.innerHTML=html;
@@ -2758,8 +2774,9 @@ else{const gpsN=sd.filter(c=>c.gps).length,noN=sd.length-gpsN;const byR={};sd.fo
  html+=sd.map(c=>carCard(c,notes)).join('');}
 if(os.length){html+=`<div class="osgroup"><div class="osg-h">🔧 Поза лінією — не рахується (${os.length})</div><div class="osg-note">Ці авто не враховуються ні як активні, ні в робочих авто, ні в недозаробітку.</div>`+os.map(c=>carCard(c,notes)).join('')+`</div>`;}
 el.innerHTML=html;
-el.querySelectorAll('.creason').forEach(x=>x.onchange=()=>{const n=carNotes()[x.dataset.pl]||{};saveCarNote(x.dataset.pl,{reason:x.value,desc:n.desc||''});renderCars();kpis();renderStandingMini();if(typeof renderFleetMini==='function')renderFleetMini();});
-el.querySelectorAll('.cdesc').forEach(x=>x.oninput=()=>{const n=carNotes()[x.dataset.pl]||{};saveCarNote(x.dataset.pl,{reason:n.reason||'',desc:x.value});});}
+el.querySelectorAll('.creason').forEach(x=>x.onchange=()=>{const n=carNotes()[x.dataset.pl]||{};saveCarNote(x.dataset.pl,{reason:x.value,desc:n.desc||'',driver:n.driver});renderCars();kpis();renderStandingMini();if(typeof renderFleetMini==='function')renderFleetMini();});
+el.querySelectorAll('.cdriver').forEach(x=>x.onchange=()=>{const n=carNotes()[x.dataset.pl]||{};var v=x.value;var patch={reason:n.reason||'',desc:n.desc||''};if(v==='__none__')patch.driver='__none__';else if(v!=='')patch.driver=decodeURIComponent(v);saveCarNote(x.dataset.pl,patch);renderCars();if(typeof kpis==='function')kpis();if(typeof renderMorning==='function')renderMorning();if(typeof renderStandingMini==='function')renderStandingMini();});
+el.querySelectorAll('.cdesc').forEach(x=>x.oninput=()=>{const n=carNotes()[x.dataset.pl]||{};saveCarNote(x.dataset.pl,{reason:n.reason||'',desc:x.value,driver:n.driver});});}
 const fleetTxt=document.getElementById('fleetTxt');
 function prefillFleet(){try{const sv=localStorage.getItem('fleet_plates');fleetTxt.value=sv!=null?sv:(DATA.active_plates||[]).join('\n');}catch(e){fleetTxt.value=(DATA.active_plates||[]).join('\n');}}
 fleetTxt.addEventListener('input',()=>{try{localStorage.setItem('fleet_plates',fleetTxt.value);}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('fleet',fleetTxt.value);renderFleet();kpis();renderCars();renderStandingMini();});
