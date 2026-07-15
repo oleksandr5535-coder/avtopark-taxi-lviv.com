@@ -2621,12 +2621,24 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
+var APP_BUILD_N=3;
+var APP_BUILD='збірка 15.07 · v'+APP_BUILD_N;
+async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
+  var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
+  var cv=(r&&r.data&&r.data.value!=null)?r.data.value:0;var cloudN=parseInt((typeof cv==='object'&&cv)?(cv.n||0):cv)||0;
+  if(cloudN>APP_BUILD_N){showUpdateBanner();}
+  if(APP_BUILD_N>=cloudN){try{await supa.from('app_data').upsert({key:'kv:appbuild',value:APP_BUILD_N});}catch(e2){}}
+}catch(e){}}
+function showUpdateBanner(){if(document.getElementById('updBanner'))return;var d=document.createElement('div');d.id='updBanner';d.style.cssText='position:fixed;left:0;right:0;top:0;z-index:99999;background:#1E6E42;color:#fff;padding:11px 14px;display:flex;justify-content:center;gap:12px;align-items:center;font-family:inherit;font-size:14px;box-shadow:0 2px 12px rgba(0,0,0,.22)';d.innerHTML='<span>🔄 Доступна нова версія дашборду</span><button onclick="appForceUpdate()" style="border:none;background:#fff;color:#1E6E42;font-weight:800;border-radius:8px;padding:6px 15px;cursor:pointer;font-family:inherit">Оновити</button>';document.body.appendChild(d);}
+function appForceUpdate(){try{if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(x){x.unregister();});});}}catch(e){}try{if('caches'in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});});}}catch(e){}location.href=location.pathname+'?v='+Date.now();}
+function histSyncNow(){try{var b=(typeof event!=='undefined'&&event)?event.target:null;if(b){b.disabled=true;b.textContent='Синхронізую…';}}catch(e){}
+  Promise.resolve((typeof payCalcInit==='function')?payCalcInit():null).then(function(){if(typeof renderHistory==='function')renderHistory();}).catch(function(){if(typeof renderHistory==='function')renderHistory();});}
 function renderHistory(){var el=document.getElementById('history');if(!el)return;
   function f(n){return (Math.round((n||0)*100)/100).toLocaleString('uk-UA',{minimumFractionDigits:2,maximumFractionDigits:2});}
   function f0(n){return (Math.round(n||0)).toLocaleString('uk-UA');}
   function esc(s){return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   var list=payCalcLocal().slice().sort(function(a,b){return (b.ts||0)-(a.ts||0);});
-  var head='<h1>\ud83d\uddc2 <span class="accent">Історія</span> розрахунків</h1><p class="sub">Оберіть водія, щоб переглянути його розрахунки · всього '+list.length+'</p>';
+  var head='<h1>\ud83d\uddc2 <span class="accent">Історія</span> розрахунків</h1><p class="sub">Оберіть водія, щоб переглянути його розрахунки · всього '+list.length+' <button onclick="histSyncNow()" style="margin-left:8px;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:inherit">\ud83d\udd04 Синхронізувати</button> <span style="color:var(--muted);font-size:11px">'+APP_BUILD+'</span></p>';
   if(!list.length){el.innerHTML=head+'<div class="st-empty">Ще нема збережених розрахунків.<br>Відкрий «Звіт» → обери водія → «\ud83d\udcbe Зберегти розрахунок».</div>';return;}
   var byDrv={};list.forEach(function(r){var k=r.driver||'—';(byDrv[k]=byDrv[k]||[]).push(r);});
   var names=Object.keys(byDrv).sort();
@@ -2818,7 +2830,7 @@ function boot(){A=DATA.drivers;M=DATA.med;TARGET=DATA.plan_default;NOW=DATA.now_
 A.forEach((o,i)=>o._i=i);
 document.getElementById('sub').textContent=DATA.window+' · попит сьогодні '+DATA.dayq;
 prefillFleet();document.getElementById('plan').value=TARGET;document.getElementById('hourly').value=HOURLY;document.getElementById('tripgoal').value=TRIPGOAL;var dse=document.getElementById('daystart');if(dse)dse.value=hm(Math.round(DAYSTART*60));
-loadSel();renderDriverPanel();drvLabel();renderFleet();daybar();kpis();renderList();renderStandingMini();updateStandBadge();if(!window._usd)fetchUsdRate();if(typeof payCalcInit==='function')payCalcInit();if(typeof brandFixInit==='function')brandFixInit();if(typeof boltBrandInit==='function')boltBrandInit();if(typeof uklonBrandInit==='function')uklonBrandInit();if(typeof brandSplitInit==='function')brandSplitInit();if(typeof boltEarnInit==='function')boltEarnInit();if(typeof promoInit==='function')promoInit();if(typeof drvCatInit==='function')drvCatInit();var ln=document.getElementById('legnorm');if(ln)ln.textContent=HOURLY;var ls=document.getElementById('legshift');if(ls)ls.textContent=document.getElementById('shiftend').value;var lt=document.getElementById('legtarget');if(lt)lt.textContent=TARGET;
+loadSel();renderDriverPanel();drvLabel();renderFleet();daybar();kpis();renderList();renderStandingMini();updateStandBadge();if(!window._usd)fetchUsdRate();if(typeof payCalcInit==='function')payCalcInit();if(typeof versionCheck==='function')versionCheck();if(typeof brandFixInit==='function')brandFixInit();if(typeof boltBrandInit==='function')boltBrandInit();if(typeof uklonBrandInit==='function')uklonBrandInit();if(typeof brandSplitInit==='function')brandSplitInit();if(typeof boltEarnInit==='function')boltEarnInit();if(typeof promoInit==='function')promoInit();if(typeof drvCatInit==='function')drvCatInit();var ln=document.getElementById('legnorm');if(ln)ln.textContent=HOURLY;var ls=document.getElementById('legshift');if(ls)ls.textContent=document.getElementById('shiftend').value;var lt=document.getElementById('legtarget');if(lt)lt.textContent=TARGET;
 try{var _lv=localStorage.getItem('lastView');if(_lv&&['morning','overview','drivers','cars','owner','report','settings','week','standing','history','branding'].indexOf(_lv)>=0)view=_lv;}catch(e){}
 showLogin(false);document.getElementById('uploader').classList.add('hide');document.getElementById('app').classList.remove('hide');showView(view);fillDaySel();window.scrollTo(0,0);}
 
