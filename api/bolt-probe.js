@@ -1,8 +1,6 @@
-// /api/bolt-probe.js — ОКРЕМА діагностична функція (не чіпає bolt.js).
-// Логіниться тими ж ключами (BOLT_CLIENT_ID / BOLT_CLIENT_SECRET) і:
-//   /api/bolt-probe?token=1   -> віддає свіжий access_token (щоб вставити в Swagger Authorize)
-//   /api/bolt-probe           -> перебирає ймовірні методи (шукає брендування/бонуси/кампанії)
-//
+// /api/bolt-probe.js — діагностика Bolt Fleet API (не чіпає bolt.js).
+//   /api/bolt-probe?token=1  -> віддає свіжий access_token (для Swagger Authorize)
+//   /api/bolt-probe          -> перебирає методи (виписки/баланс/стан/водії/авто/промо)
 // Змінні оточення (вже є на Vercel): BOLT_CLIENT_ID, BOLT_CLIENT_SECRET
 
 const COMPANY_ID = 25859;
@@ -42,7 +40,6 @@ export default async function handler(req, res) {
       return res.status(200).send(token);
     }
 
-    // інакше -> перебір методів у v1 і v2 (шукаємо брендування/бонуси/кампанії)
     const now = Math.floor(Date.now() / 1000);
     const weekAgo = now - 7 * 24 * 3600;
     const bases = [
@@ -50,12 +47,18 @@ export default async function handler(req, res) {
       'https://node.bolt.eu/fleet-integration-gateway/fleetIntegration/v2',
     ];
     const methods = [
-      'getCampaigns', 'getCampaignList', 'getFleetCampaigns', 'getActiveCampaigns',
-      'getBonuses', 'getFleetBonuses', 'getBrandingBonuses', 'getBranding',
-      'getCompensations', 'getFleetCompensations', 'getPayouts', 'getFleetPayouts',
-      'getEarnings', 'getDriverEarnings', 'getFleetEarnings', 'getCompanyEarnings',
-      'getInvoices', 'getEngagementData', 'getFleetEngagementData',
-      'getCampaignParticipants', 'getIncentives', 'getFleetIncentives',
+      // виписки / рахунки / виплати
+      'getInvoicesList', 'getInvoiceList', 'getStatements', 'getStatementList',
+      'getSettlements', 'getSettlementList', 'getWeeklyInvoice', 'getWeeklyStatement',
+      'getFleetInvoices', 'getCompanyInvoices', 'getInvoiceDocuments',
+      // баланс / стан компанії
+      'getCompanyBalance', 'getBalance', 'getFleetBalance', 'getCompanyState',
+      'getFleetState', 'getCompanyDetails', 'getCompanyInfo',
+      // водії / авто / стан (щоб побачити, що взагалі є на цьому шлюзі)
+      'getDrivers', 'getFleetDrivers', 'getDriversList', 'getVehicles',
+      'getFleetVehicles', 'getVehicleList', 'getDriverState', 'getDriversByStatus',
+      // ще пара варіантів під бонуси/промо іншими назвами
+      'getRiderPromos', 'getPromotions', 'getFleetPromotions', 'getEngagements',
     ];
     const body = {
       company_ids: [COMPANY_ID], company_id: COMPANY_ID,
@@ -71,7 +74,6 @@ export default async function handler(req, res) {
       for (const m of methods) {
         const url = base + '/' + m;
         let status = '?', snippet = '';
-        // спробувати POST, і якщо 404/405 — GET (раптом метод GET)
         try {
           let r = await fetchT(url, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 9000);
           if (r.status === 404 || r.status === 405) {
@@ -93,8 +95,8 @@ export default async function handler(req, res) {
       + 'td,th{border:1px solid #ccc;padding:5px 7px;vertical-align:top}th{background:#eee}'
       + '.ok{background:#e7f7e7}.no{background:#faf0f0;color:#a33}.snip{max-width:680px;word-break:break-all;color:#333}'
       + 'h3{margin:0 0 6px}</style></head><body>'
-      + '<h3>Bolt Fleet API — пошук брендування / бонусів / кампаній</h3>'
-      + '<p>Зелений (200) = метод існує. Дивись у відповідь на поля bonus / campaign / branding / amount.'
+      + '<h3>Bolt Fleet API — виписки / баланс / стан / водії / авто / промо</h3>'
+      + '<p>Зелений (200) = метод існує. Дивись у відповідь на поля amount / bonus / promo / compensation / total / balance.'
       + ' Знайдено робочих методів: <b>' + found.length + '</b>.</p>'
       + '<table><thead><tr><th>API</th><th>Метод</th><th>Статус</th><th>Відповідь (початок)</th></tr></thead><tbody>'
       + rows.map(r => '<tr class="' + (String(r.status) === '200' ? 'ok' : 'no') + '"><td>' + r.ver + '</td><td>' + r.method + '</td><td>' + esc(r.status) + '</td><td class=snip>' + esc(r.snippet) + '</td></tr>').join('')
