@@ -1441,7 +1441,7 @@ function rptBoltSection(bolt,dateKey){
     var netFull=base+(promo||0);
     var netCell=(o.netRaw!=null||promo>0)?rpt_C(netFull):'';
     h+='<tr>'
-      +'<td>'+rpt_esc(o.name)+'</td>'
+      +'<td>'+rpt_esc(nameFor(o.name))+'</td>'
       +'<td>'+o.comp+'</td>'
       +'<td class="rpt-net" data-token="'+o.token+'" data-net="'+base+'">'+(netCell===''?'':rpt_esc(netCell))+'</td>'
       +'<td>'+(o.cash===''?'':rpt_esc(o.cash))+'</td>'
@@ -1698,12 +1698,13 @@ function bordurK(tok){return weekMon+':'+tok;}
 function bordurGet(tok){var v=bordurAll()[bordurK(tok)];return v?(parseFloat(v)||0):0;}
 function bordurSet(tok,v){v=parseFloat(String(v==null?'':v).replace(',','.'))||0;var m=bordurAll();var k=bordurK(tok);if(v)m[k]=v;else delete m[k];bordurMapSave(m);}
 function setBordur(enc,v){var tok=decodeURIComponent(enc);bordurSet(tok,v);if(typeof renderWeek==='function')renderWeek();}
-function promoAll(){try{return JSON.parse(localStorage.getItem('promo_all')||'{}')||{};}catch(e){return {};}}
-function promoMapSave(m){try{localStorage.setItem('promo_all',JSON.stringify(m));}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('promo',m);}
-function promoK(tok){return weekMon+':'+tok;}
-function promoGet(tok){var v=promoAll()[promoK(tok)];return v?(parseFloat(v)||0):0;}
-function promoSet(tok,v){v=parseFloat(String(v==null?'':v).replace(',','.'))||0;var m=promoAll();var k=promoK(tok);if(v)m[k]=v;else delete m[k];promoMapSave(m);}
-function setPromo(enc,v){var tok=decodeURIComponent(enc);promoSet(tok,v);if(typeof renderWeek==='function')renderWeek();}
+function wkPromoAll(){try{return JSON.parse(localStorage.getItem('promo_all')||'{}')||{};}catch(e){return {};}}
+function wkPromoMapSave(m){try{localStorage.setItem('promo_all',JSON.stringify(m));}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('promo',m);}
+function wkPromoK(tok){return weekMon+':'+tok;}
+function wkPromoGet(tok){var v=wkPromoAll()[wkPromoK(tok)];return v?(parseFloat(v)||0):0;}
+function wkDailyPromoSum(tok){try{if(typeof window==='undefined'||!window._promo||!weekMon)return 0;var s=0;var d=new Date(weekMon+'T00:00:00');for(var i=0;i<7;i++){var k=(typeof _wkYmd==='function')?_wkYmd(d):null;var day=k?window._promo[k]:null;if(day&&day[tok]!=null){var v=parseFloat(day[tok]);if(!isNaN(v))s+=v;}d.setDate(d.getDate()+1);}return s;}catch(e){return 0;}}
+function wkPromoSet(tok,v){v=parseFloat(String(v==null?'':v).replace(',','.'))||0;var m=wkPromoAll();var k=wkPromoK(tok);if(v)m[k]=v;else delete m[k];wkPromoMapSave(m);}
+function wkSetPromo(enc,v){var tok=decodeURIComponent(enc);wkPromoSet(tok,v);if(typeof renderWeek==='function')renderWeek();}
 function renderWeek(){var el=document.getElementById('week');if(!el)return;
  if(!DAYS||!Object.keys(DAYS).length){el.innerHTML='<h1>Аналіз за <span class="accent">тиждень</span></h1><p class="sub">Ще нема даних.</p>';return;}
   if(weekMon&&!/^\d{4}-\d{2}-\d{2}$/.test(weekMon))weekMon=null;
@@ -1718,14 +1719,14 @@ function renderWeek(){var el=document.getElementById('week');if(!el)return;
  var T=A.list.reduce(function(a,m){a.net+=m.net;a.gross+=m.gross;a.orders+=m.orders;a.online+=m.online;return a;},{net:0,gross:0,orders:0,online:0});
  function strip(m){return '<div class="wk-strip">'+A.keys.map(function(k,i){var pd=m.perDay[k];var cls=pd?(pd.done?'d':'u'):'n';var ti=DL[i]+' '+_wkLab(k)+(pd?(': '+Math.round(pd.net)+' \u20b4'):' \u2014');return '<span class="wk-cell '+cls+'" title="'+ti+'">'+DL[i].slice(0,1)+'</span>';}).join('')+'</div>';}
  var TT={net:0,cash:0,card:0,brand:0,cardBrand:0,bord:0,promo:0,kmP:0,kmG:0,orders:0,online:0};
- var rows=A.list.map(function(m){var tok=rpt_toks(m.name).join('|');var bv=weekBrandVal(m);var brand=bv<0?0:bv;var bord=bordurGet(tok);var promo=promoGet(tok);var netD=(m.net||0)+bord+promo;var cashD=(m.cash||0)+bord;var card=netD-cashD;var cardBrand=card+brand;
+ var rows=A.list.map(function(m){var tok=rpt_toks(m.name).join('|');var bv=weekBrandVal(m);var brand=bv<0?0:bv;var bord=bordurGet(tok);var promo=wkPromoGet(tok);var _dsum=(typeof wkDailyPromoSum==='function')?wkDailyPromoSum(tok):0;var netD=(m.net||0)+bord+promo;var cashD=(m.cash||0)+bord;var card=netD-cashD;var cardBrand=card+brand;
   TT.net+=netD;TT.cash+=cashD;TT.card+=card;TT.brand+=brand;TT.cardBrand+=cardBrand;TT.bord+=bord;TT.promo+=promo;TT.kmP+=m.kmTotal||0;TT.kmG+=m.gpsKm||0;TT.orders+=m.orders||0;TT.online+=m.online||0;
   var brandCell=bv<0?'<span class="wk-brand off">\u2014</span>':(bv>0?'<span class="wk-brand">'+Math.round(bv)+'\u20b4</span>':'0');
   return '<tr class="wk-row" data-n="'+encodeURIComponent(m.name)+'" onclick="openWeekDriver(this.dataset.n)"><td><div class="wk-nm">'+rpt_esc(nameFor(m.name))+' \u203a</div>'+strip(m)+'</td>'
    +'<td class="r"><b'+((bord>0||promo>0)?' title="'+(bord>0?'бордюр '+gv(bord)+' \u20b4':'')+((bord>0&&promo>0)?', ':'')+(promo>0?'промо '+gv(promo)+' \u20b4':'')+'"':'')+'>'+gv(netD)+'</b>'+((bord>0||promo>0)?'<span style="font-size:10px;color:var(--muted)"> +'+((bord>0?'\u0431':'')+(promo>0?'\u043f':''))+'</span>':'')+'</td><td class="r">'+m.done+'/'+m.days+'</td><td class="r">'+(m.pct==null?'\u2014':m.pct+'%')+'</td>'
    +'<td class="r">'+(m.pace==null?'\u2014':m.pace)+'</td><td class="r">'+m.orders+'</td><td class="r">'+H(m.online)+'</td><td class="r">'+gv(cashD)+'</td>'
    +'<td class="r"><input type="text" value="'+(bord||'')+'" placeholder="0" onclick="event.stopPropagation()" onchange="setBordur(&quot;'+encodeURIComponent(tok)+'&quot;,this.value)" style="width:60px;text-align:right;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);font-family:inherit;font-size:12.5px"></td>'
-   +'<td class="r"><input type="text" value="'+(promo||'')+'" placeholder="0" onclick="event.stopPropagation()" onchange="setPromo(&quot;'+encodeURIComponent(tok)+'&quot;,this.value)" style="width:60px;text-align:right;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);font-family:inherit;font-size:12.5px"></td>'
+   +'<td class="r"><input type="text" value="'+(promo||'')+'" placeholder="0" onclick="event.stopPropagation()" onchange="wkSetPromo(&quot;'+encodeURIComponent(tok)+'&quot;,this.value)" style="width:60px;text-align:right;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);font-family:inherit;font-size:12.5px">'+(_dsum>0?'<div onclick="event.stopPropagation();wkSetPromo(&quot;'+encodeURIComponent(tok)+'&quot;,'+_dsum+')" title="Промо, внесене в денні звіти за цей тиждень. Клік — підставити в тижневе поле." style="font-size:10px;color:var(--muted);margin-top:2px;cursor:pointer;text-decoration:underline dotted">з денних: '+gv(_dsum)+'</div>':'')+'</td>'
    +'<td class="r"'+(card<0?' style="color:var(--bad)"':'')+'>'+gv(card)+'</td>'
    +'<td class="r">'+brandCell+'</td>'
    +'<td class="r"><b>'+gv(cardBrand)+'</b></td>'
@@ -1797,7 +1798,7 @@ function dayDashboard(){
   var slice=hours.slice(H0,H1+1);var maxH=Math.max(1,Math.max.apply(null,slice));
   var bolt=0,uklon=0,cash=0,card=0;S.forEach(function(o){bolt+=o.b_net||0;uklon+=o.u_net||0;cash+=o.cash_g||0;card+=o.card_g||0;});
   var totBU=Math.max(1,bolt+uklon),totCC=Math.max(1,cash+card);
-  var topHtml=top.map(function(o,i){var w=Math.round((o.net||0)/maxN*100);return '<div class="ld-row" data-i="'+o._i+'"><span class="ld-n">'+(i+1)+'</span><span class="ld-name">'+o.name+'</span><span class="ld-bar"><i style="width:'+w+'%"></i></span><span class="ld-v">'+gv(o.net)+' ₴</span></div>';}).join('');
+  var topHtml=top.map(function(o,i){var w=Math.round((o.net||0)/maxN*100);return '<div class="ld-row" data-i="'+o._i+'"><span class="ld-n">'+(i+1)+'</span><span class="ld-name">'+rpt_esc(nameFor(o.name))+'</span><span class="ld-bar"><i style="width:'+w+'%"></i></span><span class="ld-v">'+gv(o.net)+' ₴</span></div>';}).join('');
   var hoursHtml='';for(var h=H0;h<=H1;h++){var hh=Math.round(hours[h]/maxH*100);hoursHtml+='<div class="hr-col"><span class="hr-bar" style="height:'+Math.max(3,hh)+'%"></span><span class="hr-x">'+h+'</span></div>';}
   function splitBar(a,b,la,lb,tot){var wa=Math.round(a/tot*100);return '<div class="sp-l"><span>'+la+'</span><span>'+gv(a)+' ₴ · '+wa+'%</span></div><div class="sp-bar"><i style="width:'+wa+'%"></i></div><div class="sp-l"><span>'+lb+'</span><span>'+gv(b)+' ₴ · '+(100-wa)+'%</span></div>';}
   var stc={done:0,ontrack:0,behind:0,nowork:0};
@@ -1815,7 +1816,7 @@ function dayDashboard(){
   var avgCard='<div class="dd-card"><div class="dd-t">Середнє по парку</div><div class="avg-grid">'+ai(gv(Math.round(totNet/n2))+' ₴','Каса / водія')+ai(medP!=null?medP+' ₴/год':'—','Темп (медіана)')+ai((Math.round(totOrd/n2*10)/10),'Поїздок / водія')+ai(pkm!=null?pkm+' ₴':'—','Ціна за км')+'</div></div>';
   var byIdle=S.filter(function(o){return o.idle!=null&&(o.orders||0)>0;}).sort(function(a,b){return (b.idle||0)-(a.idle||0);}).slice(0,3);
   var byNet=S.filter(function(o){return (o.orders||0)>0;}).sort(function(a,b){return (a.net||0)-(b.net||0);}).slice(0,3);
-  var arRow=function(o,val){return '<div class="ld-row" data-i="'+o._i+'"><span class="ld-name" style="width:auto;flex:1">'+o.name+'</span><span class="ld-v">'+val+'</span></div>';};
+  var arRow=function(o,val){return '<div class="ld-row" data-i="'+o._i+'"><span class="ld-name" style="width:auto;flex:1">'+rpt_esc(nameFor(o.name))+'</span><span class="ld-v">'+val+'</span></div>';};
   var antiCard='<div class="dd-card"><div class="dd-t">Кому увага</div><div class="ar-sub">Найбільше стояли</div>'+(byIdle.length?byIdle.map(function(o){return arRow(o,hmd(o.idle));}).join(''):'<div class="dd-empty">—</div>')+'<div class="ar-sub" style="margin-top:11px">Найменше заробили</div>'+(byNet.length?byNet.map(function(o){return arRow(o,gv(o.net)+' ₴');}).join(''):'<div class="dd-empty">—</div>')+'</div>';
   var _sd=(typeof standing==='function')?standing():[];var _os=(typeof outService==='function')?outService():[];var _cn=(typeof carNotes==='function')?carNotes():{};function _why(c){var n=_cn[c.plate]||{};return n.reason||(c.gps?(((c.gps_km||0)>=5)?(c.gps_km+' км'):'стоїть'):'не виходило');}function _idleBadge(pl){var d=carIdleDays(pl);return '<i class="ddays">'+(d.exact?'':'\u2265')+d.n+'\u0434</i>';}var _byR={};_sd.forEach(function(c){var r=(_cn[c.plate]||{}).reason||'без причини';_byR[r]=(_byR[r]||0)+1;});var _rsum=Object.keys(_byR).sort(function(a,b){return _byR[b]-_byR[a];}).map(function(r){return r+' \u2014 '+_byR[r];}).join(' \u00b7 ');var idleCard='<div class="dd-card"><div class="dd-t">\u23f8 Простоюють авто \u00b7 '+_sd.length+'</div>'+(_sd.length?('<div class="dd-note">'+_rsum+'</div><div class="standchips">'+_sd.map(function(c){return '<span class="standchip clk" onclick="showView(\'cars\')"><b>'+c.plate+'</b> \u00b7 '+_why(c)+' '+_idleBadge(c.plate)+'</span>';}).join('')+'</div><div class="dd-more" onclick="showView(\'cars\')">усі та причини \u2192</div>'):'<div class="dd-empty">Усі авто в роботі</div>')+'</div>';var osCard='<div class="dd-card"><div class="dd-t">\ud83d\udd27 Поза лінією \u00b7 '+_os.length+'</div>'+(_os.length?('<div class="dd-note">Не рахуються як активні чи в недозаробітку.</div><div class="standchips">'+_os.map(function(c){var r=(_cn[c.plate]||{}).reason;return '<span class="standchip oosc clk" onclick="showView(\'cars\')"><b>'+c.plate+'</b>'+(c.car?' \u00b7 '+c.car:'')+(r?' \u00b7 '+r:'')+' '+_idleBadge(c.plate)+'</span>';}).join('')+'</div><div class="dd-more" onclick="showView(\'cars\')">керувати \u2192</div>'):'<div class="dd-empty">Немає авто поза лінією</div>')+'</div>';return '<div class="dd-h">День у цифрах</div><div class="dd-grid">'
    +'<div class="dd-card"><div class="dd-t">Топ водіїв сьогодні</div>'+(topHtml||'<div class="dd-empty">Ще нема даних</div>')+'</div>'
@@ -1909,7 +1910,7 @@ function row(o){const p=plan(o);
 const eta=planEta(o);const okp=eta>=0&&eta<=SHIFTEND;const mark=p.done?'':(okp?'<span style="color:var(--good)">▲ </span>':'<span style="color:var(--bad)">▼ </span>');const phint=p.done?`<span class="phint done">✓ план виконано</span>`:`<span class="phint">${mark}ще <b>${gv(p.rem)} ₴</b> · закриє ~<b style="color:${okp?'var(--good)':'var(--bad)'}">${eta>=0?clock(eta):'—'}</b></span>`;
 return `<button class="rowc ${statusOf(o)}" data-i="${o._i}">
 <div><span class="pill ${statusOf(o)}">${STt[statusOf(o)]} · ${Math.round((o.net||0)/planOf(o)*100)}%</span></div>
-<div class="who"><div class="nm">${o.name}</div><div class="det">${[o.car,o.plate,o.plats.join(' + ')].filter(Boolean).join(' · ')}${nightTail(o).n>0?' · 🌙 нічна':''}${o.unacc_km>=8?` · <span class="gpsflag">⚑ ${H(o.unacc_km)} км поза агрег.</span>`:''}</div></div>
+<div class="who"><div class="nm">${rpt_esc(nameFor(o.name))}</div><div class="det">${[o.car,o.plate,o.plats.join(' + ')].filter(Boolean).join(' · ')}${nightTail(o).n>0?' · 🌙 нічна':''}${o.unacc_km>=8?` · <span class="gpsflag">⚑ ${H(o.unacc_km)} км поза агрег.</span>`:''}</div></div>
 <div class="start"><div class="t">${stDisp(o)}</div><div class="l">старт${o.end?` · до ${o.end}`:''}</div>${o.online!=null?`<div class="span">${H(o.online)} год · ${H(o.idle)} простій</div>`:''}</div>
 <div class="plan"><div class="pnet">${gv(p.net)} <b>/ ${gv(planOf(o))} ₴ чист.</b></div><div class="pbar"><i class="${p.done?'done':''}" style="width:${Math.min(100,p.pct*100)}%"></i></div>${phint}</div>
 <div class="money"><div class="g">${gv(o.net)} ₴</div><div class="s">валове ${gv(o.gross)} ₴${o.pace_net==null?'':' · '+Math.round(o.pace_net)+' ₴/год'}${o.orders?' · '+o.orders+'/'+TRIPGOAL+' п.':''}</div></div>
@@ -2621,8 +2622,8 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=3;
-var APP_BUILD='збірка 15.07 · v'+APP_BUILD_N;
+var APP_BUILD_N=6;
+var APP_BUILD='збірка 17.07 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
   var cv=(r&&r.data&&r.data.value!=null)?r.data.value:0;var cloudN=parseInt((typeof cv==='object'&&cv)?(cv.n||0):cv)||0;
