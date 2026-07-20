@@ -1705,14 +1705,16 @@ function wkPromoGet(tok){var v=wkPromoAll()[wkPromoK(tok)];return v?(parseFloat(
 function wkDailyPromoSum(tok){try{if(typeof window==='undefined'||!window._promo||!weekMon)return 0;var s=0;var d=new Date(weekMon+'T00:00:00');for(var i=0;i<7;i++){var k=(typeof _wkYmd==='function')?_wkYmd(d):null;var day=k?window._promo[k]:null;if(day&&day[tok]!=null){var v=parseFloat(day[tok]);if(!isNaN(v))s+=v;}d.setDate(d.getDate()+1);}return s;}catch(e){return 0;}}
 function wkPromoSet(tok,v){v=parseFloat(String(v==null?'':v).replace(',','.'))||0;var m=wkPromoAll();var k=wkPromoK(tok);if(v)m[k]=v;else delete m[k];wkPromoMapSave(m);}
 function wkSetPromo(enc,v){var tok=decodeURIComponent(enc);wkPromoSet(tok,v);if(typeof renderWeek==='function')renderWeek();}
-function weekAllTrips(){var out=[];try{if(typeof weekMon==='undefined'||!weekMon||typeof weekKeys!=='function')return out;var keys=weekKeys(weekMon);keys.forEach(function(k){var d=(typeof rptHy==='function')?rptHy(k):((typeof DAYS!=='undefined')?DAYS[k]:null);if(!d)return;var drivers=(d&&d.drivers)||[];drivers.forEach(function(o){if(!o||!o.name)return;if(typeof isHidden==='function'&&isHidden(o.name))return;(o.trips||[]).forEach(function(t){if(!t||t.st!=='ok')return;var hh=null;if(t.t){var mm=/^(\d{1,2}):/.exec(t.t);if(mm)hh=+mm[1];}out.push({name:o.name,hour:hh,km:(+t.km||0),fare:(+t.fare||0),cat:((t.cat||'').trim()||'—')});});});});}catch(e){}return out;}
+function weekAllTrips(){var out=[];try{if(typeof weekMon==='undefined'||!weekMon||typeof weekKeys!=='function')return out;var keys=weekKeys(weekMon);keys.forEach(function(k){var d=(typeof rptHy==='function')?rptHy(k):((typeof DAYS!=='undefined')?DAYS[k]:null);if(!d)return;var drivers=(d&&d.drivers)||[];drivers.forEach(function(o){if(!o||!o.name)return;if(typeof isHidden==='function'&&isHidden(o.name))return;(o.trips||[]).forEach(function(t){if(!t||t.st!=='ok')return;var hh=null;if(t.t){var mm=/^(\d{1,2}):/.exec(t.t);if(mm)hh=+mm[1];}out.push({name:o.name,hour:hh,km:(+t.km||0),fare:(+t.fare||0),cat:((t.cat||'').trim()||'—'),plat:(t.plat==='Uklon'?'Uklon':'Bolt')});});});});}catch(e){}return out;}
 function weekAnalyticsHtml(){
   var trips=weekAllTrips();
   if(!trips.length)return '';
-  var totFare=0,totKm=0,n=trips.length,byCat={},byHour={},byDrv={};
+  var totFare=0,totKm=0,n=trips.length,byHour={},byDrv={};
+  var PLAT={Bolt:{n:0,fare:0,km:0,cats:{}},Uklon:{n:0,fare:0,km:0,cats:{}}};
   trips.forEach(function(t){
     totFare+=t.fare;totKm+=t.km;
-    var c=byCat[t.cat]||(byCat[t.cat]={n:0,fare:0,km:0});c.n++;c.fare+=t.fare;c.km+=t.km;
+    var pl=(t.plat==='Uklon')?'Uklon':'Bolt';var P=PLAT[pl];P.n++;P.fare+=t.fare;P.km+=t.km;
+    var pc=P.cats[t.cat]||(P.cats[t.cat]={n:0,fare:0,km:0});pc.n++;pc.fare+=t.fare;pc.km+=t.km;
     if(t.hour!=null){var h=byHour[t.hour]||(byHour[t.hour]={n:0,fare:0,km:0});h.n++;h.fare+=t.fare;h.km+=t.km;}
     var dn=(typeof nameFor==='function')?nameFor(t.name):t.name;
     var dd=byDrv[dn]||(byDrv[dn]={n:0,fare:0,km:0,hours:{},cats:{}});dd.n++;dd.fare+=t.fare;dd.km+=t.km;
@@ -1722,47 +1724,62 @@ function weekAnalyticsHtml(){
   var pk=function(o){return o.km>0?o.fare/o.km:0;};
   var gv2=function(x){return Math.round(x).toLocaleString('uk-UA');};
   var pkf=function(x){return (Math.round(x*10)/10).toLocaleString('uk-UA',{minimumFractionDigits:1,maximumFractionDigits:1});};
-  var cats=Object.keys(byCat).map(function(c){return {cat:c,n:byCat[c].n,fare:byCat[c].fare,km:byCat[c].km,pk:pk(byCat[c])};}).sort(function(a,b){return b.pk-a.pk;});
   var hours=Object.keys(byHour).map(function(h){return {h:+h,n:byHour[h].n,fare:byHour[h].fare,km:byHour[h].km,pk:pk(byHour[h])};});
-  var bestHour=hours.slice().sort(function(a,b){return b.pk-a.pk;})[0];
-  var maxHourFare=Math.max.apply(null,hours.map(function(x){return x.fare;}).concat([1]));
+  var bestPk=hours.slice().filter(function(x){return x.km>0;}).sort(function(a,b){return b.pk-a.pk;});
+  var bestVol=hours.slice().sort(function(a,b){return b.n-a.n;});
+  var bestHour=bestPk[0];
   hours.sort(function(a,b){return a.h-b.h;});
   var drvs=Object.keys(byDrv).map(function(dn){var d=byDrv[dn];
-    var bh=Object.keys(d.hours).map(function(h){return {h:+h,pk:pk(d.hours[h]),n:d.hours[h].n,fare:d.hours[h].fare};}).sort(function(a,b){return b.pk-a.pk;})[0];
-    var bc=Object.keys(d.cats).map(function(c){return {c:c,pk:pk(d.cats[c]),n:d.cats[c].n};}).sort(function(a,b){return b.pk-a.pk;})[0];
-    return {name:dn,n:d.n,fare:d.fare,km:d.km,pk:pk(d),bh:bh,bc:bc};
+    var bh=Object.keys(d.hours).map(function(h){return {h:+h,pk:pk(d.hours[h]),n:d.hours[h].n};}).filter(function(x){return x.pk>0;}).sort(function(a,b){return b.pk-a.pk;})[0];
+    var bc=Object.keys(d.cats).map(function(c){return {c:c,pk:pk(d.cats[c]),n:d.cats[c].n};}).filter(function(x){return x.pk>0;}).sort(function(a,b){return b.pk-a.pk;})[0];
+    return {name:dn,n:d.n,fare:d.fare,km:d.km,pk:pk(d),bh:bh,bc:bc,hours:d.hours};
   }).sort(function(a,b){return b.fare-a.fare;});
+  var pkArr=drvs.map(function(d){return d.pk;}).filter(function(x){return x>0;}).sort(function(a,b){return a-b;});
+  var medPk=pkArr.length?pkArr[Math.floor(pkArr.length/2)]:0;
   var C='1px solid var(--line)';
-  var H='<div style="margin-top:22px"><h2 style="font-size:19px;margin:0 0 3px">\ud83d\udcca Аналітика тижня</h2><p class="sub" style="margin:0 0 12px">Точні показники по поїздках парку за тиждень · ₴/км — це вартість кілометра (каса\u00f7км).</p>';
-  // summary
+  var catTable=function(P,title){
+    var cats=Object.keys(P.cats).map(function(c){return {cat:c,n:P.cats[c].n,fare:P.cats[c].fare,km:P.cats[c].km,pk:pk(P.cats[c])};}).filter(function(x){return x.km>0;}).sort(function(a,b){return b.pk-a.pk;});
+    var h='<div style="background:var(--panel);border:'+C+';border-radius:12px;padding:12px 14px"><div style="font-weight:700;margin-bottom:2px">'+title+'</div><div class="sub" style="margin:0 0 8px">'+gv2(P.n)+' замовл. · '+gv2(P.fare)+' \u20b4 · '+pkf(pk(P))+' \u20b4/км</div>';
+    if(!cats.length){return h+'<div class="sub">нема даних</div></div>';}
+    h+='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="color:var(--muted);font-size:11px;text-align:left"><th>Категорія</th><th style="text-align:right">К-сть</th><th style="text-align:right">Каса</th><th style="text-align:right">\u20b4/км</th></tr></thead><tbody>';
+    cats.forEach(function(c,i){h+='<tr style="border-top:'+C+'"><td style="padding:5px 0">'+c.cat+'</td><td style="text-align:right">'+gv2(c.n)+'</td><td style="text-align:right">'+gv2(c.fare)+'</td><td style="text-align:right;font-weight:700;color:'+(i===0?'var(--good,#1E6E42)':'inherit')+'">'+pkf(c.pk)+'</td></tr>';});
+    return h+'</tbody></table></div>';
+  };
+  var H='<div style="margin-top:22px"><h2 style="font-size:19px;margin:0 0 3px">\ud83d\udcca Аналітика тижня</h2><p class="sub" style="margin:0 0 12px">Точні показники по поїздках парку · ₴/км = каса\u00f7км (вигідність кілометра).</p>';
   H+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">'
-    +'<div style="background:var(--panel);border:'+C+';border-radius:12px;padding:12px 14px"><div style="font-size:24px;font-weight:800">'+gv2(n)+'</div><div class="sub" style="margin:0">замовлень</div></div>'
-    +'<div style="background:var(--panel);border:'+C+';border-radius:12px;padding:12px 14px"><div style="font-size:24px;font-weight:800">'+gv2(totKm)+' <span style="font-size:14px">км</span></div><div class="sub" style="margin:0">пробіг замовлень</div></div>'
-    +'<div style="background:var(--panel);border:'+C+';border-radius:12px;padding:12px 14px"><div style="font-size:24px;font-weight:800">'+gv2(totFare)+' \u20b4</div><div class="sub" style="margin:0">каса (валове поїздок)</div></div>'
-    +'<div style="background:var(--panel);border:'+C+';border-radius:12px;padding:12px 14px"><div style="font-size:24px;font-weight:800">'+pkf(totKm>0?totFare/totKm:0)+' \u20b4</div><div class="sub" style="margin:0">середня ціна за км</div></div>'
+    +'<div style="background:var(--panel);border:'+C+';border-radius:12px;padding:12px 14px"><div style="font-size:23px;font-weight:800">'+gv2(n)+'</div><div class="sub" style="margin:0">замовлень</div></div>'
+    +'<div style="background:var(--panel);border:'+C+';border-radius:12px;padding:12px 14px"><div style="font-size:23px;font-weight:800">'+gv2(totKm)+' <span style="font-size:14px">км</span></div><div class="sub" style="margin:0">пробіг замовлень</div></div>'
+    +'<div style="background:var(--panel);border:'+C+';border-radius:12px;padding:12px 14px"><div style="font-size:23px;font-weight:800">'+gv2(totFare)+' \u20b4</div><div class="sub" style="margin:0">каса (валове поїздок)</div></div>'
+    +'<div style="background:var(--panel);border:'+C+';border-radius:12px;padding:12px 14px"><div style="font-size:23px;font-weight:800">'+pkf(totKm>0?totFare/totKm:0)+' \u20b4</div><div class="sub" style="margin:0">середня ціна за км</div></div>'
     +'</div>';
-  // best hour highlight
+  H+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'
+    +'<div style="background:var(--panel);border:'+C+';border-radius:12px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center"><b>Bolt</b><span>'+gv2(PLAT.Bolt.n)+' замовл. · '+gv2(PLAT.Bolt.fare)+' \u20b4 · <b>'+pkf(pk(PLAT.Bolt))+' \u20b4/км</b></span></div>'
+    +'<div style="background:var(--panel);border:'+C+';border-radius:12px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center"><b>Uklon</b><span>'+gv2(PLAT.Uklon.n)+' замовл. · '+gv2(PLAT.Uklon.fare)+' \u20b4 · <b>'+pkf(pk(PLAT.Uklon))+' \u20b4/км</b></span></div>'
+    +'</div>';
   if(bestHour){H+='<div style="background:var(--good-bg,#eaf5ee);border:'+C+';border-radius:12px;padding:12px 14px;margin-bottom:14px"><b>Найвигідніша година тижня:</b> '+String(bestHour.h).padStart(2,'0')+':00 \u2014 <b>'+pkf(bestHour.pk)+' \u20b4/км</b> (\u0437\u0430 '+gv2(bestHour.n)+' замовлень, каса '+gv2(bestHour.fare)+' \u20b4)</div>';}
-  // two columns: categories + hours
-  H+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">';
-  // categories
-  H+='<div style="background:var(--panel);border:'+C+';border-radius:12px;padding:12px 14px"><div style="font-weight:700;margin-bottom:8px">Категорії (за вигідністю ₴/км)</div><table style="width:100%;border-collapse:collapse;font-size:13px">'
-    +'<thead><tr style="color:var(--muted);font-size:11px;text-align:left"><th>Категорія</th><th style="text-align:right">К-сть</th><th style="text-align:right">Каса</th><th style="text-align:right">\u20b4/км</th></tr></thead><tbody>';
-  cats.forEach(function(c,i){H+='<tr style="border-top:'+C+'"><td style="padding:5px 0">'+c.cat+'</td><td style="text-align:right">'+gv2(c.n)+'</td><td style="text-align:right">'+gv2(c.fare)+'</td><td style="text-align:right;font-weight:700;color:'+(i===0?'var(--good,#1E6E42)':'inherit')+'">'+pkf(c.pk)+'</td></tr>';});
-  H+='</tbody></table></div>';
-  // hours
-  H+='<div style="background:var(--panel);border:'+C+';border-radius:12px;padding:12px 14px"><div style="font-weight:700;margin-bottom:8px">По годинах доби</div><table style="width:100%;border-collapse:collapse;font-size:13px">'
-    +'<thead><tr style="color:var(--muted);font-size:11px;text-align:left"><th>Год</th><th style="text-align:right">Замовл.</th><th style="text-align:right">Каса</th><th style="text-align:right">\u20b4/км</th></tr></thead><tbody>';
+  H+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">'+catTable(PLAT.Bolt,'Категорії Bolt')+catTable(PLAT.Uklon,'Категорії Uklon')+'</div>';
+  H+='<div style="background:var(--panel);border:'+C+';border-radius:12px;padding:12px 14px;margin-bottom:14px"><div style="font-weight:700;margin-bottom:8px">По годинах доби (весь парк)</div><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="color:var(--muted);font-size:11px;text-align:left"><th>Год</th><th style="text-align:right">Замовл.</th><th style="text-align:right">Каса</th><th style="text-align:right">\u20b4/км</th></tr></thead><tbody>';
   hours.forEach(function(h){var isBest=bestHour&&h.h===bestHour.h;H+='<tr style="border-top:'+C+(isBest?';background:var(--good-bg,#eaf5ee)':'')+'"><td style="padding:4px 0">'+String(h.h).padStart(2,'0')+':00</td><td style="text-align:right">'+gv2(h.n)+'</td><td style="text-align:right">'+gv2(h.fare)+'</td><td style="text-align:right;font-weight:'+(isBest?'800':'400')+'">'+pkf(h.pk)+'</td></tr>';});
   H+='</tbody></table></div>';
-  H+='</div>';
+  // opportunities card
+  var below=drvs.filter(function(d){return d.pk>0&&medPk>0&&d.pk<medPk*0.9;}).sort(function(a,b){return a.pk-b.pk;});
+  var topPkH=bestPk.slice(0,3).map(function(x){return String(x.h).padStart(2,'0')+':00 ('+pkf(x.pk)+' \u20b4/км)';}).join(', ');
+  var topVolH=bestVol.slice(0,3).map(function(x){return String(x.h).padStart(2,'0')+':00 ('+gv2(x.n)+' замовл.)';}).join(', ');
+  H+='<div style="background:#fff8ec;border:1px solid #f0d9a8;border-radius:12px;padding:14px 16px;margin-bottom:6px"><div style="font-weight:800;font-size:15px;margin-bottom:8px">\ud83d\udca1 Де можна заробити більше</div>';
+  H+='<div style="font-size:13px;line-height:1.9">';
+  H+='\u2022 <b>Найвигідніші години</b> (найкраще ₴/км): '+topPkH+'. Радь водіям працювати саме в ці години.<br>';
+  H+='\u2022 <b>Найбільше замовлень</b> (пік попиту): '+topVolH+'. Тут менше простою \u2014 більше поїздок.<br>';
+  if(medPk>0)H+='\u2022 <b>Медіана парку:</b> '+pkf(medPk)+' \u20b4/км. Хто нижче \u2014 бере надто дешеві поїздки або їздить порожняком.<br>';
+  if(below.length){H+='\u2022 <b>Нижче медіани (кандидати на розмову):</b> '+below.slice(0,6).map(function(d){return d.name+' ('+pkf(d.pk)+' \u20b4/км)';}).join(', ')+'.';}
+  else{H+='\u2022 Усі водії \u2014 на рівні або вище медіани парку \ud83d\udc4d';}
+  H+='</div></div>';
   // drivers examples
-  H+='<div style="background:var(--panel);border:'+C+';border-radius:12px;padding:12px 14px"><div style="font-weight:700;margin-bottom:8px">Приклади водіїв (топ за касою) \u2014 їхні найвигідніші година й категорія</div><table style="width:100%;border-collapse:collapse;font-size:13px">'
-    +'<thead><tr style="color:var(--muted);font-size:11px;text-align:left"><th>Водій</th><th style="text-align:right">Замовл.</th><th style="text-align:right">Каса</th><th style="text-align:right">\u20b4/км</th><th style="text-align:right">Найвигідніша год.</th><th style="text-align:right">Найвигідніша кат.</th></tr></thead><tbody>';
-  drvs.slice(0,8).forEach(function(d){
+  H+='<div style="background:var(--panel);border:'+C+';border-radius:12px;padding:12px 14px;margin-top:14px"><div style="font-weight:700;margin-bottom:8px">Приклади водіїв (топ за касою) \u2014 їхні найвигідніші година й категорія</div><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="color:var(--muted);font-size:11px;text-align:left"><th>Водій</th><th style="text-align:right">Замовл.</th><th style="text-align:right">Каса</th><th style="text-align:right">\u20b4/км</th><th style="text-align:right">Найвигідніша год.</th><th style="text-align:right">Найвигідніша кат.</th></tr></thead><tbody>';
+  drvs.slice(0,10).forEach(function(d){
     var bh=d.bh?(String(d.bh.h).padStart(2,'0')+':00 \u00b7 '+pkf(d.bh.pk)+' \u20b4/км'):'\u2014';
     var bc=d.bc?(d.bc.c+' \u00b7 '+pkf(d.bc.pk)+' \u20b4/км'):'\u2014';
-    H+='<tr style="border-top:'+C+'"><td style="padding:5px 0">'+d.name+'</td><td style="text-align:right">'+gv2(d.n)+'</td><td style="text-align:right">'+gv2(d.fare)+'</td><td style="text-align:right;font-weight:700">'+pkf(d.pk)+'</td><td style="text-align:right;color:var(--muted)">'+bh+'</td><td style="text-align:right;color:var(--muted)">'+bc+'</td></tr>';
+    var low=(d.pk>0&&medPk>0&&d.pk<medPk*0.9);
+    H+='<tr style="border-top:'+C+'"><td style="padding:5px 0">'+d.name+(low?' <span style="color:#b5651d;font-size:11px">\u25bc низький ₴/км</span>':'')+'</td><td style="text-align:right">'+gv2(d.n)+'</td><td style="text-align:right">'+gv2(d.fare)+'</td><td style="text-align:right;font-weight:700;color:'+(low?'#b5651d':'inherit')+'">'+pkf(d.pk)+'</td><td style="text-align:right;color:var(--muted)">'+bh+'</td><td style="text-align:right;color:var(--muted)">'+bc+'</td></tr>';
   });
   H+='</tbody></table></div>';
   H+='</div>';
@@ -2686,7 +2703,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=8;
+var APP_BUILD_N=9;
 var APP_BUILD='збірка 20.07 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
