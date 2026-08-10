@@ -1222,6 +1222,22 @@ button{transition:background .15s,color .15s,border-color .15s,opacity .15s}
   font-family:var(--mono);font-size:11px;line-height:1.5;color:var(--ink2);
   white-space:pre-wrap;word-break:break-word}
 .airaw-box[hidden]{display:none}
+
+
+/* графік розбору */
+.aichart{border:1px solid var(--line);background:transparent;color:var(--muted);
+  border-radius:var(--r-sm);padding:9px 12px;font:inherit;font-size:12px;
+  font-weight:600;cursor:pointer}
+.aichart:hover{background:var(--soft);color:var(--ink)}
+.aichart-box{margin-top:12px;padding:10px;background:#fff;border:1px solid var(--line);
+  border-radius:var(--r-md);overflow-x:auto}
+.aichart-box[hidden]{display:none}
+.aichart-box svg{display:block;max-width:100%;height:auto;min-width:560px}
+.aichart-acts{display:flex;justify-content:flex-end;margin-top:8px}
+.aipng{border:1px solid var(--line);background:var(--soft);color:var(--ink2);
+  border-radius:var(--r-sm);padding:8px 13px;font:inherit;font-size:12px;
+  font-weight:700;cursor:pointer}
+.aipng:hover{background:var(--panel);color:var(--ink)}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head><body>
 <script>try{var _th=localStorage.getItem("theme");if(_th)document.documentElement.setAttribute("data-theme",_th);}catch(e){}</script>
@@ -3463,7 +3479,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=34;
+var APP_BUILD_N=36;
 var APP_BUILD='збірка 10.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
@@ -5159,12 +5175,31 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
         }).join('')+'</div>'
       +'<div class="aiacts"><button type="button" class="aibtn" data-mode="driver">Розібрати</button>'
       +'<button type="button" class="aibtn alt" data-mode="msg">Написати водієві</button>'
+      +'<button type="button" class="aichart" title="Показати графік">графік</button>'
       +'<button type="button" class="airaw" title="Показати, які саме дані йдуть у запит">дані</button>'
       +'<button type="button" class="aicopy" hidden>Копіювати</button></div>'
+      +'<div class="aichart-box" hidden></div>'
       +'<pre class="airaw-box" hidden></pre><div class="aiout"></div>';
     var out=box.querySelector('.aiout'),sub=box.querySelector('[data-sub]');
     var copyBtn=box.querySelector('.aicopy');
     var rawBtn=box.querySelector('.airaw'),rawBox=box.querySelector('.airaw-box');
+    var chBtn=box.querySelector('.aichart'),chBox=box.querySelector('.aichart-box');
+    function drawChart(){
+      var d;try{d=collect(name,period);}catch(e){return false;}
+      if(!d||!d.days.length)return false;
+      var svg=(typeof aiChart==='function')?aiChart(d):'';
+      if(!svg)return false;
+      chBox.innerHTML=svg+'<div class="aichart-acts"><button type="button" class="aipng">Зберегти картинку</button></div>';
+      chBox.querySelector('.aipng').onclick=function(){
+        aiSavePng(chBox,'rozbir-'+String(name).replace(/\s+/g,'-')+'-'+(d.period.to||''));
+      };
+      return true;
+    }
+    chBtn.onclick=function(){
+      if(!chBox.hidden){chBox.hidden=true;return;}
+      if(drawChart())chBox.hidden=false;
+      else{chBox.innerHTML='<p style="color:var(--muted);font-size:12.5px;margin:0">Немає даних для графіка.</p>';chBox.hidden=false;}
+    };
     rawBtn.onclick=function(){
       if(!rawBox.hidden){rawBox.hidden=true;return;}
       var d;try{d=collect(name,period);}catch(e){rawBox.textContent='помилка: '+e.message;rawBox.hidden=false;return;}
@@ -5186,7 +5221,7 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
       if(!b)return;
       period=b.getAttribute('data-p');
       [].forEach.call(box.querySelectorAll('.aichip'),function(x){x.classList.toggle('on',x===b);});
-      out.innerHTML='';copyBtn.hidden=true;label();
+      out.innerHTML='';copyBtn.hidden=true;chBox.hidden=true;rawBox.hidden=true;label();
     };
     function run(mode,btn){
       var data;
@@ -5208,6 +5243,7 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
                : '<div class="aiwarn">Числа взяті з твоєї бази. Розділ «Здогад» \u2014 припущення, не встановлена причина.</div>')
             +'<div class="aifoot">'+(j.model||'')+' \u00b7 '+((j.tokens&&j.tokens.in)||0)+' \u2192 '+((j.tokens&&j.tokens.out)||0)+' токенів</div>';
           copyBtn.hidden=false;copyBtn.textContent='Копіювати';
+          if(mode!=='msg'&&drawChart())chBox.hidden=false;
         })
         .catch(function(e){
           btn.disabled=false;btn.textContent=old;
@@ -5262,67 +5298,168 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
 </script>
 
 <script>
-/* ДИЗАЙН-ШАР v17 — розбір усього парку за тиждень (одним запитом).
-   Бере готовий weekAgg() — той самий, за яким малюється таблиця «Тиждень».
-   Нічого не рахує заново.
-   Щоб прибрати: видали цей скрипт і блок ДИЗАЙН-ШАР v16 зі стилів. */
+/* ДИЗАЙН-ШАР v20 — розбір парку: тиждень або тренд за кілька тижнів.
+   ВАЖЛИВО: розклад падіння/зростання рахується ТУТ, у коді, детерміновано.
+   Claude отримує вже готові числа й лише пояснює та розставляє пріоритети.
+   Спирається на weekAgg() — ту саму функцію, за якою малюється таблиця «Тиждень». */
 (function(){
+  var SPANS=[{k:1,t:'Цей тиждень'},{k:4,t:'4 тижні'},{k:8,t:'8 тижнів'}];
+
   function r0(v){return v==null?null:Math.round(v);}
   function r1(v){return v==null?null:Math.round(v*10)/10;}
   function med(a){a=a.filter(function(x){return x!=null&&!isNaN(x);}).sort(function(x,y){return x-y;});
     return a.length?a[Math.floor(a.length/2)]:null;}
-  function prevMon(mon){
-    try{var d=new Date(mon+'T00:00:00');d.setDate(d.getDate()-7);
+  function shiftMon(mon,n){
+    try{var d=new Date(mon+'T00:00:00');d.setDate(d.getDate()+n*7);
       return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
     catch(e){return null;}
   }
-  function slim(m){
-    return {name:(typeof nameFor==='function')?nameFor(m.name):m.name,
-      net:r0(m.net),gross:r0(m.gross),orders:m.orders||0,online:r1(m.online),
-      km:r0(m.km),pace:m.pace,days:m.days||0,done:m.done||0,pct:m.pct,idle:r1(m.idle)};
+  function key(nm){try{return nkey(nm);}catch(e){return String(nm||'');}}
+  function disp(nm){try{return (typeof nameFor==='function')?nameFor(nm):nm;}catch(e){return nm;}}
+
+  /* зріз одного тижня */
+  function weekSlice(mon){
+    var A=weekAgg(mon);
+    if(!A||!A.list)return null;
+    var by={},tot={net:0,gross:0,orders:0,online:0,km:0,plan:0,days:0};
+    A.list.forEach(function(m){
+      var k=key(m.name);
+      by[k]={name:disp(m.name),net:m.net||0,orders:m.orders||0,online:m.online||0,
+             days:m.days||0,done:m.done||0,plan:m.planSum||0,pace:m.pace,pct:m.pct};
+      tot.net+=m.net||0;tot.gross+=m.gross||0;tot.orders+=m.orders||0;
+      tot.online+=m.online||0;tot.km+=m.km||0;tot.plan+=m.planSum||0;tot.days+=m.days||0;
+    });
+    return {mon:mon,from:A.keys[0],to:A.keys[6],days_with_data:A.present.length,
+      drivers:A.list.length,by:by,
+      totals:{net:r0(tot.net),gross:r0(tot.gross),orders:tot.orders,
+              online:r1(tot.online),km:r0(tot.km),plan:r0(tot.plan),
+              plan_pct:tot.plan>0?Math.round(tot.net/tot.plan*100):null},
+      park:{pace:r0(med(A.list.map(function(m){return m.pace;}))),
+            net:r0(med(A.list.map(function(m){return m.net;}))),
+            days:r0(med(A.list.map(function(m){return m.days;})))}};
   }
-  function totals(list){
-    var t={net:0,gross:0,orders:0,online:0,km:0};
-    list.forEach(function(m){t.net+=m.net||0;t.gross+=m.gross||0;t.orders+=m.orders||0;
-      t.online+=m.online||0;t.km+=m.km||0;});
-    return {net:r0(t.net),gross:r0(t.gross),orders:t.orders,online:r1(t.online),km:r0(t.km),drivers:list.length};
+
+  /* ЧОМУ змінилась каса: розклад на «менше виїжджали» та «нижчий заробіток за день».
+     Δnet ≈ Δднів × (заробіток/день торік) + дні_зараз × Δ(заробіток/день) */
+  function decompose(L,P){
+    if(!L||!P)return null;
+    var daysEff=0,rateEff=0,rows=[];
+    var keys={};
+    Object.keys(P.by).forEach(function(k){keys[k]=1;});
+    Object.keys(L.by).forEach(function(k){keys[k]=1;});
+    Object.keys(keys).forEach(function(k){
+      var a=L.by[k]||{name:(P.by[k]||{}).name,net:0,days:0,orders:0,pace:null};
+      var b=P.by[k]||{name:(L.by[k]||{}).name,net:0,days:0,orders:0,pace:null};
+      var rateP=b.days>0?b.net/b.days:0, rateL=a.days>0?a.net/a.days:0;
+      var dDays=(a.days-b.days)*rateP;
+      var dRate=a.days*(rateL-rateP);
+      daysEff+=dDays;rateEff+=dRate;
+      rows.push({name:a.name||b.name,
+        delta:r0(a.net-b.net),
+        net_now:r0(a.net),net_prev:r0(b.net),
+        days_now:a.days,days_prev:b.days,
+        pace_now:a.pace,pace_prev:b.pace,
+        from_days:r0(dDays),from_rate:r0(dRate),
+        status:(b.days>0&&a.days===0)?'перестав виїжджати'
+              :((b.days===0&&a.days>0)?'новий':'')});
+    });
+    rows.sort(function(x,y){return x.delta-y.delta;});
+    return {
+      total_delta:r0(L.totals.net-P.totals.net),
+      from_fewer_days:r0(daysEff),
+      from_lower_rate:r0(rateEff),
+      worst:rows.slice(0,6),
+      best:rows.slice(-3).reverse()
+    };
   }
-  function collect(){
-    if(typeof weekAgg!=='function'||!weekMon)return null;
-    var A=weekAgg(weekMon);
-    if(!A||!A.list||!A.list.length)return null;
-    var out={week:{from:A.keys[0],to:A.keys[6],days_with_data:A.present.length},
-      drivers:A.list.map(slim),
-      park:{net:r0(med(A.list.map(function(m){return m.net;}))),
-            pace:r0(med(A.list.map(function(m){return m.pace;}))),
-            orders:r0(med(A.list.map(function(m){return m.orders;}))),
-            online:r1(med(A.list.map(function(m){return m.online;})))},
-      totals:totals(A.list)};
-    var pm=prevMon(weekMon);
-    try{
-      if(pm){
-        var P=weekAgg(pm);
-        if(P&&P.list&&P.list.length&&P.present.length){
-          out.prev={from:P.keys[0],to:P.keys[6],days_with_data:P.present.length,
-            totals:totals(P.list),
-            park:{net:r0(med(P.list.map(function(m){return m.net;}))),
-                  pace:r0(med(P.list.map(function(m){return m.pace;})))}};
-        }
+
+  /* хто потребує розмови — правила прості й перевірні */
+  function attention(slices){
+    if(slices.length<2)return [];
+    var last=slices[slices.length-1],out=[];
+    var keys={};slices.forEach(function(s){Object.keys(s.by).forEach(function(k){keys[k]=1;});});
+    Object.keys(keys).forEach(function(k){
+      var series=slices.map(function(s){return s.by[k]||null;});
+      var cur=series[series.length-1];
+      if(!cur||!cur.days)return;
+      var reasons=[];
+      /* падіння кілька тижнів поспіль */
+      var down=0;
+      for(var i=series.length-1;i>0;i--){
+        var a=series[i],b=series[i-1];
+        if(a&&b&&b.net>0&&a.net<b.net*0.95)down++;else break;
       }
-    }catch(e){}
+      if(down>=2)reasons.push('падає '+down+' тижні поспіль');
+      /* темп нижчий за парк */
+      var lowPace=0;
+      for(var j=series.length-1;j>=0;j--){
+        var s=slices[j],d=series[j];
+        if(d&&d.pace!=null&&s.park.pace&&d.pace<s.park.pace*0.85)lowPace++;else break;
+      }
+      if(lowPace>=2)reasons.push('темп нижчий за парк '+lowPace+' тижні поспіль');
+      /* план */
+      if(cur.pct!=null&&cur.pct<80)reasons.push('план виконано на '+cur.pct+'%');
+      /* мало днів */
+      if(last.park.days&&cur.days<Math.max(2,last.park.days-2))
+        reasons.push('лише '+cur.days+' роб. днів проти '+last.park.days+' у парку');
+      if(!reasons.length)return;
+      out.push({name:cur.name,net_last:r0(cur.net),pace_last:cur.pace,
+        days_last:cur.days,plan_pct:cur.pct,
+        net_series:series.map(function(x){return x?r0(x.net):0;}),
+        reasons:reasons});
+    });
+    out.sort(function(a,b){return b.reasons.length-a.reasons.length||a.net_last-b.net_last;});
+    return out.slice(0,8);
+  }
+
+  function collect(spanWeeks){
+    if(typeof weekAgg!=='function'||!weekMon)return null;
+    var slices=[];
+    for(var i=spanWeeks-1;i>=0;i--){
+      var mon=shiftMon(weekMon,-i);
+      if(!mon)continue;
+      var s=weekSlice(mon);
+      if(s&&s.days_with_data>0)slices.push(s);
+    }
+    if(!slices.length)return null;
+    var last=slices[slices.length-1];
+    var prev=slices.length>1?slices[slices.length-2]:null;
+    if(!prev&&spanWeeks===1){
+      var pm=shiftMon(weekMon,-1);
+      var ps=pm?weekSlice(pm):null;
+      if(ps&&ps.days_with_data>0)prev=ps;
+    }
+    var out={
+      mode:spanWeeks===1?'week':'trend',
+      weeks:slices.map(function(s){
+        return {from:s.from,to:s.to,days_with_data:s.days_with_data,
+                drivers:s.drivers,totals:s.totals,park:s.park};
+      }),
+      last_week:{from:last.from,to:last.to,
+        drivers:Object.keys(last.by).map(function(k){
+          var d=last.by[k];
+          return {name:d.name,net:r0(d.net),orders:d.orders,online:r1(d.online),
+                  days:d.days,pace:d.pace,plan_pct:d.pct};
+        }).sort(function(a,b){return b.net-a.net;})}
+    };
+    if(prev)out.change=decompose(last,prev);
+    if(slices.length>1)out.needs_talk=attention(slices);
     return out;
   }
+
+  var HEAD={'ТИЖДЕНЬ ЗАГАЛОМ':'Тиждень загалом','ЩО ЗМІНИЛОСЬ':'Що змінилось',
+            'ПОТРЕБУЮТЬ УВАГИ':'Потребують уваги','З КИМ ПОГОВОРИТИ':'З ким поговорити',
+            'ЗДОГАД':'Здогад','ЩО ЗРОБИТИ ЦЬОГО ТИЖНЯ':'Що зробити цього тижня',
+            'ЩО ЗРОБИТИ':'Що зробити'};
   function fmt(t){
-    var H={'ТИЖДЕНЬ ЗАГАЛОМ':'Тиждень загалом','ПОТРЕБУЮТЬ УВАГИ':'Потребують уваги',
-           'ЗДОГАД':'Здогад','ЩО ЗРОБИТИ ЦЬОГО ТИЖНЯ':'Що зробити цього тижня'};
     var out='',guess=false;
     String(t||'').split('\n').forEach(function(line){
       var L=line.trim();if(!L)return;
       var up=L.replace(/[:：]$/,'').toUpperCase();
-      if(H[up]){
+      if(HEAD[up]){
         if(guess){out+='</div>';guess=false;}
         if(up==='ЗДОГАД'){out+='<div class="aiguess"><h4>Здогад</h4>';guess=true;return;}
-        out+='<h4>'+H[up]+'</h4>';return;
+        out+='<h4>'+HEAD[up]+'</h4>';return;
       }
       var e=L.replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});
       if(/^[-•*]\s+/.test(L))out+='<li>'+e.replace(/^[-•*]\s+/,'')+'</li>';
@@ -5331,38 +5468,88 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
     if(guess)out+='</div>';
     return out;
   }
+
   function build(){
+    var span=1,lastText='';
     var box=document.createElement('div');
     box.className='aibox';
-    box.innerHTML='<div class="aihd"><span class="ait">Розбір тижня по парку</span>'
-      +'<span class="aisub">усі водії одним запитом</span>'
-      +'<button type="button" class="aibtn">Розібрати тиждень</button></div>'
-      +'<div class="aiout"></div>';
-    var btn=box.querySelector('.aibtn'),out=box.querySelector('.aiout');
+    box.innerHTML='<div class="aihd"><span class="ait">Розбір парку</span><span class="aisub" data-sub></span></div>'
+      +'<div class="aiper">'+SPANS.map(function(p){
+          return '<button type="button" class="aichip'+(p.k===1?' on':'')+'" data-w="'+p.k+'">'+p.t+'</button>';
+        }).join('')+'</div>'
+      +'<div class="aiacts"><button type="button" class="aibtn">Розібрати</button>'
+      +'<button type="button" class="airaw" title="Показати, які саме дані йдуть у запит">дані</button>'
+      +'<button type="button" class="aicopy" hidden>Копіювати</button></div>'
+      +'<pre class="airaw-box" hidden></pre><div class="aiout"></div>';
+    var out=box.querySelector('.aiout'),sub=box.querySelector('[data-sub]');
+    var btn=box.querySelector('.aibtn'),copyBtn=box.querySelector('.aicopy');
+    var rawBtn=box.querySelector('.airaw'),rawBox=box.querySelector('.airaw-box');
+
+    function label(){
+      var d=collect(span);
+      sub.textContent=d?(d.weeks.length+' тижн. · '+d.weeks[0].from+' – '+d.weeks[d.weeks.length-1].to)
+                       :'немає даних';
+      return d;
+    }
+    box.querySelector('.aiper').onclick=function(e){
+      var b=e.target.closest?e.target.closest('.aichip'):null;
+      if(!b)return;
+      span=+b.getAttribute('data-w');
+      [].forEach.call(box.querySelectorAll('.aichip'),function(x){x.classList.toggle('on',x===b);});
+      out.innerHTML='';copyBtn.hidden=true;rawBox.hidden=true;label();
+    };
+    rawBtn.onclick=function(){
+      if(!rawBox.hidden){rawBox.hidden=true;return;}
+      var d=label();
+      if(!d){rawBox.textContent='немає даних за цей період';rawBox.hidden=false;return;}
+      var size=JSON.stringify(d).length;
+      var warn='';
+      if(!d.change)warn='\u26a0 Немає попереднього тижня для порівняння — розкладу змін не буде.\n\n';
+      rawBox.textContent=warn+'\u2248'+Math.round(size/3.5)+' токенів, '+size+' символів\n\n'+JSON.stringify(d,null,1);
+      rawBox.hidden=false;
+    };
     btn.onclick=function(){
       var data;
-      try{data=collect();}catch(e){out.innerHTML='<div class="aierr">Не вдалось зібрати дані: '+e.message+'</div>';return;}
-      if(!data){out.innerHTML='<div class="aierr">За цей тиждень немає даних.</div>';return;}
-      btn.disabled=true;btn.textContent='Думаю…';
-      out.innerHTML='<p style="color:var(--muted)">Порівнюю '+data.drivers.length+' водіїв за '
-        +data.week.days_with_data+' днів…</p>';
+      try{data=label();}catch(e){out.innerHTML='<div class="aierr">Не вдалось зібрати дані: '+e.message+'</div>';return;}
+      if(!data){out.innerHTML='<div class="aierr">За цей період немає даних.</div>';return;}
+      btn.disabled=true;btn.textContent='Думаю…';copyBtn.hidden=true;
+      out.innerHTML='<p style="color:var(--muted)">Порівнюю '+data.weeks.length+' тижн…</p>';
       fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({task:'week',payload:data})})
+        body:JSON.stringify({task:(data.mode==='trend'?'park':'week'),payload:data})})
         .then(function(r){return r.json();})
         .then(function(j){
           btn.disabled=false;btn.textContent='Розібрати ще раз';
           if(!j||!j.ok){out.innerHTML='<div class="aierr">'+((j&&j.error)||'Не вдалось отримати відповідь')+'</div>';return;}
-          out.innerHTML=fmt(j.text)
-            +'<div class="aiwarn">Числа взяті з таблиці нижче. Розділ «Здогад» — припущення, не встановлена причина.</div>'
+          lastText=j.text||'';
+          out.innerHTML=fmt(lastText)
+            +'<div class="aiwarn">Розклад змін порахований у дашборді, не моделлю. Розділ «Здогад» — припущення.</div>'
             +'<div class="aifoot">'+(j.model||'')+' \u00b7 '+((j.tokens&&j.tokens.in)||0)+' \u2192 '+((j.tokens&&j.tokens.out)||0)+' токенів</div>';
+          copyBtn.hidden=false;copyBtn.textContent='Копіювати';
         })
         .catch(function(e){
-          btn.disabled=false;btn.textContent='Розібрати тиждень';
+          btn.disabled=false;btn.textContent='Розібрати';
           out.innerHTML='<div class="aierr">Помилка мережі: '+e.message+'</div>';
         });
     };
+    copyBtn.onclick=function(){
+      if(!lastText)return;
+      function done(){copyBtn.textContent='Скопійовано';setTimeout(function(){copyBtn.textContent='Копіювати';},1600);}
+      function fallback(){
+        var ta=document.createElement('textarea');ta.value=lastText;
+        ta.style.position='fixed';ta.style.opacity='0';
+        document.body.appendChild(ta);ta.select();
+        try{document.execCommand('copy');done();}catch(e){}
+        document.body.removeChild(ta);
+      }
+      try{
+        if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(lastText).then(done,fallback);
+        else fallback();
+      }catch(e){fallback();}
+    };
+    label();
     return box;
   }
+
   function attach(){
     var el=document.getElementById('week');
     if(!el||el.classList.contains('hide'))return;
@@ -5383,6 +5570,121 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
   else init();
+})();
+</script>
+<script>
+/* ДИЗАЙН-ШАР v21 — картинка розбору: смуги «водій проти парку» + каса по днях.
+   Малюється з ТИХ САМИХ чисел, що йдуть у запит, тому текст і графік не розійдуться.
+   Зберігається як PNG без жодних сторонніх бібліотек. */
+(function(){
+  function esc(s){return String(s==null?'':s).replace(/[&<>]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+  function num(v,d){
+    if(v==null||isNaN(v))return '—';
+    var n=Math.round(v*(d?10:1))/(d?10:1);
+    return String(n).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'\u00a0');
+  }
+  function avg(arr,f){
+    var s=0,n=0;arr.forEach(function(x){var v=f(x);if(v!=null&&!isNaN(v)){s+=v;n++;}});
+    return n?s/n:null;
+  }
+
+  /* SVG: смуга порівняння водія з медіаною парку */
+  function bars(rows,W){
+    var y=0,h=0,out='';
+    rows.forEach(function(r){
+      if(r.me==null&&r.park==null)return;
+      var max=Math.max(r.me||0,r.park||0,1);
+      var wMe=Math.round((r.me||0)/max*(W-250));
+      var wPk=Math.round((r.park||0)/max*(W-250));
+      var worse=r.lowerIsBetter?((r.me||0)>(r.park||0)):((r.me||0)<(r.park||0));
+      var col=worse?'#C0392B':'#14875A';
+      out+='<text x="0" y="'+(y+11)+'" font-size="12" font-weight="600" fill="#565A63">'+esc(r.t)+'</text>'
+        +'<rect x="150" y="'+(y+2)+'" width="'+wMe+'" height="11" rx="3" fill="'+col+'"/>'
+        +'<rect x="150" y="'+(y+16)+'" width="'+wPk+'" height="11" rx="3" fill="#C9C5BA"/>'
+        +'<text x="'+(W-92)+'" y="'+(y+12)+'" font-size="12" font-weight="700" fill="'+col+'" font-family="monospace">'+esc(r.fme)+'</text>'
+        +'<text x="'+(W-92)+'" y="'+(y+26)+'" font-size="11" fill="#8B8F98" font-family="monospace">'+esc(r.fpk)+'</text>';
+      y+=38;h=y;
+    });
+    return {svg:out,h:h};
+  }
+
+  /* SVG: каса по днях */
+  function spark(days,W,top){
+    if(!days||days.length<2)return {svg:'',h:0};
+    var max=1;days.forEach(function(d){if((d.net||0)>max)max=d.net;});
+    var bw=Math.min(46,Math.floor((W-20)/days.length)-6),gap=6;
+    var H=88,out='';
+    out+='<text x="0" y="'+(top+12)+'" font-size="11" font-weight="700" fill="#8B8F98" letter-spacing="1.4">КАСА ПО ДНЯХ</text>';
+    days.forEach(function(d,i){
+      var hh=Math.max(2,Math.round((d.net||0)/max*H));
+      var x=i*(bw+gap), yy=top+26+(H-hh);
+      out+='<rect x="'+x+'" y="'+yy+'" width="'+bw+'" height="'+hh+'" rx="4" fill="#C8881A" opacity="'+( (d.net||0)>=max*0.75?1:0.55)+'"/>'
+        +'<text x="'+(x+bw/2)+'" y="'+(top+26+H+13)+'" font-size="10" text-anchor="middle" fill="#8B8F98" font-family="monospace">'+esc(String(d.date).slice(8,10))+'</text>'
+        +'<text x="'+(x+bw/2)+'" y="'+(yy-4)+'" font-size="10" text-anchor="middle" fill="#565A63" font-family="monospace">'+num(d.net)+'</text>';
+    });
+    return {svg:out,h:26+H+20};
+  }
+
+  window.aiChart=function(data){
+    try{
+      if(!data||!data.days||!data.days.length)return '';
+      var W=680,d=data.days,pk=data.park||{};
+      var rows=[
+        {t:'Чисте за день, \u20b4', me:avg(d,function(x){return x.net;}), park:pk.net},
+        {t:'Заробіток за годину', me:avg(d,function(x){return x.pace;}), park:pk.pace},
+        {t:'Поїздок за день',     me:avg(d,function(x){return x.orders;}), park:pk.orders},
+        {t:'Гривень за кілометр', me:avg(d,function(x){return x.uah_per_km;}), park:pk.uah_per_km},
+        {t:'Простій, год',        me:avg(d,function(x){return x.idle;}), park:pk.idle, lowerIsBetter:true}
+      ];
+      rows.forEach(function(r){
+        var dec=(r.t.indexOf('кілометр')>=0||r.t.indexOf('Простій')>=0||r.t.indexOf('Поїздок')>=0);
+        r.fme=num(r.me,dec); r.fpk='парк '+num(r.park,dec);
+      });
+      var b=bars(rows,W);
+      var sp=spark(d,W,b.h+14);
+      var H=b.h+14+sp.h+52;
+      return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" '
+        +'font-family="Manrope, system-ui, sans-serif">'
+        +'<rect width="'+W+'" height="'+H+'" fill="#FFFFFF"/>'
+        +'<g transform="translate(16,34)">'
+        +'<text x="0" y="-14" font-size="13" font-weight="800" fill="#15171C">'+esc(data.driver||'')+'</text>'
+        +'<text x="'+(W-32)+'" y="-14" font-size="11" text-anchor="end" fill="#8B8F98" font-family="monospace">'
+        +esc((data.period&&data.period.from)||'')+(data.period&&data.period.days>1?(' \u2013 '+esc(data.period.to)):'')+'</text>'
+        +b.svg+sp.svg
+        +'</g>'
+        +'<text x="16" y="'+(H-12)+'" font-size="10" fill="#8B8F98">\u25a0 водій   \u25a0 медіана парку   \u00b7 AVTO PARK Lviv</text>'
+        +'</svg>';
+    }catch(e){return '';}
+  };
+
+  /* SVG -> PNG, без сторонніх бібліотек */
+  window.aiSavePng=function(host,fname){
+    var svg=host.querySelector('svg');
+    if(!svg)return;
+    var w=+svg.getAttribute('width'),h=+svg.getAttribute('height'),sc=2;
+    var src=new XMLSerializer().serializeToString(svg);
+    var img=new Image();
+    img.onload=function(){
+      var c=document.createElement('canvas');
+      c.width=w*sc;c.height=h*sc;
+      var ctx=c.getContext('2d');
+      ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);
+      ctx.drawImage(img,0,0,c.width,c.height);
+      try{
+        c.toBlob(function(bl){
+          if(!bl)return;
+          var a=document.createElement('a');
+          a.href=URL.createObjectURL(bl);
+          a.download=(fname||'rozbir')+'.png';
+          document.body.appendChild(a);a.click();
+          setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1500);
+        },'image/png');
+      }catch(e){}
+    };
+    img.onerror=function(){};
+    img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(src);
+  };
 })();
 </script>
 </body></html>
