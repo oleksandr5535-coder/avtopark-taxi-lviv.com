@@ -3451,7 +3451,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=32;
+var APP_BUILD_N=33;
 var APP_BUILD='збірка 10.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
@@ -5019,6 +5019,7 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
     var nk=nkey(name),keys=keysFor(period);
     var days=[],parkPace=[],parkOrd=[],parkOnl=[],parkNet=[],parkPk=[],parkIdle=[];
     var tiers={econ:0,std:0,premium:0,deliv:0},meth={},tripsN=0,lastObj=null;
+    var pTiers={econ:0,std:0,premium:0,deliv:0},pMeth={},stops=[];
     keys.forEach(function(k){
       var D=DAYS[k],drv=(D&&D.drivers)||[];
       var mine=null,pp=[],po=[],pn=[],pl=[],pk=[],pi=[];
@@ -5033,6 +5034,10 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
         if(o.net!=null)pl.push(o.net);
         if(o.real_pk!=null)pk.push(o.real_pk);
         if(o.idle!=null)pi.push(o.idle);
+        pTiers.econ+=(o.t_econ||0);pTiers.std+=(o.t_std||0);
+        pTiers.premium+=(o.t_prem||0);pTiers.deliv+=(o.t_deliv||0);
+        if(o.methods&&typeof o.methods==='object')
+          Object.keys(o.methods).forEach(function(m){pMeth[m]=(pMeth[m]||0)+(o.methods[m]||0);});
       });
       if(med(pp)!=null)parkPace.push(med(pp));
       if(med(po)!=null)parkOrd.push(med(po));
@@ -5053,6 +5058,21 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
       if(mine.methods&&typeof mine.methods==='object')
         Object.keys(mine.methods).forEach(function(m){meth[m]=(meth[m]||0)+(mine.methods[m]||0);});
       tripsN+=(mine.orders||0);
+      /* тривалі стоянки за GPS — де саме стояв */
+      try{
+        var pl=mine.plate_norm,g=D&&D.gps_raw&&D.gps_raw[pl];
+        if(g&&g.s&&g.s.length){
+          g.s.forEach(function(x){
+            var mins=x.dur;
+            if(typeof mins==='string'){
+              var h=/(\d+)\s*год/.exec(mins),mm=/(\d+)\s*хв/.exec(mins);
+              mins=(h?+h[1]*60:0)+(mm?+mm[1]:0);
+            }
+            if(!mins||mins<15)return;
+            stops.push({date:k,at:x.st||'',min:Math.round(mins),place:String(x.addr||'').slice(0,70)});
+          });
+        }
+      }catch(e){}
     });
     function pct(obj){
       var t=0;Object.keys(obj).forEach(function(k){t+=obj[k]||0;});
@@ -5066,7 +5086,15 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
       days:days,
       park:{pace:r0(med(parkPace)),orders:r0(med(parkOrd)),online:r1(med(parkOnl)),
             net:r0(med(parkNet)),uah_per_km:med(parkPk),idle:r1(med(parkIdle))},
-      tiers:pct(tiers),methods:pct(meth),trips_total:tripsN};
+      tiers:pct(tiers),methods:pct(meth),trips_total:tripsN,
+      park_tiers:pct(pTiers),park_methods:pct(pMeth)};
+    if(stops.length){
+      stops.sort(function(a,b){return b.min-a.min;});
+      out.stops=stops.slice(0,12);
+      var tot=0;stops.forEach(function(x){tot+=x.min;});
+      out.stops_total_min=tot;
+    }
+    if(days.length<3)out.small_sample=true;
     try{
       var cur=curDay(),wk=weekKeysOf(cur);
       if(wk.length===7&&lastObj){
