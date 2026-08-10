@@ -1210,6 +1210,18 @@ button{transition:background .15s,color .15s,border-color .15s,opacity .15s}
   .aiacts{flex-direction:column;align-items:stretch}
   .aicopy{margin-left:0}
 }
+
+
+/* кнопка «дані» — що саме йде в запит */
+.airaw{border:1px solid var(--line);background:transparent;color:var(--muted);
+  border-radius:var(--r-sm);padding:9px 12px;font:inherit;font-size:12px;
+  font-weight:600;cursor:pointer}
+.airaw:hover{background:var(--soft);color:var(--ink)}
+.airaw-box{margin:11px 0 0;padding:12px;max-height:320px;overflow:auto;
+  background:var(--soft);border:1px solid var(--line);border-radius:var(--r-md);
+  font-family:var(--mono);font-size:11px;line-height:1.5;color:var(--ink2);
+  white-space:pre-wrap;word-break:break-word}
+.airaw-box[hidden]{display:none}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head><body>
 <script>try{var _th=localStorage.getItem("theme");if(_th)document.documentElement.setAttribute("data-theme",_th);}catch(e){}</script>
@@ -3451,7 +3463,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=33;
+var APP_BUILD_N=34;
 var APP_BUILD='збірка 10.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
@@ -5147,9 +5159,21 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
         }).join('')+'</div>'
       +'<div class="aiacts"><button type="button" class="aibtn" data-mode="driver">Розібрати</button>'
       +'<button type="button" class="aibtn alt" data-mode="msg">Написати водієві</button>'
-      +'<button type="button" class="aicopy" hidden>Копіювати</button></div><div class="aiout"></div>';
+      +'<button type="button" class="airaw" title="Показати, які саме дані йдуть у запит">дані</button>'
+      +'<button type="button" class="aicopy" hidden>Копіювати</button></div>'
+      +'<pre class="airaw-box" hidden></pre><div class="aiout"></div>';
     var out=box.querySelector('.aiout'),sub=box.querySelector('[data-sub]');
     var copyBtn=box.querySelector('.aicopy');
+    var rawBtn=box.querySelector('.airaw'),rawBox=box.querySelector('.airaw-box');
+    rawBtn.onclick=function(){
+      if(!rawBox.hidden){rawBox.hidden=true;return;}
+      var d;try{d=collect(name,period);}catch(e){rawBox.textContent='помилка: '+e.message;rawBox.hidden=false;return;}
+      var size=JSON.stringify(d).length;
+      var warn='';
+      if(!d.stops)warn='\u26a0 Стоянок за GPS немає — або того дня не завантажено Wialon, або авто не в групі.\n\n';
+      rawBox.textContent=warn+'\u2248'+Math.round(size/3.5)+' токенів, '+size+' символів\n\n'+JSON.stringify(d,null,1);
+      rawBox.hidden=false;
+    };
     function label(){
       var d=collect(name,period);
       sub.textContent=d.days.length
