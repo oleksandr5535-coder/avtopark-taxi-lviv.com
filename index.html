@@ -1389,6 +1389,58 @@ button{transition:background .15s,color .15s,border-color .15s,opacity .15s}
 .aicut{margin:0 0 9px;padding:9px 11px;border-radius:var(--r-sm);
   background:var(--warn-bg);border:1px solid var(--warn-line);
   color:var(--warn-tx);font-size:12px;line-height:1.45}
+
+
+/* ===================================================================== */
+/* ДИЗАЙН-ШАР v26 — «Спитати про парк».                                  */
+/* ===================================================================== */
+.askbtn{position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom));
+  z-index:450;border:none;background:var(--inkp);color:var(--inkp-fg);
+  border-radius:999px;padding:13px 20px;font:inherit;font-size:13px;font-weight:700;
+  cursor:pointer;box-shadow:0 12px 30px -10px rgba(20,22,27,.55)}
+.askbtn:hover{opacity:.9}
+@media (max-width:760px){.askbtn{bottom:calc(78px + env(safe-area-inset-bottom));right:12px;padding:11px 16px}}
+
+.chat-panel{position:fixed;right:18px;bottom:calc(74px + env(safe-area-inset-bottom));
+  z-index:460;width:420px;max-width:calc(100vw - 24px);height:min(560px,72vh);
+  display:flex;flex-direction:column;background:var(--panel);
+  border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh-pop);
+  overflow:hidden;animation:dcalIn .18s ease}
+.chat-panel[hidden]{display:none}
+@media (max-width:760px){
+  .chat-panel{right:8px;left:8px;width:auto;bottom:calc(134px + env(safe-area-inset-bottom));height:min(70vh,520px)}
+}
+
+.chat-h{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.chat-t{font-size:13px;font-weight:800;letter-spacing:-.01em;color:var(--ink)}
+.chat-tok{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.chat-new,.chat-x{border:1px solid var(--line);background:var(--panel);color:var(--ink2);
+  border-radius:8px;padding:5px 9px;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer}
+.chat-new:hover,.chat-x:hover{background:var(--soft);color:var(--ink)}
+
+.chat-msgs{flex:1;overflow-y:auto;padding:13px 14px;display:flex;flex-direction:column;gap:9px}
+.chat-m{max-width:88%;padding:10px 13px;border-radius:14px;font-size:13.5px;line-height:1.55;
+  word-break:break-word}
+.chat-m.me{align-self:flex-end;background:var(--inkp);color:var(--inkp-fg);border-bottom-right-radius:5px}
+.chat-m.ai{align-self:flex-start;background:var(--soft);color:var(--ink);
+  border:1px solid var(--line);border-bottom-left-radius:5px}
+.chat-m.wait{color:var(--muted)}
+.chat-hint{font-size:12.5px;color:var(--muted);line-height:1.6}
+.chat-ex{display:block;width:100%;text-align:left;margin-top:7px;border:1px solid var(--line);
+  background:var(--panel);color:var(--ink2);border-radius:10px;padding:9px 11px;
+  font:inherit;font-size:12.5px;cursor:pointer}
+.chat-ex:hover{background:var(--soft);color:var(--ink)}
+
+.chat-foot{display:flex;gap:8px;align-items:flex-end;padding:11px 12px;border-top:1px solid var(--line)}
+.chat-inp{flex:1;resize:none;max-height:120px;padding:10px 12px;border:1px solid var(--line);
+  border-radius:12px;font:inherit;font-size:13.5px;background:var(--soft);color:var(--ink);
+  line-height:1.45}
+.chat-inp:focus{outline:none;border-color:var(--amber);background:var(--panel)}
+.chat-inp:disabled{opacity:.6}
+.chat-send{flex:none;width:38px;height:38px;border:none;border-radius:50%;
+  background:var(--inkp);color:var(--inkp-fg);font-size:17px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center}
+.chat-send:hover{opacity:.88}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head><body>
 <script>try{var _th=localStorage.getItem("theme");if(_th)document.documentElement.setAttribute("data-theme",_th);}catch(e){}</script>
@@ -3631,7 +3683,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=47;
+var APP_BUILD_N=48;
 var APP_BUILD='збірка 10.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
@@ -6569,7 +6621,250 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
   else init();
 })();
 </script>
+<script>
+/* ДИЗАЙН-ШАР v26 — «Спитати про парк».
+   Вікно розмови, доступне з будь-якого екрана. Бачить зріз парку:
+   авто зі станами, водії за 30 днів, оренди, борги, стан дня.
+   Коду дашборда НЕ бачить — лише опис екранів і відомих обмежень. */
+(function(){
+  var MAX_MSGS=14;
+  var hist=[];        /* {role,content} */
+  var lastCtx=null;
+
+  function esc(s){return String(s==null?'':s).replace(/[&<>]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+  function r0(v){return (v==null||isNaN(v))?null:Math.round(v);}
+  function r1(v){return (v==null||isNaN(v))?null:Math.round(v*10)/10;}
+  function pc(v){return (v==null||isNaN(v))?null:Math.round(v*100);}
+  function med(a){a=a.filter(function(x){return x!=null&&!isNaN(x);}).sort(function(x,y){return x-y;});
+    return a.length?a[Math.floor(a.length/2)]:null;}
+  function today(){try{return kyivToday();}catch(e){return new Date().toISOString().slice(0,10);}}
+
+  /* ---- зріз парку ---- */
+  function carsSnapshot(day){
+    var out=[],seen={};
+    function add(pl,st,extra){
+      pl=String(pl||'').trim();if(!pl||seen[pl])return;seen[pl]=1;
+      out.push(Object.assign({auto:pl,стан:st},extra||{}));
+    }
+    try{
+      var notes=(typeof carNotes==='function')?carNotes():{};
+      var drivers=((typeof DATA!=='undefined'&&DATA&&DATA.drivers)||[]);
+      var byPlate={};drivers.forEach(function(o){if(o&&o.plate_norm)byPlate[o.plate_norm]=o;});
+      var fleet=[];
+      try{fleet=getFleet()||[];}catch(e){}
+      if(!fleet.length){try{fleet=JSON.parse(localStorage.getItem('fleet_plates')||'[]');}catch(e){}}
+      fleet.forEach(function(pl){
+        if(typeof isRentedOn==='function'&&isRentedOn(pl,day)){
+          var ri=(typeof rentCarInfo==='function')?rentCarInfo(pl,day):null;
+          add(pl,'подобова оренда',ri&&ri.cur?{до:ri.cur.to,орендар:ri.cur.renter||null,
+            за_добу:r0(rentPerDay(ri.cur)),не_оплачено:r0(rentRest(ri.cur))}:null);
+          return;
+        }
+        var n=notes[pl];
+        if(n&&n.reason&&typeof OUT_OF_SERVICE!=='undefined'&&OUT_OF_SERVICE.has(n.reason)){
+          add(pl,'поза строєм',{причина:n.reason,опис:n.desc||null});return;
+        }
+        var o=byPlate[pl];
+        if(o&&((o.orders||0)>0||(o.net||0)>0)){
+          add(pl,'таксі',{водій:(typeof nameFor==='function')?nameFor(o.name):o.name,
+            поїздок:o.orders||0,чисте:r0(o.net),на_лінії:r1(o.online)});return;
+        }
+        var km=null;
+        try{km=(DATA.gps_cars||{})[pl];}catch(e){}
+        add(pl,'простій',Object.assign({причина:(n&&n.reason)||null},
+          (km!=null&&km>3)?{проїхало_км:r1(km)}:{}));
+      });
+    }catch(e){}
+    return out;
+  }
+
+  function driversSnapshot(){
+    try{
+      if(typeof cmpAggregate!=='function')return null;
+      var save=[window._cmpFrom,window._cmpTo];
+      var all=Object.keys(DAYS||{}).filter(function(k){return /^\d{4}-\d{2}-\d{2}$/.test(k);}).sort();
+      if(!all.length)return null;
+      window._cmpTo=all[all.length-1];
+      window._cmpFrom=all[Math.max(0,all.length-30)];
+      var A=cmpAggregate();
+      var from=window._cmpFrom,to=window._cmpTo;
+      window._cmpFrom=save[0];window._cmpTo=save[1];
+      if(!A||!A.rows||!A.rows.length)return null;
+      var d=A.rows.map(function(a){return {
+        водій:(typeof nameFor==='function')?nameFor(a.name):a.name,
+        авто:a.plate||null, робочих_днів:a.days,
+        чисте:r0(a.net), чисте_за_день:r0(a.netDay), за_годину:r0(a.perHour),
+        поїздок:a.orders, на_лінії_год:r1(a.online), на_замовленнях_год:r1(a.work),
+        без_замовлень_год:r1(a.idle), частка_роботи_пц:pc(a.util),
+        порожній_пробіг_пц:pc(a.emptyPct), грн_за_км:r1(a.realPk!=null?a.realPk:a.pricePk),
+        скасувань_пц:pc(a.cancelPct),
+        тарифи:a.tt?{Економ:pc(a.tEcon/a.tt),Стандарт:pc(a.tStd/a.tt),Комфорт:pc(a.tPrem/a.tt)}:null
+      };}).sort(function(x,y){return (y.чисте||0)-(x.чисте||0);});
+      function m(f){return med(d.map(function(x){return x[f];}));}
+      return {період:{з:from,по:to,днів:A.ndays},водії:d,
+        медіана:{чисте:m('чисте'),чисте_за_день:m('чисте_за_день'),за_годину:m('за_годину'),
+          поїздок:m('поїздок'),на_лінії_год:m('на_лінії_год'),без_замовлень_год:m('без_замовлень_год'),
+          частка_роботи_пц:m('частка_роботи_пц'),порожній_пробіг_пц:m('порожній_пробіг_пц'),
+          грн_за_км:m('грн_за_км'),робочих_днів:m('робочих_днів')}};
+    }catch(e){return null;}
+  }
+
+  function moneySnapshot(){
+    try{
+      var list=(typeof payCalcLocal==='function')?payCalcLocal():[];
+      var owe=[],weOwe=[],openN=0;
+      list.forEach(function(r){
+        if(!r||r.settled)return;
+        var rest=(typeof restOf==='function')?restOf(r):Math.abs(r.diff||0);
+        if(rest<=0.5)return;
+        openN++;
+        var item={водій:r.driver,період:(r.from||'')+' – '+(r.to||''),сума:r0(rest)};
+        if(r.dir==='out')weOwe.push(item);else owe.push(item);
+      });
+      var mon=today().slice(0,7);
+      var rin=(typeof rentIncomeRange==='function')?rentIncomeRange(mon+'-01',mon+'-31'):null;
+      var rentOwed=0,rentActive=0;
+      try{
+        rentAll().forEach(function(r){
+          var x=rentRest(r);if(x>0.5)rentOwed+=x;
+          var t=today();if(t>=r.from&&t<=r.to)rentActive++;
+        });
+      }catch(e){}
+      return {незакритих_розрахунків:openN,винні_нам:owe.slice(0,10),ми_винні:weOwe.slice(0,10),
+        оренда:{активних:rentActive,дохід_за_місяць:rin?rin.sum:null,не_оплачено:r0(rentOwed)}};
+    }catch(e){return null;}
+  }
+
+  var DASH={
+    що_це:'Дашборд таксопарку AVTO PARK Lviv. Дані з Bolt, Uklon і GPS Wialon.',
+    екрани:{
+      'Сьогодні':'Ранок, Зведення, Статус (хто онлайн), Стоять, Трекер',
+      'Аналітика':'Тиждень, Історія, Водії, Порівняння (усі показники за діапазон), Авто',
+      'Гроші':'Брендування, Звіт (розрахунок з водієм), Власнику, Оренда (подобова)',
+      'Дані':'Завантажено, Налаштування'
+    },
+    відомі_обмеження:[
+      'Каса парку (частка власника) ніде не зведена докупи — відсоток і лізинг видно лише в кожному розрахунку окремо.',
+      'Дохід від подобової оренди не входить у зведені екрани — лише у вкладці «Оренда» та в картці авто.',
+      'Простій може бути занижений: у водіїв на двох платформах він рахується по-різному.',
+      'Очікування пасажира приходить лише від Bolt, у водіїв на Uklon це поле порожнє.',
+      'Стоянки за GPS є лише за ті дні, коли завантажували Wialon.'
+    ]
+  };
+
+  function buildContext(){
+    var day=(typeof DATA!=='undefined'&&DATA&&DATA.date)?DATA.date:today();
+    var ctx={
+      сьогодні:{дата:day,вікно:(DATA&&DATA.window)||null,попит:(DATA&&DATA.dayq)||null},
+      авто:carsSnapshot(day),
+      dashboard:DASH
+    };
+    var d=driversSnapshot();if(d)ctx.водії_за_30_днів=d;
+    var m=moneySnapshot();if(m)ctx.гроші=m;
+    return ctx;
+  }
+
+  /* ---- вікно ---- */
+  function render(panel){
+    var box=panel.querySelector('.chat-msgs');
+    box.innerHTML=hist.map(function(m){
+      return '<div class="chat-m '+(m.role==='user'?'me':'ai')+'">'+esc(m.content).replace(/\n/g,'<br>')+'</div>';
+    }).join('')||'<div class="chat-hint">Спитай про що завгодно з парку. Наприклад:<br>'
+      +'<button type="button" class="chat-ex">Розкажи про стан авто</button>'
+      +'<button type="button" class="chat-ex">Хто багато катає, а заробітку немає</button>'
+      +'<button type="button" class="chat-ex">Скільки мені винні зараз</button>'
+      +'<button type="button" class="chat-ex">Які авто простоюють і чому</button></div>';
+    box.scrollTop=box.scrollHeight;
+  }
+
+  function send(panel,text){
+    text=String(text||'').trim();
+    if(!text)return;
+    if(hist.length>=MAX_MSGS){
+      hist=hist.slice(-(MAX_MSGS-2));
+    }
+    hist.push({role:'user',content:text});
+    render(panel);
+    var box=panel.querySelector('.chat-msgs');
+    var wait=document.createElement('div');
+    wait.className='chat-m ai wait';wait.textContent='Думаю…';
+    box.appendChild(wait);box.scrollTop=box.scrollHeight;
+    var inp=panel.querySelector('.chat-inp');
+    inp.disabled=true;
+    if(!lastCtx)lastCtx=buildContext();
+    fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({task:'chat',payload:lastCtx,messages:hist})})
+      .then(function(r){return r.json();})
+      .then(function(j){
+        inp.disabled=false;
+        if(!j||!j.ok){hist.push({role:'assistant',content:'Не вийшло: '+((j&&j.error)||'невідома помилка')});}
+        else{hist.push({role:'assistant',content:j.text||'(порожня відповідь)'});
+          panel.querySelector('.chat-tok').textContent=((j.tokens&&j.tokens.in)||0)+' → '+((j.tokens&&j.tokens.out)||0)+' токенів';}
+        render(panel);inp.focus();
+      })
+      .catch(function(e){
+        inp.disabled=false;
+        hist.push({role:'assistant',content:'Помилка мережі: '+e.message});
+        render(panel);
+      });
+  }
+
+  function build(){
+    var p=document.createElement('div');
+    p.id='askPanel';p.className='chat-panel';p.hidden=true;
+    p.innerHTML='<div class="chat-h"><span class="chat-t">Спитати про парк</span>'
+      +'<span class="chat-tok"></span>'
+      +'<button type="button" class="chat-new" title="Почати нову розмову">нова</button>'
+      +'<button type="button" class="chat-x" title="Закрити">\u2715</button></div>'
+      +'<div class="chat-msgs"></div>'
+      +'<div class="chat-foot"><textarea class="chat-inp" rows="1" placeholder="Напиши питання…"></textarea>'
+      +'<button type="button" class="chat-send">\u2191</button></div>';
+    document.body.appendChild(p);
+    var inp=p.querySelector('.chat-inp');
+    p.querySelector('.chat-x').onclick=function(){p.hidden=true;};
+    p.querySelector('.chat-new').onclick=function(){hist=[];lastCtx=null;render(p);
+      p.querySelector('.chat-tok').textContent='';};
+    p.querySelector('.chat-send').onclick=function(){send(p,inp.value);inp.value='';inp.style.height='auto';};
+    inp.onkeydown=function(e){
+      if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send(p,inp.value);inp.value='';inp.style.height='auto';}
+    };
+    inp.oninput=function(){inp.style.height='auto';inp.style.height=Math.min(inp.scrollHeight,120)+'px';};
+    p.querySelector('.chat-msgs').onclick=function(e){
+      var b=e.target.closest?e.target.closest('.chat-ex'):null;
+      if(b)send(p,b.textContent);
+    };
+    render(p);
+    return p;
+  }
+
+  function init(){
+    if(document.getElementById('askBtn'))return;
+    var btn=document.createElement('button');
+    btn.id='askBtn';btn.type='button';btn.className='askbtn';
+    btn.title='Спитати про парк';
+    btn.innerHTML='<span>Спитати</span>';
+    document.body.appendChild(btn);
+    var panel=null;
+    btn.onclick=function(){
+      if(!panel)panel=build();
+      panel.hidden=!panel.hidden;
+      if(!panel.hidden){lastCtx=buildContext();
+        setTimeout(function(){try{panel.querySelector('.chat-inp').focus();}catch(e){}},60);}
+    };
+    /* показувати кнопку лише коли додаток відкритий */
+    function vis(){
+      var app=document.getElementById('app');
+      btn.style.display=(app&&!app.classList.contains('hide'))?'':'none';
+    }
+    vis();setInterval(vis,1500);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
+  else init();
+})();
+</script>
 </body></html>
+
 
 
 
