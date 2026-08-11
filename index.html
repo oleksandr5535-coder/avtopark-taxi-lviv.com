@@ -1365,6 +1365,28 @@ button{transition:background .15s,color .15s,border-color .15s,opacity .15s}
   border:1px solid var(--warn-line);color:var(--warn-tx);font-size:12.5px;line-height:1.45}
 .carmiss b{font-family:var(--mono)}
 @media (max-width:460px){.crdlg-g{grid-template-columns:1fr}}
+
+
+/* вибір точних дат для розбору */
+.airange{display:flex;align-items:flex-end;gap:9px;flex-wrap:wrap;margin-top:10px;
+  padding:11px 13px;background:var(--soft);border:1px solid var(--line);border-radius:var(--r-md)}
+.airange[hidden]{display:none}
+.airange label{display:flex;flex-direction:column;gap:4px;font-size:10.5px;
+  font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.airange input{padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-sm);
+  font:inherit;font-family:var(--mono);font-size:12.5px;background:var(--panel);color:var(--ink)}
+.airange-n{font-family:var(--mono);font-size:11.5px;color:var(--muted);padding-bottom:9px}
+
+
+.aistale{margin:0;padding:10px 12px;border-radius:var(--r-sm);
+  background:var(--warn-bg);border:1px solid var(--warn-line);
+  color:var(--warn-tx);font-size:12.5px;line-height:1.45}
+
+
+.airawtext{font-size:13.5px;line-height:1.6;color:var(--ink2);white-space:normal;word-break:break-word}
+.aicut{margin:0 0 9px;padding:9px 11px;border-radius:var(--r-sm);
+  background:var(--warn-bg);border:1px solid var(--warn-line);
+  color:var(--warn-tx);font-size:12px;line-height:1.45}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head><body>
 <script>try{var _th=localStorage.getItem("theme");if(_th)document.documentElement.setAttribute("data-theme",_th);}catch(e){}</script>
@@ -3607,7 +3629,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=43;
+var APP_BUILD_N=46;
 var APP_BUILD='збірка 10.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
@@ -5270,7 +5292,9 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
    Період на вибір: обраний день, поточний тиждень, 7 або 14 днів.
    Збирає ВЖЕ ПОРАХОВАНІ показники з DAYS. Нічого не рахує заново. */
 (function(){
-  var PERIODS=[{k:'day',t:'Обраний день'},{k:'week',t:'Цей тиждень'},{k:'d7',t:'7 днів'},{k:'d14',t:'14 днів'}];
+  var PERIODS=[{k:'day',t:'Обраний день'},{k:'week',t:'Цей тиждень'},{k:'d7',t:'7 днів'},
+               {k:'d14',t:'14 днів'},{k:'custom',t:'Свої дні'}];
+  var CF='',CT='';   /* свій період: з / по */
   function r1(v){return v==null?null:Math.round(v*10)/10;}
   function r0(v){return v==null?null:Math.round(v);}
   function med(a){a=a.filter(function(x){return x!=null&&!isNaN(x);}).sort(function(x,y){return x-y;});
@@ -5308,8 +5332,23 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
     var all=allKeys(),cur=curDay();
     if(period==='day')return all.filter(function(k){return k===cur;});
     if(period==='week'){var wk=weekKeysOf(cur);return all.filter(function(k){return wk.indexOf(k)>=0;});}
+    if(period==='custom'){
+      if(!CF||!CT)return [];
+      var a=CF,b=CT;
+      if(b<a){var z=a;a=b;b=z;}
+      return all.filter(function(k){return k>=a&&k<=b;});
+    }
     if(period==='d7')return all.slice(-7);
     return all.slice(-14);
+  }
+  /* межі за замовчуванням для «своїх днів» */
+  function defRange(){
+    var all=allKeys();
+    if(!all.length)return ['',''];
+    var to=curDay()||all[all.length-1];
+    var i=all.indexOf(to);if(i<0)i=all.length-1;
+    var from=all[Math.max(0,i-13)];
+    return [from,to];
   }
   /* Чому немає стоянок: перевіряє кожен день окремо й називає причину. */
   function gpsDiag(name,period){
@@ -5458,6 +5497,21 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
     var e=String(t||'').replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});
     return '<div class="aimsg">'+e.replace(/\n/g,'<br>')+'</div>';
   }
+  /* Якщо розбір на розділи нічого не дав — показуємо сирий текст,
+     а не порожнечу. Тиха відмова гірша за некрасиву відповідь. */
+  function safeFmt(t,fn){
+    var h='';
+    try{h=fn(t);}catch(e){h='';}
+    if(h&&h.replace(/<[^>]*>/g,'').trim())return h;
+    var raw=String(t||'').replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});
+    if(!raw.trim())return '<div class="aierr">Модель повернула порожню відповідь. Спробуй ще раз.</div>';
+    return '<div class="airawtext">'+raw.replace(/\n/g,'<br>')+'</div>';
+  }
+  function stopNote(j){
+    if(j&&j.stop==='max_tokens')
+      return '<div class="aicut">Відповідь дійшла до межі довжини і могла обірватись. Спробуй коротший період.</div>';
+    return '';
+  }
   function build(name){
     var period='d14',lastText='';
     var box=document.createElement('div');
@@ -5466,6 +5520,9 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
       +'<div class="aiper">'+PERIODS.map(function(p){
           return '<button type="button" class="aichip'+(p.k==='d14'?' on':'')+'" data-p="'+p.k+'">'+p.t+'</button>';
         }).join('')+'</div>'
+      +'<div class="airange" hidden><label>з<input type="date" class="ai-f"></label>'
+      +'<label>по<input type="date" class="ai-t"></label>'
+      +'<span class="airange-n"></span></div>'
       +'<div class="aiacts"><button type="button" class="aibtn" data-mode="driver">Розібрати</button>'
       +'<button type="button" class="aibtn alt" data-mode="msg">Написати водієві</button>'
       +'<button type="button" class="aichart" title="Показати графік">графік</button>'
@@ -5518,15 +5575,30 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
       var d=collect(name,period);
       sub.textContent=d.days.length
         ? (d.days.length===1?('день '+d.period.from):(d.period.from+' \u2013 '+d.period.to+' \u00b7 '+d.days.length+' дн.'))
-        : 'немає даних за цей період';
+        : (period==='custom'?'у цьому діапазоні немає днів із даними':'немає даних за цей період');
       return d;
     }
+    var rng=box.querySelector('.airange'),fI=box.querySelector('.ai-f'),tI=box.querySelector('.ai-t');
+    var rngN=box.querySelector('.airange-n');
+    (function(){var dr=defRange();CF=dr[0];CT=dr[1];fI.value=CF;tI.value=CT;})();
+    function syncRange(){
+      CF=fI.value;CT=tI.value;
+      var d=label();
+      rngN.textContent=d?(d.days.length+' дн. з даними'):'немає даних';
+      out.innerHTML='';copyBtn.hidden=true;chBox.hidden=true;
+    }
+    fI.addEventListener('change',syncRange);
+    tI.addEventListener('change',syncRange);
+
     box.querySelector('.aiper').onclick=function(e){
       var b=e.target.closest?e.target.closest('.aichip'):null;
       if(!b)return;
       period=b.getAttribute('data-p');
       [].forEach.call(box.querySelectorAll('.aichip'),function(x){x.classList.toggle('on',x===b);});
-      out.innerHTML='';copyBtn.hidden=true;chBox.hidden=true;rawBox.hidden=true;label();
+      rng.hidden=(period!=='custom');
+      out.innerHTML='';copyBtn.hidden=true;chBox.hidden=true;rawBox.hidden=true;
+      var d=label();
+      if(period==='custom')rngN.textContent=d?(d.days.length+' дн. з даними'):'немає даних';
     };
     function run(mode,btn){
       var data;
@@ -5542,7 +5614,7 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
           btn.disabled=false;btn.textContent=old;
           if(!j||!j.ok){out.innerHTML='<div class="aierr">'+((j&&j.error)||'Не вдалось отримати відповідь')+'</div>';return;}
           lastText=j.text||'';
-          out.innerHTML=(mode==='msg'?fmtMsg(lastText):fmt(lastText))
+          out.innerHTML=(mode==='msg'?safeFmt(lastText,fmtMsg):safeFmt(lastText,fmt))+stopNote(j)
             +(mode==='msg'
                ? '<div class="aiwarn">Перечитай перед відправкою. Числа з твоєї бази, формулювання \u2014 машинне.</div>'
                : '<div class="aiwarn">Числа взяті з твоєї бази. Розділ «Здогад» \u2014 припущення, не встановлена причина.</div>')
@@ -5774,6 +5846,21 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
     return out;
   }
 
+  /* Якщо розбір на розділи нічого не дав — показуємо сирий текст,
+     а не порожнечу. Тиха відмова гірша за некрасиву відповідь. */
+  function safeFmt(t,fn){
+    var h='';
+    try{h=fn(t);}catch(e){h='';}
+    if(h&&h.replace(/<[^>]*>/g,'').trim())return h;
+    var raw=String(t||'').replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});
+    if(!raw.trim())return '<div class="aierr">Модель повернула порожню відповідь. Спробуй ще раз.</div>';
+    return '<div class="airawtext">'+raw.replace(/\n/g,'<br>')+'</div>';
+  }
+  function stopNote(j){
+    if(j&&j.stop==='max_tokens')
+      return '<div class="aicut">Відповідь дійшла до межі довжини і могла обірватись. Спробуй коротший період.</div>';
+    return '';
+  }
   function build(){
     var span=1,lastText='';
     var box=document.createElement('div');
@@ -5826,7 +5913,7 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
           btn.disabled=false;btn.textContent='Розібрати ще раз';
           if(!j||!j.ok){out.innerHTML='<div class="aierr">'+((j&&j.error)||'Не вдалось отримати відповідь')+'</div>';return;}
           lastText=j.text||'';
-          out.innerHTML=fmt(lastText)
+          out.innerHTML=safeFmt(lastText,fmt)+stopNote(j)
             +'<div class="aiwarn">Розклад змін порахований у дашборді, не моделлю. Розділ «Здогад» — припущення.</div>'
             +'<div class="aifoot">'+(j.model||'')+' \u00b7 '+((j.tokens&&j.tokens.in)||0)+' \u2192 '+((j.tokens&&j.tokens.out)||0)+' токенів</div>';
           copyBtn.hidden=false;copyBtn.textContent='Копіювати';
@@ -6357,6 +6444,27 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
     if(guess)out+='</div>';
     return out;
   }
+  /* Екран «Порівняння» перемальовується повністю при будь-якій дії.
+     Тому відповідь тримаємо ТУТ, поза розміткою, і повертаємо,
+     якщо діапазон не змінився. Інакше відповідь зникала б від кожного кліку. */
+  var SAVED={key:'',text:'',tok:''};
+  function rangeKey(d){return d?(d.period.from+'|'+d.period.to+'|'+d.drivers.length):'';}
+
+  /* Якщо розбір на розділи нічого не дав — показуємо сирий текст,
+     а не порожнечу. Тиха відмова гірша за некрасиву відповідь. */
+  function safeFmt(t,fn){
+    var h='';
+    try{h=fn(t);}catch(e){h='';}
+    if(h&&h.replace(/<[^>]*>/g,'').trim())return h;
+    var raw=String(t||'').replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});
+    if(!raw.trim())return '<div class="aierr">Модель повернула порожню відповідь. Спробуй ще раз.</div>';
+    return '<div class="airawtext">'+raw.replace(/\n/g,'<br>')+'</div>';
+  }
+  function stopNote(j){
+    if(j&&j.stop==='max_tokens')
+      return '<div class="aicut">Відповідь дійшла до межі довжини і могла обірватись. Спробуй коротший період.</div>';
+    return '';
+  }
   function build(){
     var lastText='';
     var box=document.createElement('div');
@@ -6397,9 +6505,11 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
           btn.disabled=false;btn.textContent='Розібрати ще раз';
           if(!j||!j.ok){out.innerHTML='<div class="aierr">'+((j&&j.error)||'Не вдалось отримати відповідь')+'</div>';return;}
           lastText=j.text||'';
-          out.innerHTML=fmt(lastText)
+          SAVED.key=rangeKey(data);SAVED.text=lastText;
+          SAVED.tok=(j.model||'')+' \u00b7 '+((j.tokens&&j.tokens.in)||0)+' \u2192 '+((j.tokens&&j.tokens.out)||0)+' токенів';
+          out.innerHTML=safeFmt(lastText,fmt)+stopNote(j)
             +'<div class="aiwarn">Числа ті самі, що в таблиці нижче. Розділ «Здогад» — припущення, не встановлена причина.</div>'
-            +'<div class="aifoot">'+(j.model||'')+' \u00b7 '+((j.tokens&&j.tokens.in)||0)+' \u2192 '+((j.tokens&&j.tokens.out)||0)+' токенів</div>';
+            +'<div class="aifoot">'+SAVED.tok+'</div>';
           copyBtn.hidden=false;copyBtn.textContent='Копіювати';
         })
         .catch(function(e){
@@ -6416,7 +6526,20 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
       try{if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(lastText).then(done,fb);else fb();}
       catch(e){fb();}
     };
-    label();
+    /* повернути попередню відповідь, якщо діапазон той самий */
+    (function(){
+      var d=label();
+      if(d&&SAVED.text&&SAVED.key===rangeKey(d)){
+        lastText=SAVED.text;
+        out.innerHTML=safeFmt(lastText,fmt)
+          +'<div class="aiwarn">Числа ті самі, що в таблиці нижче. Розділ «Здогад» — припущення, не встановлена причина.</div>'
+          +'<div class="aifoot">'+SAVED.tok+'</div>';
+        copyBtn.hidden=false;
+        btn.textContent='Розібрати ще раз';
+      }else if(d&&SAVED.text){
+        out.innerHTML='<p class="aistale">Діапазон змінився — попередній розбір застарів. Натисни «Розібрати період».</p>';
+      }
+    })();
     return box;
   }
   function attach(){
