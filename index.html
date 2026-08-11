@@ -790,7 +790,7 @@ input[type=date],input[type=number],input[type=time]{
 /* Один вигляд для вибору дня і для діапазону на «Порівнянні».           */
 /* Логіка вибору дат не змінена — переписано лише оформлення клітинок.   */
 /* ===================================================================== */
-.dcal-pop{position:absolute;top:calc(100% + 8px);left:0;z-index:120;
+.dcal-pop{position:absolute;top:calc(100% + 8px);left:0;z-index:650;
   width:290px;max-width:88vw;background:var(--panel);border:1px solid var(--line);
   border-radius:16px;box-shadow:var(--sh-pop);padding:14px;
   animation:dcalIn .18s ease}
@@ -863,7 +863,9 @@ input[data-dcal]{cursor:pointer;font-family:var(--mono);font-variant-numeric:tab
 input[data-dcal]:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
 
 /* плаваючий календар (для полів дати) */
-.dcal-float{position:fixed;z-index:400;width:290px;max-width:calc(100vw - 24px);
+/* 700 — вище за модальні вікна (.crdlg = 500): календар відкривається
+   ЗСЕРЕДИНИ вікна оренди, тож має бути над ним, інакше ховається позаду. */
+.dcal-float{position:fixed;z-index:700;width:290px;max-width:calc(100vw - 24px);
   background:var(--panel);border:1px solid var(--line);border-radius:16px;
   box-shadow:var(--sh-pop);padding:14px;animation:dcalIn .18s ease}
 .dcal-float[hidden]{display:none}
@@ -1020,7 +1022,7 @@ button{transition:background .15s,color .15s,border-color .15s,opacity .15s}
 .sfx-btn::after{content:"\25BE";opacity:.45;font-size:10px;flex:none}
 .sfx.on .sfx-btn{border-color:var(--amber);box-shadow:0 0 0 3px var(--warn-bg)}
 
-.sfx-pop{position:absolute;z-index:300;top:calc(100% + 6px);left:0;
+.sfx-pop{position:absolute;z-index:600;top:calc(100% + 6px);left:0;
   width:280px;max-width:78vw;background:var(--panel);
   border:1px solid var(--line);border-radius:var(--r-md);
   box-shadow:var(--sh-pop);padding:8px;animation:dcalIn .16s ease}
@@ -3629,7 +3631,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=46;
+var APP_BUILD_N=47;
 var APP_BUILD='збірка 10.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
@@ -4882,6 +4884,8 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
     var list=document.querySelectorAll('input[type=date]');
     for(var i=0;i<list.length;i++)attach(list[i]);
   }
+  /* щоб нові вікна могли підключити календар одразу, без очікування спостерігача */
+  window.dcalScan=scan;
   function init(){
     scan();
     try{
@@ -6316,6 +6320,7 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
       +'<div class="crdlg-a"><button type="button" class="crdlg-no">Скасувати</button>'
       +'<button type="button" class="crdlg-ok">Записати оренду</button></div></div>';
     document.body.appendChild(box);
+    if(typeof dcalScan==='function')dcalScan();   // календар на полях дати одразу
     function close(){box.remove();if(typeof renderCars==='function')renderCars();}
     box.querySelector('.crdlg-no').onclick=close;
     box.onclick=function(e){if(e.target===box)close();};
