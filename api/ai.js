@@ -11,7 +11,10 @@ export const maxDuration = 60;
 
 const MODEL = 'claude-sonnet-5';
 const MAX_BODY = 60000;        // символів у payload
-const MAX_TOKENS = 1600;   // менше — і відповідь обривається на півслові
+// Ліміт довжини відповіді. Розбір по всіх водіях довший за розбір одного —
+// тому ліміт свій для кожного типу задачі.
+const MAX_TOKENS = 1600;
+const TOKENS_BY_TASK = { compare: 3000, park: 2400, week: 2000 };
 
 const TASKS = {
   driver: {
@@ -379,7 +382,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: MAX_TOKENS,
+        max_tokens: TOKENS_BY_TASK[taskName] || MAX_TOKENS,
         system: task.system,
         messages: [{ role: 'user', content: task.prompt(payload) }],
       }),
@@ -393,17 +396,29 @@ export default async function handler(req, res) {
     if (j.error) throw new Error(j.error.message || 'Помилка API');
     if (!Array.isArray(j.content)) throw new Error('Порожня відповідь');
 
-    const out = j.content
+    let out = j.content
       .filter(x => x && x.type === 'text')
       .map(x => x.text)
       .join('\n')
       .trim();
+
+    // Якщо блоків типу text не знайшлось — не мовчати, а показати, що прийшло.
+    if (!out) {
+      const types = j.content.map(x => (x && x.type) || '?').join(', ');
+      out = j.content
+        .map(x => (x && (x.text || x.content || '')) || '')
+        .join('\n')
+        .trim();
+      if (!out) throw new Error('Модель повернула відповідь без тексту (блоки: ' + types + ')');
+    }
 
     const u = j.usage || {};
     return res.status(200).send(JSON.stringify({
       ok: true,
       text: out,
       model: j.model || MODEL,
+      stop: j.stop_reason || '',
+      limit: TOKENS_BY_TASK[taskName] || MAX_TOKENS,
       tokens: { in: u.input_tokens || 0, out: u.output_tokens || 0 },
     }));
 
