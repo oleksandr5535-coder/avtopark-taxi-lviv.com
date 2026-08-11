@@ -1332,6 +1332,39 @@ button{transition:background .15s,color .15s,border-color .15s,opacity .15s}
   font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap}
 .carrent .cr-go:hover{color:var(--ink);background:var(--soft)}
 .carcard select:disabled{opacity:.45;cursor:not-allowed}
+
+
+/* ---- запис оренди з екрана «Авто» ---- */
+.crdlg{position:fixed;inset:0;z-index:500;background:rgba(20,22,27,.45);
+  display:flex;align-items:center;justify-content:center;padding:18px;
+  animation:dcalIn .16s ease}
+.crdlg-in{width:460px;max-width:100%;max-height:90vh;overflow:auto;
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);
+  box-shadow:var(--sh-pop);padding:18px 20px}
+.crdlg-h{font-size:14px;font-weight:800;letter-spacing:-.01em;color:var(--ink)}
+.crdlg-h b{font-family:var(--mono)}
+.crdlg-p{margin:7px 0 14px;font-size:12.5px;line-height:1.5;color:var(--muted)}
+.crdlg-g{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.crdlg-g label{display:flex;flex-direction:column;gap:5px;font-size:10.5px;
+  font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.crdlg-g label:nth-child(3),.crdlg-g label:nth-child(4){grid-column:1 / -1}
+.crdlg-g input{padding:10px 11px;border:1px solid var(--line);border-radius:var(--r-sm);
+  font:inherit;font-size:13.5px;background:var(--panel);color:var(--ink)}
+.crdlg-g input[type=number],.crdlg-g input[type=date]{font-family:var(--mono)}
+.crdlg-a{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.crdlg-no{border:1px solid var(--line);background:var(--panel);color:var(--ink2);
+  border-radius:var(--r-sm);padding:10px 15px;font:inherit;font-size:12.5px;
+  font-weight:700;cursor:pointer}
+.crdlg-ok{border:none;background:var(--inkp);color:var(--inkp-fg);
+  border-radius:var(--r-sm);padding:10px 17px;font:inherit;font-size:12.5px;
+  font-weight:700;cursor:pointer}
+.crdlg-ok:hover{opacity:.88}
+
+.carmiss{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin-top:10px;
+  padding:10px 12px;border-radius:var(--r-md);background:var(--warn-bg);
+  border:1px solid var(--warn-line);color:var(--warn-tx);font-size:12.5px;line-height:1.45}
+.carmiss b{font-family:var(--mono)}
+@media (max-width:460px){.crdlg-g{grid-template-columns:1fr}}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head><body>
 <script>try{var _th=localStorage.getItem("theme");if(_th)document.documentElement.setAttribute("data-theme",_th);}catch(e){}</script>
@@ -3574,7 +3607,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=41;
+var APP_BUILD_N=42;
 var APP_BUILD='збірка 10.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
@@ -3758,7 +3791,8 @@ function carDriver(plate){var nt=(typeof carNotes==='function'?carNotes()[plate]
   if(hist){var ap=(dP(hist)||{}).plate;if(ap&&ap!==plate)return '';}
   return hist;}
 function carDriverName(plate){var d=carDriver(plate);return d?nameFor(d):'';}
-const REASONS=['Готове авто — немає водія','Водій на вихідному','Водій захворів','Утримуємо як підмінне','Не готове до таксі / готуємо до випуску','На ремонті / ТО','ДТП / пошкоджено','Інше'];
+const REASONS=['Готове авто — немає водія','Водій на вихідному','Водій захворів','Утримуємо як підмінне','Подобова оренда','Не готове до таксі / готуємо до випуску','На ремонті / ТО','ДТП / пошкоджено','Інше'];
+const RENT_REASON='Подобова оренда';
 const OUT_OF_SERVICE=new Set(['Не готове до таксі / готуємо до випуску','На ремонті / ТО','ДТП / пошкоджено']);
 /* ===== ПОДОБОВА ОРЕНДА =====
    Оренда — це стан АВТО на період, а не водій. Дохід іде в касу парку окремо
@@ -3871,7 +3905,10 @@ if(_ri&&_ri.cur){
     +_ri.month_sum.toLocaleString('uk-UA')+' \u20b4</b> за '+_ri.month_days+' дн.</div>'
     +'<button type="button" class="cr-go" onclick="showView(&quot;rent&quot;)">відкрити оренду</button></div>';
 }
-var _lock=(_ri&&_ri.cur)?' disabled title="Стан задано орендою — міняється у вкладці «Оренда»"':'';
+var _lock=(_ri&&_ri.cur)?' disabled title="Стан задано орендою — знімається у вкладці «Оренда»"':'';
+var _miss=(!(_ri&&_ri.cur)&&typeof rentMissingHint==='function')?rentMissingHint(c.plate):null;
+if(_miss)_rentBox+='<div class="carmiss">Авто проїхало <b>'+_miss+' км</b> за GPS, але поїздок немає і оренда не записана. Схоже, забули записати подобову оренду.'
+  +'<button type="button" class="cr-go" onclick="carRentForm(&quot;'+c.plate+'&quot;)">записати оренду</button></div>';
 return `<div class="carcard${(_ri&&_ri.cur)?' rented':''}"><div class="carhd"><b>${c.plate}</b>${c.car?' · '+c.car:''}${_dname?' · '+rpt_esc(_dname):''}${_rentBadge}<span class="cstate">${(_ri&&_ri.cur)?'подобова оренда':carStat(c)}</span></div>
 ${_rentBox}
 <div class="carnote"><select class="cdriver" data-pl="${c.plate}" title="Водій на авто">${_dopts}</select><select class="creason" data-pl="${c.plate}"${_lock}>${opts}</select><textarea class="cdesc" data-pl="${c.plate}" placeholder="Опис: чому не їздило">${nt.desc||''}</textarea></div></div>`;}
@@ -4017,7 +4054,10 @@ if(_rented.length){
 }
 if(_broken.length){html+=`<div class="osgroup"><div class="osg-h">🔧 Поза лінією — не рахується (${_broken.length})</div><div class="osg-note">Ці авто не враховуються ні як активні, ні в робочих авто, ні в недозаробітку.</div>`+_broken.map(c=>carCard(c,notes)).join('')+`</div>`;}
 el.innerHTML=html;
-el.querySelectorAll('.creason').forEach(x=>x.onchange=()=>{const n=carNotes()[x.dataset.pl]||{};saveCarNote(x.dataset.pl,{reason:x.value,desc:n.desc||'',driver:n.driver});renderCars();kpis();renderStandingMini();if(typeof renderFleetMini==='function')renderFleetMini();});
+el.querySelectorAll('.creason').forEach(x=>x.onchange=()=>{
+  if(x.value===RENT_REASON&&typeof carRentForm==='function'){carRentForm(x.dataset.pl);return;}
+  const n=carNotes()[x.dataset.pl]||{};saveCarNote(x.dataset.pl,{reason:x.value,desc:n.desc||'',driver:n.driver});
+  renderCars();kpis();renderStandingMini();if(typeof renderFleetMini==='function')renderFleetMini();});
 el.querySelectorAll('.cdriver').forEach(x=>x.onchange=()=>{const n=carNotes()[x.dataset.pl]||{};var v=x.value;var patch={reason:n.reason||'',desc:n.desc||''};if(v==='__none__')patch.driver='__none__';else if(v!=='')patch.driver=decodeURIComponent(v);saveCarNote(x.dataset.pl,patch);renderCars();if(typeof kpis==='function')kpis();if(typeof renderMorning==='function')renderMorning();if(typeof renderStandingMini==='function')renderStandingMini();});
 el.querySelectorAll('.cdesc').forEach(x=>x.oninput=()=>{const n=carNotes()[x.dataset.pl]||{};saveCarNote(x.dataset.pl,{reason:n.reason||'',desc:x.value,driver:n.driver});});}
 const fleetTxt=document.getElementById('fleetTxt');
@@ -6157,5 +6197,88 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
   };
 })();
 </script>
+<script>
+/* ДИЗАЙН-ШАР v24 — оренда записується прямо з екрана «Авто».
+   Причина «Подобова оренда» відкриває коротку форму: дати, сума, орендар.
+   Запис оренди — єдине джерело правди; стан авто виводиться з нього автоматично.
+   Плюс автоматичне попередження: авто їздило за GPS, але ні поїздок, ні оренди. */
+(function(){
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function today(){try{return kyivToday();}catch(e){return new Date().toISOString().slice(0,10);}}
+  function uid(){return 'r'+Date.now()+'-'+Math.random().toString(36).slice(2,6);}
+
+  window.carRentForm=function(plate){
+    var d=(typeof DATA!=='undefined'&&DATA&&DATA.date)?DATA.date:today();
+    var box=document.getElementById('carRentDlg');
+    if(box)box.remove();
+    box=document.createElement('div');
+    box.id='carRentDlg';
+    box.className='crdlg';
+    box.innerHTML='<div class="crdlg-in"><div class="crdlg-h">Подобова оренда · <b>'+esc(plate)+'</b></div>'
+      +'<p class="crdlg-p">Авто на ці дні не рахуватиметься простоєм, а сума потрапить у дохід парку окремо від таксі.</p>'
+      +'<div class="crdlg-g">'
+      +'<label>З<input type="date" id="crdF" value="'+d+'"></label>'
+      +'<label>По<input type="date" id="crdT" value="'+d+'"></label>'
+      +'<label>Сума за весь період, \u20b4<input type="number" inputmode="decimal" id="crdS" placeholder="0"></label>'
+      +'<label>Орендар<input type="text" id="crdW" placeholder="імʼя або телефон"></label>'
+      +'<label>Пробіг на початку<input type="number" inputmode="numeric" id="crdK" placeholder="—"></label>'
+      +'</div>'
+      +'<div class="crdlg-a"><button type="button" class="crdlg-no">Скасувати</button>'
+      +'<button type="button" class="crdlg-ok">Записати оренду</button></div></div>';
+    document.body.appendChild(box);
+    function close(){box.remove();if(typeof renderCars==='function')renderCars();}
+    box.querySelector('.crdlg-no').onclick=close;
+    box.onclick=function(e){if(e.target===box)close();};
+    box.querySelector('.crdlg-ok').onclick=function(){
+      var from=document.getElementById('crdF').value,to=document.getElementById('crdT').value;
+      var sum=parseFloat(String(document.getElementById('crdS').value||'').replace(',','.'))||0;
+      var who=document.getElementById('crdW').value||'';
+      var km=parseFloat(document.getElementById('crdK').value||'');
+      if(!from||!to){alert('Вкажи дати оренди.');return;}
+      if(to<from){alert('Дата «по» раніша за «з».');return;}
+      if(sum<=0){alert('Вкажи домовлену суму.');return;}
+      var rec={id:uid(),plate:plate,from:from,to:to,sum:sum,renter:who.trim(),
+        km_start:isNaN(km)?null:km,km_end:null,note:'',pays:[],ts:Date.now(),_upd:Date.now()};
+      /* перетин із таксі — найчастіша помилка */
+      var cf=0,ex='';
+      try{
+        var pl=(typeof NPL==='function')?NPL(plate):plate;
+        rentKeys(rec).forEach(function(k){
+          var D=DAYS&&DAYS[k];if(!D||!D.drivers)return;
+          D.drivers.forEach(function(o){
+            if(o&&o.plate_norm===pl&&((o.orders||0)>0)){cf++;if(!ex)ex=k+' ('+o.name+')';}
+          });
+        });
+      }catch(e){}
+      if(cf&&!confirm('У '+cf+' дн. авто виконувало поїздки в таксі, напр. '+ex+'.\nВсе одно записати оренду?'))return;
+      var list=rentAll().slice();list.push(rec);
+      rentSave(list,rentDelSet());
+      /* причина в нотатках не потрібна — стан береться з запису оренди */
+      try{var n=carNotes()[plate]||{};saveCarNote(plate,{reason:'',desc:n.desc||'',driver:n.driver});}catch(e){}
+      close();
+      try{kpis();renderStandingMini();if(typeof renderFleetMini==='function')renderFleetMini();}catch(e){}
+    };
+    setTimeout(function(){try{document.getElementById('crdS').focus();}catch(e){}},60);
+  };
+
+  /* авто їздило за GPS, але ні поїздок, ні оренди — імовірно забутий запис */
+  window.rentMissingHint=function(plate){
+    try{
+      var d=(typeof DATA!=='undefined'&&DATA&&DATA.date)?DATA.date:'';
+      if(!d||!DATA||!DATA.gps_cars)return null;
+      var pl=(typeof NPL==='function')?NPL(plate):plate;
+      var km=DATA.gps_cars[pl];
+      if(km==null||km<15)return null;
+      if(typeof isRentedOn==='function'&&isRentedOn(pl,d))return null;
+      var orders=0;
+      ((DATA.drivers)||[]).forEach(function(o){if(o&&o.plate_norm===pl)orders+=(o.orders||0);});
+      if(orders>0)return null;
+      return Math.round(km);
+    }catch(e){return null;}
+  };
+})();
+</script>
 </body></html>
+
 
