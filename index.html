@@ -1840,6 +1840,36 @@ select:focus,textarea:focus{
 .cp-date .cp-list{max-height:min(300px,46vh)}
 .cp-date .cp-o{font-family:var(--mono);font-size:12.5px}
 .cp-date .cp-g{position:sticky;top:0;background:var(--panel);z-index:1}
+
+
+/* ===================================================================== */
+/* ДИЗАЙН-ШАР v35 — список дат у панелі Звіту не має розпихати рядок.    */
+/* .cpick має flex:1 1 210px — це правильно для картки авто, де поля     */
+/* ділять ширину. У панелі Звіту це розтягувало оболонку на весь         */
+/* вільний простір і виштовхувало кнопки на наступний рядок.            */
+/* ===================================================================== */
+#report .rpt-ctl .cpick{flex:0 0 auto;width:auto;min-width:150px;max-width:230px}
+#report .rpt-ctl .cp-btn{padding:8px 11px;font-size:14px;background:var(--panel)}
+#report .rpt-bar{align-items:flex-end;gap:12px}
+#report .rpt-ctl{flex:0 0 auto}
+
+
+/* ---- календар: власна прокрутка, коли не влазить у екран ---- */
+.dcal-float{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.dcal-float::-webkit-scrollbar{width:8px}
+.dcal-float::-webkit-scrollbar-thumb{background:var(--track);border-radius:8px}
+
+
+/* ---- «Порівняння»: плавне перемикання груп колонок ---- */
+#cmpBody{transition:min-height .18s ease}
+.cmp-ctrl .cmp-btn{transition:background-color .16s ease,border-color .16s ease,color .16s ease}
+/* таблиця не «блимає» при заміні вмісту */
+#cmpBody .cmp-wrap,#cmpBody table{animation:cmpFade .16s ease}
+@keyframes cmpFade{from{opacity:.5}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){
+  #cmpBody{transition:none}
+  #cmpBody .cmp-wrap,#cmpBody table{animation:none}
+}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head><body>
 <script>try{var _th=localStorage.getItem("theme");if(_th)document.documentElement.setAttribute("data-theme",_th);}catch(e){}</script>
@@ -4174,7 +4204,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=70;
+var APP_BUILD_N=73;
 var APP_BUILD='збірка 21.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
@@ -5082,13 +5112,18 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
     return bar+lab;
   }
 
-  window.cmpSort=function(k){var s=window._cmpSort||{k:'perHour',dir:-1};if(s.k===k)s.dir=-s.dir;else{s.k=k;s.dir=-1;}window._cmpSort=s;window.renderCompare();};
+  window.cmpSort=function(k){var s=window._cmpSort||{k:'perHour',dir:-1};if(s.k===k)s.dir=-s.dir;else{s.k=k;s.dir=-1;}window._cmpSort=s;window._cmpPartial=true;window.renderCompare();};
   window.cmpCalToggle=function(){window._cmpCalOpen=!window._cmpCalOpen;window.renderCompare();};
   window.cmpCalStep=function(d){ensureRange();var ym=window._cmpCalYM||window._cmpTo.slice(0,7);var y=+ym.slice(0,4),m=+ym.slice(5,7)-1;var nd=new Date(Date.UTC(y,m+d,1));window._cmpCalYM=nd.getUTCFullYear()+'-'+String(nd.getUTCMonth()+1).padStart(2,'0');window.renderCompare();};
   window.cmpPickRange=function(k){if(!window._cmpPend){window._cmpFrom=k;window._cmpTo=k;window._cmpPend=true;}else{if(k<window._cmpFrom){window._cmpTo=window._cmpFrom;window._cmpFrom=k;}else{window._cmpTo=k;}window._cmpPend=false;}window.renderCompare();};
   window.cmpPreset=function(n){var ad=allDays();if(!ad.length)return;window._cmpTo=ad[ad.length-1];if(n==='all'){window._cmpFrom=ad[0];}else{var f=shiftDay(window._cmpTo,-(n-1));window._cmpFrom=(f<ad[0])?ad[0]:f;}window._cmpPend=false;window._cmpCalOpen=false;window.renderCompare();};
   window.cmpToggleTaxi=function(v){window._cmpTaxiOnly=v;window.renderCompare();};
-  window.cmpGroup=function(g){window._cmpGroup=g;window.renderCompare();};
+  window.cmpGroup=function(g){
+    if(window._cmpGroup===g)return;   /* та сама група — нічого не робимо */
+    window._cmpGroup=g;
+    window._cmpPartial=true;          /* оновити лише таблицю, без стрибка */
+    window.renderCompare();
+  };
 
   function calHtml(){
     ensureRange();
@@ -5204,7 +5239,23 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
         +'</div>';
     }
 
-    el.innerHTML=head+switcher+table+legend+'</div>'+recHtml;
+    /* Перемикач груп і таблиця — в окремому блоці #cmpBody.
+    При зміні групи чи сортування оновлюємо ТІЛЬКИ його, а не весь екран:
+    інакше перемальовується заголовок і кнопки, і сторінка стрибає. */
+    var body='<div id="cmpBody">'+switcher+table+legend+'</div>';
+    var prev=document.getElementById('cmpBody');
+    if(prev&&window._cmpPartial){
+      var h=prev.offsetHeight;
+      prev.style.minHeight=h+'px';
+      prev.outerHTML=body;
+      var now=document.getElementById('cmpBody');
+      if(now){now.style.minHeight=h+'px';
+        requestAnimationFrame(function(){now.style.minHeight='';});}
+      window._cmpPartial=false;
+      return;
+    }
+    window._cmpPartial=false;
+    el.innerHTML=head+body+'</div>'+recHtml;
   };
 
   if(typeof window.showView==='function'){
@@ -5399,6 +5450,9 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
     pop.className='dcal dcal-float';
     pop.hidden=true;
     pop.addEventListener('click',function(e){e.stopPropagation();});
+    /* прокрутка всередині вікна не має його закривати */
+    pop.addEventListener('scroll',function(){innerScroll=true;},true);
+    pop.addEventListener('touchmove',function(e){e.stopPropagation();},{passive:true});
     document.body.appendChild(pop);
     return pop;
   }
@@ -5435,13 +5489,22 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
     if(!target||!pop)return;
     var r=target.getBoundingClientRect();
     var w=pop.offsetWidth||290, h=pop.offsetHeight||330;
+    var vh=window.innerHeight;
     var left=Math.min(Math.max(8,r.left), window.innerWidth-w-8);
-    var top=(r.bottom+8+h<window.innerHeight)?(r.bottom+8):Math.max(8,r.top-h-8);
+    var top;
+    /* Спершу пробуємо під полем, потім над ним. Якщо не влазить ніде
+       (низький екран телефона) — притискаємо до верху й даємо вікну
+       власну прокрутку, щоб було видно всі дні. */
+    if(r.bottom+8+h<vh){top=r.bottom+8;}
+    else if(r.top-h-8>8){top=r.top-h-8;}
+    else{top=8;pop.style.maxHeight=(vh-16)+'px';pop.style.overflowY='auto';}
     pop.style.left=left+'px';
-    pop.style.top=top+'px';
+    pop.style.top=Math.max(8,top)+'px';
   }
   function open(inp){
     ensurePop();
+    /* скинути обмеження з попереднього відкриття */
+    pop.style.maxHeight='';pop.style.overflowY='';
     target=inp;
     var v=(inp.value||'').slice(0,7);
     ym=/^\d{4}-\d{2}$/.test(v)?v:today().slice(0,7);
@@ -5490,14 +5553,16 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
      на місці. Перерахунок на кожну подію давав смикання, тому просто
      закриваємо: гортати сторінку з відкритим календарем сенсу немає. */
   window.addEventListener('resize',function(){if(target)close();});
+  /* Прокрутка СТОРІНКИ закриває календар (він fixed, інакше «зависав» би
+     посеред екрана). Прокрутка ВСЕРЕДИНІ календаря — ні: там свій список
+     днів, і його треба гортати. Позначку ставимо на самому вікні. */
+  var innerScroll=false;
   window.addEventListener('scroll',function(e){
     if(!target)return;
-    /* Прокрутка всередині самого календаря не має його закривати.
-       e.target може бути document або window — тоді contains() падає,
-       тому перевіряємо, що це справді вузол. */
+    if(innerScroll){innerScroll=false;return;}
     try{
       var n=e&&e.target;
-      if(pop&&n&&n.nodeType===1&&pop.contains(n))return;
+      if(pop&&n&&n.nodeType===1&&(n===pop||pop.contains(n)))return;
     }catch(err){}
     close();
   },true);
