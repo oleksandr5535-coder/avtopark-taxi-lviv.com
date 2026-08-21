@@ -169,9 +169,11 @@ font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
 h1{font-size:30px;margin:0;font-weight:820;letter-spacing:-.015em}.accent{color:var(--amber)}
 .sub{font-size:13px;color:var(--ink2);margin-top:7px}
 .daybar{display:flex;align-items:center;gap:11px;margin:18px 0;padding:13px 16px;border-radius:13px;background:var(--panel);border:1px solid var(--line)}
-  /* Був display:none — компонент малювався в невидиме.
-   Ховаємо тільки коли порожній, а не завжди. */
-#daybar:empty{display:none}
+  /* #daybar схований НАВМИСНО: його зміст («Середній темп по парку»)
+   уже показано у великій картці «Темп по парку» на «Зведенні».
+   Не вмикати — буде дублювання. Функція daybar() лишається,
+   бо перемальовується разом з рештою і нічого не коштує. */
+#daybar{display:none}
 .daybar .dot{width:10px;height:10px;border-radius:50%;flex:none}.daybar b{font-weight:750}
 .kpis{margin:16px 0 22px}
   .ovhero{display:flex;gap:14px;flex-wrap:wrap;margin:14px 0 12px}
@@ -4114,7 +4116,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=66;
+var APP_BUILD_N=67;
 var APP_BUILD='збірка 21.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
