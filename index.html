@@ -1662,8 +1662,10 @@ select:focus,textarea:focus{
 .rpt-tablewrap,.cmp-wrap,.sfx-list,.chat-msgs,.airaw-box{
   scrollbar-width:thin;overscroll-behavior:contain}
 
-/* довгі списки — плавне докручування до потрібного місця */
-html{scroll-behavior:smooth}
+/* Плавна прокрутка — ТІЛЬКИ там, де ми її просимо самі (scrollIntoView).
+   На html вона змушувала сторінку «пливти» щоразу, коли браузер
+   прокручував до поля при відкритті календаря на телефоні. */
+@media (min-width:760px){html{scroll-behavior:smooth}}
 
 /* виділення тексту в моно-колонках не тягне зайвого */
 .otable td.r,.rpt-table td.r{user-select:all}
@@ -1801,6 +1803,43 @@ html{scroll-behavior:smooth}
   .liveblk .lb-go{width:32px;height:32px}
   .liveblk .lb-btn{padding:11px;font-size:13px}
 }
+
+
+/* ===================================================================== */
+/* ДИЗАЙН-ШАР v34 — смуга підсумків на «Зведенні».                       */
+/* Була сірою плямою з чорнильного напівпрозорого тла, радіусом 10 і     */
+/* без рамки — єдиний блок, що випадав із загального вигляду карток.     */
+/* ===================================================================== */
+.ovsec{background:var(--soft);border:1px solid var(--line);
+  border-radius:var(--r-lg);padding:13px 16px;gap:8px 22px;
+  font-size:12.5px;color:var(--ink2);box-shadow:var(--sh-card)}
+.ovsec b{color:var(--ink);font-weight:700;margin-right:5px}
+.ovsec span{display:inline-flex;align-items:baseline;white-space:nowrap}
+[data-theme=dark] .ovsec{background:var(--soft)}
+
+/* блок «Не виїхали» — той самий характер, кольори з теми */
+#nonCarsBox{margin-top:10px;background:var(--panel);
+  border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:13px 16px;box-shadow:var(--sh-card)}
+#nonCarsBox.hide{display:none}
+
+@media (max-width:520px){
+  .ovsec{gap:7px 16px;padding:12px 14px;font-size:12px}
+}
+
+
+/* ---- список дат у Звіті: швидкі кнопки й обмежена висота ---- */
+.cp-pop.cp-date{min-width:250px}
+.cp-quick{display:flex;gap:6px;margin-bottom:7px;padding-bottom:7px;
+  border-bottom:1px solid var(--line)}
+.cp-quick button{flex:1;border:1px solid var(--line);background:var(--soft);
+  color:var(--ink2);border-radius:8px;padding:7px 9px;font:inherit;
+  font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap}
+.cp-quick button:hover{background:var(--panel);color:var(--ink);border-color:var(--amber)}
+/* висота списку не залежить від кількості дат */
+.cp-date .cp-list{max-height:min(300px,46vh)}
+.cp-date .cp-o{font-family:var(--mono);font-size:12.5px}
+.cp-date .cp-g{position:sticky;top:0;background:var(--panel);z-index:1}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head><body>
 <script>try{var _th=localStorage.getItem("theme");if(_th)document.documentElement.setAttribute("data-theme",_th);}catch(e){}</script>
@@ -2637,6 +2676,25 @@ function rptHy(k){ if(_rptHy[k])return _rptHy[k]; var d=(typeof DAYS!=='undefine
 function rptDates(){ return (typeof DAYS!=='undefined')?Object.keys(DAYS).sort():[]; }
 function rptLabel(k){ var d=(typeof DAYS!=='undefined')?DAYS[k]:null; return (d&&d.date_label)||k; }
 function rptGlobalFl(){ var m={}; rptDates().forEach(function(k){ var H=rptHy(k); if(!H||!H._parts)return; var src=[].concat(H._parts.bolt_income||[],H._parts.bolt_hist||[]); src.forEach(function(r){var v=r&&r['Водій'];if(v)m[rpt_toks(v).join('|')]=v;}); }); return m; }
+/* Дати згруповані по місяцях: у списку за рік це єдиний спосіб
+   не загубитись. Групи бере наш віджет і показує заголовками. */
+function rptDayOptions(dates,cur){
+  var MON=['Січень','Лютий','Березень','Квітень','Травень','Червень',
+           'Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+  var out='',lastM=null;
+  dates.slice().reverse().forEach(function(k){
+    var mk=k.slice(0,7);
+    if(mk!==lastM){
+      if(lastM)out+='</optgroup>';
+      var y=+k.slice(0,4),m=+k.slice(5,7);
+      out+='<optgroup label="'+(MON[m-1]||'')+' '+y+'">';
+      lastM=mk;
+    }
+    out+='<option value="'+k+'"'+(k===cur?' selected':'')+'>'+rptLabel(k)+'</option>';
+  });
+  if(lastM)out+='</optgroup>';
+  return out;
+}
 function rptDriverList(){ var fl=rptGlobalFl(),lf=rptGlobalLF(),seen={},out=[]; rptDates().forEach(function(k){ var H=rptHy(k); if(!H||!H.drivers)return; H.drivers.forEach(function(o){ if((o.b_comp||0)>0||o.b_hasinc||(o.u_orders||0)>0){ var key=rpt_toks(o.name).join('|'); if(!seen[key]){seen[key]=1; out.push({key:key,name:rpt_name(o.name,fl,lf),raw:o.name,fired:(typeof firedFrom==='function')?firedFrom(o.name):null,gone:(typeof firedGone==='function')?firedGone(o.name):false});} } }); }); out.sort(function(a,b){return a.name.localeCompare(b.name,'uk');}); return out; }
 /* <option>-и для вибору водія: активні зверху, звільнені — окремою групою */
 function rptDrvOptions(drv,cur){
@@ -3020,7 +3078,7 @@ function renderReport(){
   if(!rptTo||!/^\d{4}-\d{2}-\d{2}$/.test(rptTo)||rptTo<dates[0]||rptTo>dates[dates.length-1])rptTo=dates[dates.length-1];
   var bar='<div class="rpt-bar"><div class="rpt-modes"><button class="rpt-tab'+(rptMode==='day'?' on':'')+'" data-m="day">За день</button><button class="rpt-tab'+(rptMode==='range'?' on':'')+'" data-m="range">За період \u00b7 водій</button></div>';
   if(rptMode==='day'){
-    bar+='<div class="rpt-ctl"><label>Дата звіту</label><select id="rptDaySel">'+dates.slice().reverse().map(function(k){return '<option value="'+k+'"'+(k===rptDayKey?' selected':'')+'>'+rptLabel(k)+'</option>';}).join('')+'</select></div>';
+    bar+='<div class="rpt-ctl"><label>Дата звіту</label><select id="rptDaySel">'+rptDayOptions(dates,rptDayKey)+'</select></div>';
   }else{
     var drv=rptDriverList();if(!rptDrvKey&&drv.length)rptDrvKey=drv[0].key;
     bar+='<div class="rpt-ctl"><label>Водій</label><select id="rptDrvSel">'+rptDrvOptions(drv,rptDrvKey)+'</select></div>';
@@ -3354,7 +3412,7 @@ function kpis(){const S=shown();const k=S.reduce((s,o)=>s+(o.gross||0),0),net=S.
 const stt=S.map(o=>effStartMin(o)).filter(x=>x!=null).sort((a,b)=>a-b);const sh=stt.length?stt[Math.floor(stt.length/2)]:null;
 const sm=hm(sh);
 const uk=S.reduce((s,o)=>s+(o.unacc_km||0),0);const fl=fleetStats();
-const pv=S.map(o=>o.pace_net).filter(x=>x!=null).sort((a,b)=>a-b);const np=pv.length?Math.round(pv[Math.floor(pv.length/2)]):null;const okp=np!=null&&np>=HOURLY;const inPace=S.filter(o=>o.pace_net!=null&&o.pace_net>=HOURLY).length;const goal=S.filter(o=>(o.orders||0)>=TRIPGOAL).length;const verdict=np==null?'Ще мало даних':(okp?'Парк тримає норму':'Темп нижче норми');const stcnt=standing().length;document.getElementById('kpis').innerHTML=`<div class="ovhero"><div class="oh-card oh-net"><div class="oh-l">Каса дня · чистими</div><div class="oh-big">${gv(net)} ₴</div><div class="oh-sub">валове ${gv(k)} ₴ · ${S.length} активних · <span onclick="toggleNonCars()" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;font-weight:700">${fl.work}/${fl.total} авто в роботі${((fl.non&&fl.non.length)||roamedCars().length)?" ▾":""}</span>${(function(){var _r=roamedCars();return _r.length?' · <span onclick="toggleNonCars()" style="cursor:pointer;color:var(--warn,#B5651D);font-weight:700;text-decoration:underline dotted;text-underline-offset:3px">'+_r.length+' катались даремно ▾</span>':'';})()}</div></div><div class="oh-card oh-pace ${okp?'good':'bad'}"><div class="oh-l">Темп по парку</div><div class="oh-big2">${np==null?'—':np+' ₴/год'}</div><div class="oh-sub">чистими · норма ${HOURLY}</div><div class="oh-verdict">${verdict}</div></div></div><div class="ovprim"><div class="pcard"><div class="pc-l">Виконали план</div><div class="pc-n">${done} <span>/ ${S.length}</span></div><div class="pc-bar"><i style="width:${Math.round(done/Math.max(S.length,1)*100)}%"></i></div></div><div class="pcard"><div class="pc-l">Без роботи</div><div class="pc-n ${nw?'bad':''}">${nw}</div><div class="pc-s">потребують уваги</div></div><div class="pcard"><div class="pc-l">Простоюють авто</div><div class="pc-n ${stcnt?'bad':''}">${stcnt}</div><div class="pc-s">деталі у «Авто»</div></div></div><div class="ovsec"><span><b>Медіана старту</b> ${sm}</span><span><b>Поза агрегатами</b> ${H(uk)} км</span><span><b>У темпі ≥${HOURLY}</b> ${inPace}/${S.length}</span><span><b>Закрили ${TRIPGOAL}п.</b> ${goal}/${S.length}</span></div><div id="nonCarsBox" class="hide" style="margin-top:10px;background:#fff;border:1px solid #eee;border-radius:12px;padding:10px 12px"><div style="font-weight:700;font-size:13px;margin-bottom:4px">Не виїхали (${(fl.non||[]).length}):</div>${nonCarsHtml()}${roamedHtml()}</div>`;renderFleetMini();var _dd=document.getElementById('dayDash');if(_dd){_dd.innerHTML=dayDashboard();_dd.querySelectorAll('.ld-row').forEach(function(r){r.onclick=function(){var i=+r.getAttribute('data-i');if(!isNaN(i))openDetail(i);};});}}
+const pv=S.map(o=>o.pace_net).filter(x=>x!=null).sort((a,b)=>a-b);const np=pv.length?Math.round(pv[Math.floor(pv.length/2)]):null;const okp=np!=null&&np>=HOURLY;const inPace=S.filter(o=>o.pace_net!=null&&o.pace_net>=HOURLY).length;const goal=S.filter(o=>(o.orders||0)>=TRIPGOAL).length;const verdict=np==null?'Ще мало даних':(okp?'Парк тримає норму':'Темп нижче норми');const stcnt=standing().length;document.getElementById('kpis').innerHTML=`<div class="ovhero"><div class="oh-card oh-net"><div class="oh-l">Каса дня · чистими</div><div class="oh-big">${gv(net)} ₴</div><div class="oh-sub">валове ${gv(k)} ₴ · ${S.length} активних · <span onclick="toggleNonCars()" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;font-weight:700">${fl.work}/${fl.total} авто в роботі${((fl.non&&fl.non.length)||roamedCars().length)?" ▾":""}</span>${(function(){var _r=roamedCars();return _r.length?' · <span onclick="toggleNonCars()" style="cursor:pointer;color:var(--warn,#B5651D);font-weight:700;text-decoration:underline dotted;text-underline-offset:3px">'+_r.length+' катались даремно ▾</span>':'';})()}</div></div><div class="oh-card oh-pace ${okp?'good':'bad'}"><div class="oh-l">Темп по парку</div><div class="oh-big2">${np==null?'—':np+' ₴/год'}</div><div class="oh-sub">чистими · норма ${HOURLY}</div><div class="oh-verdict">${verdict}</div></div></div><div class="ovprim"><div class="pcard"><div class="pc-l">Виконали план</div><div class="pc-n">${done} <span>/ ${S.length}</span></div><div class="pc-bar"><i style="width:${Math.round(done/Math.max(S.length,1)*100)}%"></i></div></div><div class="pcard"><div class="pc-l">Без роботи</div><div class="pc-n ${nw?'bad':''}">${nw}</div><div class="pc-s">потребують уваги</div></div><div class="pcard"><div class="pc-l">Простоюють авто</div><div class="pc-n ${stcnt?'bad':''}">${stcnt}</div><div class="pc-s">деталі у «Авто»</div></div></div><div class="ovsec"><span><b>Медіана старту</b> ${sm}</span><span><b>Поза агрегатами</b> ${H(uk)} км</span><span><b>У темпі ≥${HOURLY}</b> ${inPace}/${S.length}</span><span><b>Закрили ${TRIPGOAL}п.</b> ${goal}/${S.length}</span></div><div id="nonCarsBox" class="hide"><div style="font-weight:700;font-size:13px;margin-bottom:4px">Не виїхали (${(fl.non||[]).length}):</div>${nonCarsHtml()}${roamedHtml()}</div>`;renderFleetMini();var _dd=document.getElementById('dayDash');if(_dd){_dd.innerHTML=dayDashboard();_dd.querySelectorAll('.ld-row').forEach(function(r){r.onclick=function(){var i=+r.getAttribute('data-i');if(!isNaN(i))openDetail(i);};});}}
 function spark(hourly,big){let mx=Math.max(1,...hourly.slice(H0,Hx+1)),s='';
 for(let h=H0;h<=Hx;h++){const v=hourly[h];const ht=v?Math.max(big?6:3,v/mx*100):0;s+=v?`<i style="height:${ht}%">${big?`<span>${v}</span>`:''}</i>`:`<i class="z"></i>`;}return s;}
 function row(o){const p=plan(o);
@@ -4116,7 +4174,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=67;
+var APP_BUILD_N=70;
 var APP_BUILD='збірка 21.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
@@ -5428,8 +5486,21 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
     close();
   },true);
   document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
-  window.addEventListener('resize',function(){if(target)place();});
-  window.addEventListener('scroll',function(){if(target)place();},true);
+  /* .dcal-float має position:fixed — при прокрутці він і так лишається
+     на місці. Перерахунок на кожну подію давав смикання, тому просто
+     закриваємо: гортати сторінку з відкритим календарем сенсу немає. */
+  window.addEventListener('resize',function(){if(target)close();});
+  window.addEventListener('scroll',function(e){
+    if(!target)return;
+    /* Прокрутка всередині самого календаря не має його закривати.
+       e.target може бути document або window — тоді contains() падає,
+       тому перевіряємо, що це справді вузол. */
+    try{
+      var n=e&&e.target;
+      if(pop&&n&&n.nodeType===1&&pop.contains(n))return;
+    }catch(err){}
+    close();
+  },true);
 
   function attach(inp){
     if(inp.getAttribute('data-dcal'))return;
@@ -5438,6 +5509,11 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
     inp.setAttribute('readonly','readonly');
     inp.setAttribute('inputmode','none');
     inp.setAttribute('autocomplete','off');
+    /* Фокус на полі змушує мобільний браузер прокрутити сторінку до нього.
+       Поле лише відкриває наш календар, друкувати в нього не можна —
+       тож фокус йому не потрібен взагалі. */
+    inp.setAttribute('tabindex','-1');
+    inp.addEventListener('focus',function(){try{inp.blur();}catch(e){}});
   }
   function scan(){
     var list=document.querySelectorAll('input[type=date]');
@@ -7556,7 +7632,9 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
    Оригінальний select лишається в DOM і далі керує логікою — ми лише
    ставимо йому value і шлемо change, тому всі обробники працюють як були. */
 (function(){
-  var SEL='#cars .cdriver, #cars .creason, #morning .creason';
+  /* Список дат у Звіті теж сюди: він росте з базою (за рік — 365 рядків),
+   системний select стає нескінченним і без пошуку. */
+var SEL='#cars .cdriver, #cars .creason, #morning .creason, #report #rptDaySel';
   var open=null;
 
   function norm(s){return String(s||'').toLowerCase().replace(/[ʼ'`\u2019\u02bc]/g,'');}
@@ -7599,7 +7677,8 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
     sel.setAttribute('data-cp','1');
     sel.style.display='none';
 
-    var kind=sel.classList.contains('cdriver')?'driver':'reason';
+    var kind=sel.id==='rptDaySel'?'date'
+            :(sel.classList.contains('cdriver')?'driver':'reason');
     var box=document.createElement('div');
     box.className='cpick '+(kind==='driver'?'cp-driver':'cp-reason');
     var btn=document.createElement('button');
@@ -7610,7 +7689,8 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
     function label(){
       var all=items(sel),cur=null;
       for(var i=0;i<all.length;i++)if(all[i].v===sel.value){cur=all[i];break;}
-      var txt=(cur&&cur.v!=='')?cur.t:(kind==='driver'?'\u2014 немає водія \u2014':'\u2014 причина \u2014');
+      var txt=(cur&&cur.v!=='')?cur.t
+        :(kind==='driver'?'\u2014 немає водія \u2014':(kind==='date'?'\u2014 оберіть дату \u2014':'\u2014 причина \u2014'));
       var empty=!(cur&&cur.v!=='');
       btn.className='cp-btn'+(empty?' empty':'');
       btn.disabled=!!sel.disabled;
@@ -7645,9 +7725,22 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
       close();
       if(sel.disabled)return;
       var pop=document.createElement('div');
-      pop.className='cp-pop';
+      pop.className='cp-pop'+(kind==='date'?' cp-date':'');
       var many=items(sel).length>7;
-      pop.innerHTML=(many?'<input type="text" class="cp-q" placeholder="Пошук…" autocomplete="off" spellcheck="false">':'')
+      /* Для дат — швидкі кнопки зверху: найчастіше треба саме останні дні,
+         а не гортати список за півроку. */
+      var quick='';
+      if(kind==='date'){
+        var all=items(sel).filter(function(x){return x.v!=='';});
+        if(all.length>7){
+          quick='<div class="cp-quick">'
+            +'<button type="button" data-q="0">Останній</button>'
+            +(all.length>1?'<button type="button" data-q="1">Попередній</button>':'')
+            +'</div>';
+        }
+      }
+      pop.innerHTML=quick
+        +(many?'<input type="text" class="cp-q" placeholder="Пошук за датою…" autocomplete="off" spellcheck="false">':'')
         +'<div class="cp-list"></div>';
       document.body.appendChild(pop);
       open={box:box,pop:pop};
@@ -7676,6 +7769,13 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
       }
       pop.onclick=function(ev){
         ev.stopPropagation();
+        var q=ev.target.closest?ev.target.closest('[data-q]'):null;
+        if(q){
+          var all=items(sel).filter(function(x){return x.v!=='';});
+          var idx=+q.getAttribute('data-q');
+          if(all[idx])pick(all[idx].v);
+          return;
+        }
         var o=ev.target.closest?ev.target.closest('.cp-o'):null;
         if(o)pick(o.getAttribute('data-v'));
       };
