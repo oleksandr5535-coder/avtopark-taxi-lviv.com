@@ -4204,7 +4204,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=73;
+var APP_BUILD_N=74;
 var APP_BUILD='збірка 21.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
@@ -7731,10 +7731,23 @@ var SEL='#cars .cdriver, #cars .creason, #morning .creason, #report #rptDaySel';
   function place(pop,btn){
     var r=btn.getBoundingClientRect();
     var w=Math.max(r.width,230),h=pop.offsetHeight||280;
+    var vh=window.innerHeight;
     pop.style.width=w+'px';
     var left=Math.min(Math.max(8,r.left),window.innerWidth-w-8);
-    var top=(r.bottom+6+h<window.innerHeight)?(r.bottom+6):Math.max(8,r.top-h-6);
-    pop.style.left=left+'px';pop.style.top=top+'px';
+    var top;
+    /* під кнопкою → над кнопкою → притиснути до верху з власною прокруткою.
+       На низькому екрані телефона інакше нижня частина списку за межами. */
+    if(r.bottom+6+h<vh){top=r.bottom+6;}
+    else if(r.top-h-6>8){top=r.top-h-6;}
+    else{
+      top=8;
+      var lst=pop.querySelector('.cp-list');
+      if(lst){
+        var extra=pop.offsetHeight-lst.offsetHeight;   /* пошук + швидкі кнопки */
+        lst.style.maxHeight=Math.max(120,vh-16-extra-16)+'px';
+      }
+    }
+    pop.style.left=left+'px';pop.style.top=Math.max(8,top)+'px';
   }
 
   function enhance(sel){
@@ -7791,6 +7804,9 @@ var SEL='#cars .cdriver, #cars .creason, #morning .creason, #report #rptDaySel';
       if(sel.disabled)return;
       var pop=document.createElement('div');
       pop.className='cp-pop'+(kind==='date'?' cp-date':'');
+      /* позначка, що прокрутка йде зсередини — щоб вікно не закривалось */
+      pop.addEventListener('scroll',function(){innerScroll=true;},true);
+      pop.addEventListener('touchmove',function(ev){ev.stopPropagation();},{passive:true});
       var many=items(sel).length>7;
       /* Для дат — швидкі кнопки зверху: найчастіше треба саме останні дні,
          а не гортати список за півроку. */
@@ -7855,7 +7871,19 @@ var SEL='#cars .cdriver, #cars .creason, #morning .creason, #report #rptDaySel';
 
   document.addEventListener('click',function(){close();});
   window.addEventListener('resize',function(){if(open)close();});
-  window.addEventListener('scroll',function(){if(open)close();},true);
+  /* Прокрутка СТОРІНКИ закриває вікно (воно fixed — інакше «зависало» б).
+     Прокрутка ВСЕРЕДИНІ списку — ні: там може бути 200 дат, їх треба гортати.
+     Так само, як зроблено для календаря. */
+  var innerScroll=false;
+  window.addEventListener('scroll',function(e){
+    if(!open)return;
+    if(innerScroll){innerScroll=false;return;}
+    try{
+      var n=e&&e.target;
+      if(n&&n.nodeType===1&&open.pop&&(n===open.pop||open.pop.contains(n)))return;
+    }catch(err){}
+    close();
+  },true);
 
   function scan(){
     var l=document.querySelectorAll(SEL);
