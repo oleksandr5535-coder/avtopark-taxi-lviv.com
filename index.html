@@ -1441,6 +1441,340 @@ button{transition:background .15s,color .15s,border-color .15s,opacity .15s}
   background:var(--inkp);color:var(--inkp-fg);font-size:17px;cursor:pointer;
   display:flex;align-items:center;justify-content:center}
 .chat-send:hover{opacity:.88}
+
+
+/* ---- перемикач типів водіїв у фільтрі ---- */
+.dpscope{display:flex;gap:5px;padding:4px 4px 9px;margin-bottom:7px;border-bottom:1px solid var(--line)}
+.dpscope button{flex:1;border:1px solid var(--line);background:var(--panel);color:var(--ink2);
+  border-radius:8px;padding:7px 9px;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer}
+.dpscope button:hover{background:var(--soft);color:var(--ink)}
+.dpscope button.on{background:var(--warn-bg);border-color:var(--warn-line);color:var(--amber-tx)}
+.dp-cat{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--muted);background:var(--soft);border:1px solid var(--line);
+  border-radius:5px;padding:1px 5px;margin-left:6px}
+
+
+/* ---- налаштування доїзду ---- */
+.dhset{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;margin-top:10px}
+.dhset label{display:flex;flex-direction:column;gap:5px;font-size:11px;font-weight:700;
+  letter-spacing:.05em;text-transform:uppercase;color:var(--muted);max-width:230px}
+.dhset input{width:100px;padding:9px 11px;border:1px solid var(--line);border-radius:var(--r-sm);
+  font:inherit;font-family:var(--mono);font-size:13.5px;background:var(--panel);color:var(--ink)}
+.dhset .u{font-size:11px;color:var(--muted);padding-bottom:10px}
+.dh-reset{border:1px solid var(--line);background:var(--soft);color:var(--ink2);
+  border-radius:var(--r-sm);padding:9px 14px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.dh-reset:hover{background:var(--panel);color:var(--ink)}
+.dh-hint{margin-top:10px!important;font-size:12.5px}
+.dh-hint b{font-family:var(--mono);color:var(--ink)}
+
+
+/* ===================================================================== */
+/* ДИЗАЙН-ШАР v28 — Налаштування як картотека.                           */
+/* ===================================================================== */
+.setnav{margin:0 0 18px}
+.settiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.settile{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:4px;
+  text-align:left;padding:14px 16px;border:1px solid var(--line);background:var(--panel);
+  border-radius:var(--r-lg);box-shadow:var(--sh-card);cursor:pointer;font:inherit;
+  transition:border-color .15s,box-shadow .18s}
+/* НЕ використовувати transform у :hover — плитка зсувається,
+   курсор випадає за її межі, hover знімається, плитка повертається.
+   Виходить петля й миготіння. Підсвічуємо рамкою й тінню. */
+.settile:hover{border-color:var(--amber);box-shadow:var(--sh-pop)}
+.settile .st-t{font-size:13px;font-weight:800;letter-spacing:-.01em;color:var(--ink)}
+.settile .st-d{font-size:11.5px;color:var(--muted);line-height:1.4}
+.settile .st-n{position:absolute;top:12px;right:14px;font-family:var(--mono);font-size:11px;
+  font-weight:700;color:var(--amber-tx);background:var(--warn-bg);
+  border:1px solid var(--warn-line);border-radius:6px;padding:1px 7px}
+
+.setnav.open{display:flex;align-items:center;gap:11px;
+  padding-bottom:14px;border-bottom:1px solid var(--line)}
+.setback{border:1px solid var(--line);background:var(--panel);color:var(--ink2);
+  border-radius:var(--r-sm);padding:8px 13px;font:inherit;font-size:12.5px;
+  font-weight:700;cursor:pointer;white-space:nowrap}
+.setback:hover{background:var(--soft);color:var(--ink)}
+.setwhere{font-size:13px;font-weight:800;letter-spacing:-.01em;color:var(--ink)}
+
+@media (max-width:860px){.settiles{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:520px){.settiles{grid-template-columns:1fr}}
+
+
+/* ===================================================================== */
+/* ДИЗАЙН-ШАР v29 — динаміка по днях на окремому екрані.                 */
+/* ===================================================================== */
+.dynlink{display:flex;align-items:center;flex-wrap:wrap;gap:10px;
+  margin:14px 0;padding:13px 16px;background:var(--soft);
+  border:1px solid var(--line);border-radius:var(--r-lg)}
+.dynlink .dl-l{flex:1;min-width:180px;font-size:12.5px;color:var(--ink2)}
+.dynlink .dl-l b{font-family:var(--mono);color:var(--ink)}
+.dl-btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);
+  border-radius:var(--r-sm);padding:9px 14px;font:inherit;font-size:12.5px;
+  font-weight:700;cursor:pointer;white-space:nowrap}
+.dl-btn:hover{border-color:var(--amber);color:var(--amber-tx)}
+
+.dyn-back{margin:0 0 16px;border:1px solid var(--line);background:var(--panel);
+  color:var(--ink2);border-radius:var(--r-sm);padding:8px 13px;font:inherit;
+  font-size:12.5px;font-weight:700;cursor:pointer}
+.dyn-back:hover{background:var(--soft);color:var(--ink)}
+.dyn-body{padding:0;background:transparent;border:0;box-shadow:none}
+
+/* місяць — світла картка, не чорна панель */
+.dyn-mon{margin:0 0 9px;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-lg);box-shadow:var(--sh-card);overflow:hidden}
+.dyn-mon>summary{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+  cursor:pointer;padding:13px 16px;list-style:none}
+.dyn-mon>summary::-webkit-details-marker{display:none}
+.dyn-mon>summary::after{content:"\25BE";margin-left:auto;opacity:.4;font-size:11px;
+  transition:transform .18s}
+.dyn-mon[open]>summary::after{transform:rotate(180deg)}
+.dyn-mon[open]>summary{border-bottom:1px solid var(--line)}
+.dm-t{font-size:13.5px;font-weight:800;letter-spacing:-.01em;color:var(--ink)}
+.dm-s{font-family:var(--mono);font-size:13.5px;font-weight:700;color:var(--amber-tx)}
+.dm-n{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.dm-body{padding:10px 12px 12px}
+
+/* тиждень — тонший рядок усередині */
+.dyn-wk{margin:0 0 5px;border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--soft);overflow:hidden}
+.dyn-wk>summary{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;
+  cursor:pointer;padding:9px 12px;list-style:none}
+.dyn-wk>summary::-webkit-details-marker{display:none}
+.dyn-wk>summary::after{content:"\25BE";margin-left:auto;opacity:.35;font-size:10px}
+.dyn-wk[open]{background:var(--panel)}
+.dw-t{font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--ink)}
+.dw-s{font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--ink2)}
+.dyn-wk .otable{margin:0 12px 12px}
+
+
+/* ===================================================================== */
+/* ДИЗАЙН-ШАР v30 — ОГРАНКА.                                             */
+/* Нічого не перебудовує. Додає те, що відрізняє зроблене від зібраного:  */
+/* відгук на натискання, згладжені переходи, єдина шкала радіусів,        */
+/* повага до налаштувань доступності, точність друкарні.                  */
+/* Видалиш блок — усе працює як раніше, просто грубіше.                   */
+/* ===================================================================== */
+
+/* --- 1. ВІДГУК НА НАТИСКАННЯ ---------------------------------------- */
+/* Було 53 наведення і жодного стану натискання. На телефоні наведення
+   не існує взагалі — палець не «наводить». Без цього кнопка мертва. */
+/* Великі блоки (:not(.settile) тощо) НЕ масштабуємо — зменшена плитка
+   «тікає» з-під курсора, наведення злітає, і виникає миготіння.
+   Виняток має бути в самому селекторі: плитка — теж <button>,
+   тому окреме правило нижче не допомогло б (однакова вага). */
+button:not(:disabled):not(.settile):not(.aibtn):not(.dl-btn):active,
+[role=button]:not(:disabled):not(.settile):active,
+.dcal-c.has:active,.dcal-c.sel:active{
+  transform:scale(.975);
+  transition-duration:.06s}
+/* Великі плитки НЕ масштабуємо: зменшена плитка «тікає» з-під курсора,
+   наведення злітає, плитка повертається — і так по колу (миготіння).
+   Замість розміру міняємо тло — курсор лишається на місці. */
+.settile:active,.aibtn:not(:disabled):active,.dl-btn:active{
+  background:var(--warn-bg);border-color:var(--amber);
+  box-shadow:var(--sh-card);transition-duration:.06s}
+.aibtn:not(:disabled):active{filter:brightness(.92);background:var(--inkp)}
+
+.aibtn:not(:disabled):active,.lb-all:not(:disabled):active,
+.crdlg-ok:active,.rn-add:active,.hi-pabtn:active,.chat-send:active{
+  transform:scale(.97);filter:brightness(.94)}
+
+/* дрібні круглі — стискаються менше, щоб не «стрибали» */
+.lb-go:not(:disabled):active,.dn-arw:not(:disabled):active,
+.navtoggle:active,.dcal-nav:active,.hi-pdel:active,.rn-del:active{
+  transform:scale(.9)}
+
+/* рядки, які відкриваються — легкий натиск замість стрибка */
+.dyn-mon>summary:active,.dyn-wk>summary:active,.hi-sum:active,
+.rn-card .hi-payhd:active{opacity:.75}
+
+/* --- 2. ЗГЛАДЖЕНІ ПЕРЕХОДИ ------------------------------------------ */
+/* Наведень 53, переходів було 14 — тобто дві третини мінялись ривком. */
+button,.settile,.chip,.badge,.pill,.aichip,.dcal-c,.cvd,
+.dyn-mon,.dyn-wk,.rn-card,.carcard,.hi-acc,.aibox,.liveblk,
+.sfx-btn,.sfx-o,.dl-btn,.dyn-back,.setback,.cr-go,.dh-reset{
+  transition:background-color .16s ease,border-color .16s ease,
+             color .16s ease,box-shadow .18s ease,
+             opacity .16s ease,transform .12s ease}
+
+/* картки трохи підводяться при наведенні — глибина, не рух */
+.rn-card:hover,.carcard:hover{box-shadow:var(--sh-pop)}
+/* жодних translateY у :hover на клікабельних блоках — див. коментар вище */
+.dyn-mon:hover{border-color:var(--muted)}
+
+/* --- 3. ЄДИНА ШКАЛА РАДІУСІВ ---------------------------------------- */
+/* Було 20 різних значень числами. Зводимо до трьох, які вже є в темі.
+   Не чіпаємо круглі (999px) і ті, що задані інлайново в JS. */
+.chip,.badge,.pill,.mchip,.tabtype,.leg,.ost,.st-plate,.mn-plate,
+.hi-pm,.dp-cat,.crent,.rn-live,.cv-ok{border-radius:7px}
+.seg,.rpt-modes,.br-ftab,.pct-toggle,.pct-rtoggle{border-radius:11px;overflow:hidden}
+
+/* --- 4. ПОВАГА ДО НАЛАШТУВАНЬ ЛЮДИНИ -------------------------------- */
+/* Якщо в системі вимкнено анімації (вестибулярні розлади, слабкий пристрій) —
+   вимикаємо все, крім миттєвого відгуку. */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.01ms!important;
+    scroll-behavior:auto!important}
+  button:active{transform:none}
+}
+
+/* --- 5. ДРУКАРСЬКА ТОЧНІСТЬ ----------------------------------------- */
+/* Цифри в колонках мають стояти рівно одна під одною, завжди. */
+.otable td.r,.otable th.r,.rpt-table td,.wk-cell,.cmp-table td.r,
+.hi-pamt,.rn-pa,.dm-s,.dw-s,.lb-v,.pc-n,.oh-big,.oh-big2{
+  font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+/* мінус і плюс не мають ламати вирівнювання */
+.hi-rest b,.dm-s,.pct-line b{font-variant-numeric:tabular-nums lining-nums}
+
+/* заголовки — трохи щільніший трекінг на великих кеглях */
+h1{text-wrap:balance}
+.sub,.eyebrow,.aisub{text-wrap:pretty}
+
+/* довгі імена й адреси не розривають картки */
+.hi-name,.rn-who,.dl-l,.carmiss,.chat-m{overflow-wrap:anywhere}
+
+/* --- 6. СТАНИ, ЯКІ ЗАБУВАЮТЬ ---------------------------------------- */
+/* Заблокована кнопка має виглядати заблокованою, а не просто блідою. */
+button:disabled,input:disabled,select:disabled,textarea:disabled{
+  cursor:not-allowed}
+
+/* поле у фокусі — видно, куди друкуєш */
+input:not([type=checkbox]):not([type=radio]):focus,
+select:focus,textarea:focus{
+  outline:none;border-color:var(--amber);
+  box-shadow:0 0 0 3px var(--warn-bg)}
+
+/* порожні блоки не лишають дірок у розкладці */
+.aiout:empty,.airaw-box:empty,.setnav:empty,#dayCal:empty{display:none}
+
+/* --- 7. ДРІБНИЦІ, ЯКІ ПОМІЧАЄШ НЕ ОДРАЗУ ---------------------------- */
+/* Прокрутка всередині таблиць не «прилипає» до краю. */
+.rpt-tablewrap,.cmp-wrap,.sfx-list,.chat-msgs,.airaw-box{
+  scrollbar-width:thin;overscroll-behavior:contain}
+
+/* довгі списки — плавне докручування до потрібного місця */
+html{scroll-behavior:smooth}
+
+/* виділення тексту в моно-колонках не тягне зайвого */
+.otable td.r,.rpt-table td.r{user-select:all}
+
+/* картка під курсором показує, що вона клікабельна */
+.wk-row,.settile,.dyn-mon>summary,.dyn-wk>summary,.hi-sum{cursor:pointer}
+
+/* тінь під панеллю, що прилипла зверху — щоб було видно межу */
+.topnav{backdrop-filter:none}
+
+/* --- 8. ДРУК ---------------------------------------------------------*/
+/* Звіт іноді треба роздрукувати або зберегти в PDF. */
+@media print{
+  .navrow,.askbtn,.chat-panel,.aibox,.liveblk,.daynav,#dayCal{display:none!important}
+  .wrap{padding:0!important;max-width:none!important}
+  .panel,.sect,.oh-card,.rn-card,.dyn-mon{box-shadow:none!important;
+    border:1px solid #ddd!important;break-inside:avoid}
+  body{background:#fff!important}
+  a[href]::after{content:""}
+}
+
+
+/* ---- «Доїзд до пасажира»: рядок = назва + пояснення + значення ---- */
+.dhcard{background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-lg);box-shadow:var(--sh-card);margin-top:12px;overflow:hidden}
+.dhrow{display:flex;align-items:center;gap:18px;padding:14px 17px}
+.dhrow+.dhrow{border-top:1px solid var(--line)}
+.dh-k{flex:1;min-width:0}
+.dh-k b{display:block;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:3px}
+.dh-k span{display:block;font-size:11.5px;line-height:1.5;color:var(--muted)}
+.dh-v{flex:none;display:flex;align-items:center;gap:7px}
+.dh-v input{width:82px;padding:10px 12px;border:1px solid var(--line);
+  border-radius:var(--r-sm);font:inherit;font-family:var(--mono);font-size:14px;
+  text-align:right;background:var(--soft);color:var(--ink)}
+.dh-v .u{font-family:var(--mono);font-size:11.5px;color:var(--muted);width:22px}
+.dhfoot{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:13px 17px;background:var(--soft);border-top:1px solid var(--line)}
+.dhfoot .dh-hint{flex:1;min-width:200px;margin:0!important;font-size:12.5px;color:var(--ink2)}
+.dhfoot .dh-hint b{font-family:var(--mono);color:var(--ink)}
+@media (max-width:600px){
+  .dhrow{flex-direction:column;align-items:stretch;gap:9px}
+  .dh-v{justify-content:flex-start}
+  .dh-v input{flex:1;width:auto}
+}
+
+
+/* ===================================================================== */
+/* ДИЗАЙН-ШАР v31 — «Завантажено»: клітинки днів і тижні.                 */
+/* Було: суцільний темно-зелений з білим текстом — надто важко.           */
+/* Стало: живий зелений з теми, але читабельний. Дні знову видно окремо.  */
+/* ===================================================================== */
+.cvd{display:inline-flex;align-items:center;justify-content:center;
+  width:27px;height:27px;margin:0 4px 4px 0;border-radius:8px;
+  font-family:var(--mono);font-size:11px;font-weight:700;
+  background:var(--soft);border:1px solid var(--line);color:var(--muted);
+  transition:transform .12s ease}
+.cvd.has{background:var(--good);border-color:var(--good);color:#fff;font-weight:800;
+  box-shadow:0 2px 6px -2px rgba(20,135,90,.5)}
+.cvd:hover{transform:scale(1.12)}
+
+.cv-ok{display:inline-block;color:var(--good);font-weight:700;font-size:12.5px}
+.cv-no{display:inline-block;color:var(--muted);font-size:12.5px}
+
+/* рядок тижня — окрема картка, а не суцільний текст */
+.cv-wk{padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-md);
+  margin:8px 0;background:var(--soft)}
+.cv-wk:first-child{margin-top:0}
+.cv-wk .cv-h{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:9px}
+.cv-wk .cv-cnt{font-family:var(--mono);font-size:11.5px;font-weight:600;color:var(--muted)}
+.cv-wk .cv-days{display:flex;flex-wrap:wrap;margin-bottom:9px}
+.cv-wk .cv-brand{display:flex;flex-direction:column;gap:4px;
+  padding-top:9px;border-top:1px solid var(--line);line-height:1.5}
+
+
+/* ===================================================================== */
+/* ДИЗАЙН-ШАР v32 — списки водія й причини в картці авто.                */
+/* Системний <select> лишається в DOM (логіка не змінена) — показуємо     */
+/* власну кнопку з вікном і пошуком.                                     */
+/* ===================================================================== */
+.carnote{gap:9px}
+.cpick{position:relative;flex:1 1 210px;min-width:0}
+.cpick.cp-reason{flex:1 1 230px}
+.cp-btn{width:100%;display:flex;align-items:center;gap:8px;
+  padding:9px 12px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--panel);color:var(--ink);font:inherit;font-size:12.5px;
+  font-weight:600;cursor:pointer;text-align:left;
+  transition:border-color .15s,box-shadow .18s,background-color .15s}
+.cp-btn:hover:not(:disabled){border-color:var(--muted)}
+.cp-btn::after{content:"\25BE";margin-left:auto;flex:none;opacity:.4;font-size:10px}
+.cp-btn.empty{color:var(--muted);font-weight:500}
+.cp-btn:disabled{opacity:.5;cursor:not-allowed;background:var(--soft)}
+.cpick.on .cp-btn{border-color:var(--amber);box-shadow:0 0 0 3px var(--warn-bg)}
+.cp-lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.cp-pop{position:fixed;z-index:620;min-width:230px;max-width:calc(100vw - 16px);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r-md);
+  box-shadow:var(--sh-pop);padding:8px;animation:dcalIn .16s ease}
+.cp-q{width:100%;border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:8px 10px;font:inherit;font-size:13px;background:var(--soft);
+  color:var(--ink);margin-bottom:6px}
+.cp-q:focus{outline:none;border-color:var(--amber);background:var(--panel)}
+.cp-list{max-height:264px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.cp-o{padding:8px 10px;border-radius:8px;font-size:13px;color:var(--ink2);
+  cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  transition:background-color .12s,color .12s}
+.cp-o:hover,.cp-o.hot{background:var(--soft);color:var(--ink)}
+.cp-o.sel{background:var(--warn-bg);color:var(--amber-tx);font-weight:700}
+.cp-o.clear{color:var(--muted);font-style:italic}
+.cp-g{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);padding:9px 10px 5px;margin-top:4px;border-top:1px solid var(--line)}
+.cp-list>.cp-g:first-child{margin-top:0;border-top:0;padding-top:4px}
+.cp-none{padding:12px 10px;font-size:12.5px;color:var(--muted);text-align:center}
+.cp-hit{background:var(--warn-bg);border-radius:3px}
+
+/* опис поруч — у тому самому характері */
+.cdesc{flex:1 1 100%;padding:9px 12px;border-radius:var(--r-sm);
+  font-size:12.5px;min-height:36px}
+@media (min-width:760px){.cdesc{flex:1 1 240px}}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head><body>
 <script>try{var _th=localStorage.getItem("theme");if(_th)document.documentElement.setAttribute("data-theme",_th);}catch(e){}</script>
@@ -1494,7 +1828,27 @@ button{transition:background .15s,color .15s,border-color .15s,opacity .15s}
 <div class="osect"><h3>Не працювали / простоюють</h3><div id="carsList"></div></div></div>
 <div id="owner" class="hide"></div>
 <div id="rent" class="hide"></div>
-<div id="settings" class="hide"><h1>Нала<span class="accent">штування</span></h1><p class="sub">Разові налаштування парку — плани й типи водіїв.</p><div class="osect"><h3>Тема оформлення</h3><p class="sub" style="margin-top:-4px">Світле або темне.</p><div class="rpt-modes" id="themeToggle"><button class="on" data-theme-val="light" onclick="setTheme('light')">Світла</button><button data-theme-val="dark" onclick="setTheme('dark')">Темна</button></div></div><div class="osect"><h3>Імена водіїв у звітах</h3><p class="sub" style="margin-top:-4px">Впиши ім'я так, як у твоїх формулах. Воно вживатиметься в усіх звітах однаково — і для Bolt, і для Uklon, незалежно від того, як пишуть платформи.</p><div id="drvNamesBox"></div></div><div class="osect"><h3>Параметри плану й зміни</h3><p class="sub" style="margin-top:-4px">Денний план, норма темпу, ціль поїздок, межі зміни.</p><div class="planset"><label>План/день</label><input id="plan" type="number" min="0" step="100"><span class="u">₴</span><span style="width:1px;height:20px;background:var(--line);margin:0 4px"></span><label>Норма/год</label><input id="hourly" type="number" min="0" step="50"><span class="u">₴</span><span style="width:1px;height:20px;background:var(--line);margin:0 4px"></span><label>Поїздок/день</label><input id="tripgoal" type="number" min="0" step="1"><span class="u">шт.</span><span style="width:1px;height:20px;background:var(--line);margin:0 4px"></span><label>Зміна до</label><input id="shiftend" type="time" value="22:00"><span style="width:1px;height:20px;background:var(--line);margin:0 4px"></span><label>День з</label><input id="daystart" type="time" step="60"></div></div><div class="osect"><h3>Плани за паливом</h3><p class="sub" style="margin-top:-4px">Денний план чистими для кожного типу авто. Зміниш — застосується скрізь.</p><div id="planSettings"></div></div><div class="osect"><h3>База водіїв</h3><p class="sub" style="margin-top:-4px">Тип кожного водія. Оренда/лізинг — водій зникає зі списків і не йде в недобір.</p><div id="passList"></div></div></div>
+<div id="dyn" class="hide"></div>
+<div id="settings" class="hide"><h1>Нала<span class="accent">штування</span></h1><p class="sub">Разові налаштування парку. Обери розділ, щоб відкрити його.</p><div id="setNav" class="setnav"></div><div class="osect" data-set="theme" data-nav="Вигляд" data-desc="Світла або темна тема"><h3>Тема оформлення</h3><p class="sub" style="margin-top:-4px">Світле або темне.</p><div class="rpt-modes" id="themeToggle"><button class="on" data-theme-val="light" onclick="setTheme('light')">Світла</button><button data-theme-val="dark" onclick="setTheme('dark')">Темна</button></div></div><div class="osect" data-set="names" data-nav="Імена у звітах" data-desc="Як писати водіїв у звітах"><h3>Імена водіїв у звітах</h3><p class="sub" style="margin-top:-4px">Впиши ім'я так, як у твоїх формулах. Воно вживатиметься в усіх звітах однаково — і для Bolt, і для Uklon, незалежно від того, як пишуть платформи.</p><div id="drvNamesBox"></div></div><div class="osect" data-set="plan" data-nav="План і зміна" data-desc="План, норма, межі дня"><h3>Параметри плану й зміни</h3><p class="sub" style="margin-top:-4px">Денний план, норма темпу, ціль поїздок, межі зміни.</p><div class="planset"><label>План/день</label><input id="plan" type="number" min="0" step="100"><span class="u">₴</span><span style="width:1px;height:20px;background:var(--line);margin:0 4px"></span><label>Норма/год</label><input id="hourly" type="number" min="0" step="50"><span class="u">₴</span><span style="width:1px;height:20px;background:var(--line);margin:0 4px"></span><label>Поїздок/день</label><input id="tripgoal" type="number" min="0" step="1"><span class="u">шт.</span><span style="width:1px;height:20px;background:var(--line);margin:0 4px"></span><label>Зміна до</label><input id="shiftend" type="time" value="22:00"><span style="width:1px;height:20px;background:var(--line);margin:0 4px"></span><label>День з</label><input id="daystart" type="time" step="60"></div></div><div class="osect" data-set="fuel" data-nav="Плани за паливом" data-desc="Денний план по типах авто"><h3>Плани за паливом</h3><p class="sub" style="margin-top:-4px">Денний план чистими для кожного типу авто. Зміниш — застосується скрізь.</p><div id="planSettings"></div></div><div class="osect" data-set="dh" data-nav="Доїзд" data-desc="Км на подачу до замовлення"><h3>Доїзд до пасажира</h3><p class="sub" style="margin-top:-4px">Скільки кілометрів припадає на подачу до кожного замовлення. Використовується для оцінки порожнього пробігу — на гроші водіїв не впливає.</p>
+<div class="dhcard">
+  <div class="dhrow">
+    <div class="dh-k"><b>Кілометрів на подачу</b><span>Скільки водій проїжджає до пасажира в середньому. З цього рахується оцінка порожнього пробігу.</span></div>
+    <div class="dh-v"><input id="dhKm" type="text" inputmode="decimal" value="1.5"><span class="u">км</span></div>
+  </div>
+  <div class="dhrow">
+    <div class="dh-k"><b>Максимальна довжина відрізка</b><span>Довший шматок за GPS — це вже не подача, а рух без замовлення.</span></div>
+    <div class="dh-v"><input id="dhMaxKm" type="text" inputmode="decimal" value="3"><span class="u">км</span></div>
+  </div>
+  <div class="dhrow">
+    <div class="dh-k"><b>Проміжок до замовлення</b><span>Якщо замовлення почалось пізніше — відрізок не рахується подачею.</span></div>
+    <div class="dh-v"><input id="dhGap" type="text" inputmode="numeric" value="25"><span class="u">хв</span></div>
+  </div>
+  <div class="dhfoot">
+    <p class="dh-hint" id="dhHint"></p>
+    <button type="button" id="dhReset" class="dh-reset">Повернути типові</button>
+  </div>
+</div></div>
+<div class="osect" data-set="drivers" data-nav="База водіїв" data-desc="Тип, авто, звільнення"><h3>База водіїв</h3><p class="sub" style="margin-top:-4px">Тип кожного водія. Оренда/лізинг — водій зникає зі списків і не йде в недобір.</p><div id="passList"></div></div></div>
 </div></div>
 <script>/** @license
  *
@@ -2040,12 +2394,13 @@ function buildData(parts,dayCut){dayCut=(typeof dayCut==='number'&&dayCut>=0)?da
           if(t.gs1!=null){const c=sa.filter(s=>s.m0>=t.gs1-2).sort((a,b)=>a.m0-b.m0);if(c.length)to=c[0].addr;}
           if(t.gs0!=null){const c=sa.filter(s=>s.m0<=t.gs0).sort((a,b)=>b.m0-a.m0);if(c.length)from=c[0].addr;}
           unacc.push({t1:t.st,t2:t.en,km:Math.round(t.km*10)/10,addr:to,addrFrom:from,addrTo:to});}});
-      const budget0=(o.orders||0)*1.5;let net=0;
+      const _dhc=(typeof dhCfg==='function')?dhCfg():{km:1.5,maxKm:3,gap:25};
+      const budget0=(o.orders||0)*_dhc.km;let net=0;
       const okStarts=o.trips.filter(t=>t.st==='ok'&&t.t).map(t=>tmin(t.t)).filter(x=>x!=null).sort((a,b)=>a-b);
       unacc.forEach(u=>{const segEnd=tmin(u.t2);
         const after=okStarts.filter(T=>T>=segEnd-5);const linkT=after.length?after[0]:null;const gap=linkT!=null?(linkT-segEnd):null;
         u.linkT=linkT;u.gap=gap;
-        if(u.km<=3&&gap!=null&&gap<=25){u.type='доїзд';}else{u.type=(u.km>=4?'перевірити':'без замовлення');net+=u.km;}});
+        if(u.km<=_dhc.maxKm&&gap!=null&&gap<=_dhc.gap){u.type='доїзд';}else{u.type=(u.km>=4?'перевірити':'без замовлення');net+=u.km;}});
       const msArr=gt.filter(t=>t.gs0!=null&&t.km>=0.3).map(t=>t.gs0);
       const moveStart=msArr.length?Math.min(...msArr):null;const firstOrder=okStarts.length?okStarts[0]:null;
       o.gps_move_start=moveStart;o.first_order_min=firstOrder;
@@ -2180,7 +2535,11 @@ if(t.highCash.length)L.push(`Багато готівки: ${t.highCash.map(nm).j
 if(t.top.length)L.push(`Передовики: ${t.top.map(o=>nm(o)+' '+gv(o.net)+'₴').join(', ')}.`);
 if(t.idle.length)L.push(`Простоюють: ${t.idle.map(c=>c.plate+(c.car?' ('+c.car+')':'')).join(', ')}.`);
 return L.join('\n');}
-function renderOwner(){const t=ownerStats();
+function renderOwner(){
+if(typeof DATA==='undefined'||!DATA){var _oe=document.getElementById('owner');
+  if(_oe)_oe.innerHTML='<p class="eyebrow">AVTO PARK Lviv</p><h1>\u0412\u043b\u0430\u0441\u043d\u0438\u043a\u0443</h1><p class="sub">\u0429\u0435 \u043d\u0435\u043c\u0430\u0454 \u0434\u0430\u043d\u0438\u0445. \u0417\u0430\u0432\u0430\u043d\u0442\u0430\u0436 \u0434\u0435\u043d\u044c \u043d\u0430 \u0435\u043a\u0440\u0430\u043d\u0456 \u00ab\u0417\u0432\u0435\u0434\u0435\u043d\u043d\u044f\u00bb.</p>';
+  return;}
+const t=ownerStats();
 const m=fleetMiss();
 const fleetPic=`<div class="osect fleetpic"><h3>Картина парку · ${DATA.date_label||''}</h3>
  <div class="fp-top"><div><b>${m.workCars}</b> із ${m.fleetTot} авто працювало</div><div>зароблено <b>${gv(m.net)} ₴</b> чистими</div></div>
@@ -2234,7 +2593,7 @@ function rpt_hms2sec(v){v=String(v||'').trim();var m=v.match(/(\d+):(\d{2}):(\d{
 function rpt_sec2hms(x){x=Math.round(x);function p(n){return String(n).padStart(2,'0');}return p(Math.floor(x/3600))+':'+p(Math.floor(x%3600/60))+':'+p(x%60);}
 function rpt_C(n){if(n==null||n==='')return '';return (Math.round(n*100)/100).toFixed(2).replace('.',',');}
 function rpt_num(n){if(n==null||n==='')return '';var r=Math.round(n*100)/100;return r===Math.round(r)?String(Math.round(r)):String(r).replace('.',',');}
-function rpt_toks(n){var _r=(n||'').toLowerCase().replace(/[\u2019'`]/g,'').split(/\s+/).filter(Boolean);var _t=_r;if(_r.length>=3){var _f=_r.filter(function(x){return !/(ович|йович|ьович|евич|івна|ївна|иївна)$/.test(x);});if(_f.length>=2)_t=_f;}return _t.sort();}
+function rpt_toks(n){var _r=(n||'').toLowerCase().replace(/[\u2019\u02bc\u2018\u00b4\u0060'`]/g,'').replace(/[\u2010-\u2015]/g,'-').split(/\s+/).filter(Boolean);var _t=_r;if(_r.length>=3){var _f=_r.filter(function(x){return !/(ович|йович|ьович|евич|івна|ївна|иївна)$/.test(x);});if(_f.length>=2)_t=_f;}return _t.sort();}
 function nkey(name){return rpt_toks(name).join('|');}
 function passIndex(){var m=(typeof drvPass==='function')?drvPass():{};var idx={};Object.keys(m).forEach(function(k){var nk=nkey(k);idx[nk]=Object.assign({},idx[nk],m[k]);});return idx;}
 function dP(name){return passIndex()[nkey(name)]||{};}
@@ -2780,14 +3139,19 @@ function renderWeek(){var el=document.getElementById('week');if(!el)return;
  var T=A.list.reduce(function(a,m){a.net+=m.net;a.gross+=m.gross;a.orders+=m.orders;a.online+=m.online;return a;},{net:0,gross:0,orders:0,online:0});
  function strip(m){return '<div class="wk-strip">'+A.keys.map(function(k,i){var pd=m.perDay[k];var cls=pd?(pd.done?'d':'u'):'n';var ti=DL[i]+' '+_wkLab(k)+(pd?(': '+Math.round(pd.net)+' \u20b4'):' \u2014');return '<span class="wk-cell '+cls+'" title="'+ti+'">'+DL[i].slice(0,1)+'</span>';}).join('')+'</div>';}
  var TT={net:0,cash:0,card:0,brand:0,cardBrand:0,bord:0,promo:0,kmP:0,kmG:0,orders:0,online:0};
- var rows=A.list.map(function(m){var tok=rpt_toks(m.name).join('|');var bv=weekBrandVal(m);var brand=bv<0?0:bv;var bord=bordurGet(tok);var promo=wkPromoGet(tok);var _dsum=(typeof wkDailyPromoSum==='function')?wkDailyPromoSum(tok):0;var netD=(m.net||0)+bord+promo;var cashD=(m.cash||0)+bord;var card=netD-cashD;var cardBrand=card+brand;
+ var rows=A.list.map(function(m){var tok=rpt_toks(m.name).join('|');var bv=weekBrandVal(m);var brand=bv<0?0:bv;var bord=bordurGet(tok);var _wkP=wkPromoGet(tok);var _dsum=(typeof wkDailyPromoSum==='function')?wkDailyPromoSum(tok):0;
+  /* Промо з денних звітів входить у тижневу касу АВТОМАТИЧНО.
+     Ручне тижневе поле, якщо заповнене, ПЕРЕКРИВАЄ суму денних — щоб можна було
+     виправити, коли Bolt порахував інакше. Подвійного обліку немає: або одне, або друге. */
+  var promo=_wkP>0?_wkP:_dsum;var _auto=(_wkP<=0&&_dsum>0);
+  var netD=(m.net||0)+bord+promo;var cashD=(m.cash||0)+bord;var card=netD-cashD;var cardBrand=card+brand;
   TT.net+=netD;TT.cash+=cashD;TT.card+=card;TT.brand+=brand;TT.cardBrand+=cardBrand;TT.bord+=bord;TT.promo+=promo;TT.kmP+=m.kmTotal||0;TT.kmG+=m.gpsKm||0;TT.orders+=m.orders||0;TT.online+=m.online||0;
   var brandCell=bv<0?'<span class="wk-brand off">\u2014</span>':(bv>0?'<span class="wk-brand">'+Math.round(bv)+'\u20b4</span>':'0');
   return '<tr class="wk-row" data-n="'+encodeURIComponent(m.name)+'" onclick="openWeekDriver(this.dataset.n)"><td><div class="wk-nm">'+rpt_esc(nameFor(m.name))+' \u203a</div>'+strip(m)+'</td>'
-   +'<td class="r"><b'+((bord>0||promo>0)?' title="'+(bord>0?'бордюр '+gv(bord)+' \u20b4':'')+((bord>0&&promo>0)?', ':'')+(promo>0?'промо '+gv(promo)+' \u20b4':'')+'"':'')+'>'+gv(netD)+'</b>'+((bord>0||promo>0)?'<span style="font-size:10px;color:var(--muted)"> +'+((bord>0?'\u0431':'')+(promo>0?'\u043f':''))+'</span>':'')+'</td><td class="r">'+m.done+'/'+m.days+'</td><td class="r">'+(m.pct==null?'\u2014':m.pct+'%')+'</td>'
+   +'<td class="r"><b'+((bord>0||promo>0)?' title="'+(bord>0?'бордюр '+gv(bord)+' \u20b4':'')+((bord>0&&promo>0)?', ':'')+(promo>0?('промо '+gv(promo)+' \u20b4'+(_auto?' (з денних звітів)':' (вписано вручну)')):'')+'"':'')+'>'+gv(netD)+'</b>'+((bord>0||promo>0)?'<span style="font-size:10px;color:var(--muted)"> +'+((bord>0?'\u0431':'')+(promo>0?'\u043f':''))+'</span>':'')+'</td><td class="r">'+m.done+'/'+m.days+'</td><td class="r">'+(m.pct==null?'\u2014':m.pct+'%')+'</td>'
    +'<td class="r">'+(m.pace==null?'\u2014':m.pace)+'</td><td class="r">'+m.orders+'</td><td class="r">'+H(m.online)+'</td><td class="r">'+gv(cashD)+'</td>'
    +'<td class="r"><input type="text" value="'+(bord||'')+'" placeholder="0" onclick="event.stopPropagation()" onchange="setBordur(&quot;'+encodeURIComponent(tok)+'&quot;,this.value)" style="width:60px;text-align:right;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);font-family:inherit;font-size:12.5px"></td>'
-   +'<td class="r"><input type="text" value="'+(promo||'')+'" placeholder="0" onclick="event.stopPropagation()" onchange="wkSetPromo(&quot;'+encodeURIComponent(tok)+'&quot;,this.value)" style="width:60px;text-align:right;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);font-family:inherit;font-size:12.5px">'+(_dsum>0?'<div onclick="event.stopPropagation();wkSetPromo(&quot;'+encodeURIComponent(tok)+'&quot;,'+_dsum+')" title="Промо, внесене в денні звіти за цей тиждень. Клік — підставити в тижневе поле." style="font-size:10px;color:var(--muted);margin-top:2px;cursor:pointer;text-decoration:underline dotted">з денних: '+gv(_dsum)+'</div>':'')+'</td>'
+   +'<td class="r"><input type="text" value="'+(promo||'')+'" placeholder="0" onclick="event.stopPropagation()" onchange="wkSetPromo(&quot;'+encodeURIComponent(tok)+'&quot;,this.value)" style="width:60px;text-align:right;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);font-family:inherit;font-size:12.5px">'+(_dsum>0?'<div onclick="event.stopPropagation();wkSetPromo(&quot;'+encodeURIComponent(tok)+'&quot;,'+_dsum+')" title="Промо з денних звітів за цей тиждень. Уже враховане в касі. Клік — зафіксувати як тижневе, щоб потім правити вручну." style="font-size:10px;color:var(--muted);margin-top:2px;cursor:pointer;text-decoration:underline dotted">з денних: '+gv(_dsum)+'</div>':'')+'</td>'
    +'<td class="r"'+(card<0?' style="color:var(--bad)"':'')+'>'+gv(card)+'</td>'
    +'<td class="r">'+brandCell+'</td>'
    +'<td class="r"><b>'+gv(cardBrand)+'</b></td>'
@@ -2843,10 +3207,10 @@ function renderWeekDriver(name){var el=document.getElementById('week');if(!el)re
   +trk+'<div class="osect"><h3>По днях (Пн\u2013Нд)</h3><div style="overflow-x:auto"><table class="otable"><thead><tr><th>День</th><th class="r">Чистими</th><th class="r">Валове</th><th class="r">Поїзд</th><th class="r">Онлайн</th><th class="r">\u20b4/год</th><th>План</th></tr></thead><tbody>'+dayRows+'</tbody></table></div></div>';
  try{window.scrollTo(0,0);}catch(e){}}
 
-function showView(v){view=v;try{localStorage.setItem('lastView',v);}catch(e){}document.getElementById('overview').classList.toggle('hide',v!=='overview');document.getElementById('owner').classList.toggle('hide',v!=='owner');document.getElementById('cars').classList.toggle('hide',v!=='cars');document.getElementById('settings').classList.toggle('hide',v!=='settings');document.getElementById('morning').classList.toggle('hide',v!=='morning');document.getElementById('drivers').classList.toggle('hide',v!=='drivers');document.getElementById('report').classList.toggle('hide',v!=='report');document.getElementById('week').classList.toggle('hide',v!=='week');document.getElementById('standing').classList.toggle('hide',v!=='standing');document.getElementById('history').classList.toggle('hide',v!=='history');document.getElementById('branding').classList.toggle('hide',v!=='branding');document.getElementById('coverage').classList.toggle('hide',v!=='coverage');document.getElementById('status').classList.toggle('hide',v!=='status');document.getElementById('tracker').classList.toggle('hide',v!=='tracker');var _rv=document.getElementById('rent');if(_rv)_rv.classList.toggle('hide',v!=='rent');if(v!=='status'&&window._statusTimer){clearTimeout(window._statusTimer);window._statusTimer=null;}document.getElementById('detail').classList.add('hide');if(v==='rent'&&typeof renderRent==='function')renderRent();if(v==='cars')renderCars();if(v==='settings'){renderSettings();renderDriverNames();}if(v==='morning')renderMorning();if(v==='drivers')renderDrivers();if(v==='report')renderReport();if(v==='week')renderWeek();if(v==='standing')renderStanding();if(v==='history')renderHistory();if(v==='branding')renderBranding();if(v==='coverage')renderCoverage();if(v==='status')renderStatus();if(v==='tracker')renderTracker();if(v==='overview')renderStandingMini();(function(){var _nav=document.getElementById('topnav');if(!_nav)return;[..._nav.querySelectorAll('button[data-v]')].forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v));[..._nav.querySelectorAll('.ncat')].forEach(function(c){var has=[...c.querySelectorAll('button[data-v]')].some(b=>b.dataset.v===v);c.classList.toggle('active',has);c.classList.remove('open');});})();if(v==='owner')renderOwner();window.scrollTo(0,0);}
+function showView(v){view=v;try{localStorage.setItem('lastView',v);}catch(e){}document.getElementById('overview').classList.toggle('hide',v!=='overview');document.getElementById('owner').classList.toggle('hide',v!=='owner');document.getElementById('cars').classList.toggle('hide',v!=='cars');document.getElementById('settings').classList.toggle('hide',v!=='settings');document.getElementById('morning').classList.toggle('hide',v!=='morning');document.getElementById('drivers').classList.toggle('hide',v!=='drivers');document.getElementById('report').classList.toggle('hide',v!=='report');document.getElementById('week').classList.toggle('hide',v!=='week');document.getElementById('standing').classList.toggle('hide',v!=='standing');document.getElementById('history').classList.toggle('hide',v!=='history');document.getElementById('branding').classList.toggle('hide',v!=='branding');document.getElementById('coverage').classList.toggle('hide',v!=='coverage');document.getElementById('status').classList.toggle('hide',v!=='status');document.getElementById('tracker').classList.toggle('hide',v!=='tracker');var _rv=document.getElementById('rent');if(_rv)_rv.classList.toggle('hide',v!=='rent');var _dv=document.getElementById('dyn');if(_dv)_dv.classList.toggle('hide',v!=='dyn');if(v!=='status'&&window._statusTimer){clearTimeout(window._statusTimer);window._statusTimer=null;}document.getElementById('detail').classList.add('hide');if(v==='rent'&&typeof renderRent==='function')renderRent();if(v==='dyn'&&typeof renderDyn==='function')renderDyn();if(v==='cars')renderCars();if(v==='settings'){renderSettings();renderDriverNames();}if(v==='morning')renderMorning();if(v==='drivers')renderDrivers();if(v==='report')renderReport();if(v==='week')renderWeek();if(v==='standing')renderStanding();if(v==='history')renderHistory();if(v==='branding')renderBranding();if(v==='coverage')renderCoverage();if(v==='status')renderStatus();if(v==='tracker')renderTracker();if(v==='overview')renderStandingMini();(function(){var _nav=document.getElementById('topnav');if(!_nav)return;[..._nav.querySelectorAll('button[data-v]')].forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v));[..._nav.querySelectorAll('.ncat')].forEach(function(c){var has=[...c.querySelectorAll('button[data-v]')].some(b=>b.dataset.v===v);c.classList.toggle('active',has);c.classList.remove('open');});})();if(v==='owner')renderOwner();window.scrollTo(0,0);}
 function daybar(){const S=shown();const pv=S.map(o=>o.pace_net).filter(x=>x!=null).sort((a,b)=>a-b);const np=pv.length?Math.round(pv[Math.floor(pv.length/2)]):null;const ok=np!=null&&np>=HOURLY;const col=np==null?'var(--amber)':(ok?'var(--good)':'var(--bad)');
 document.getElementById('daybar').innerHTML=`<span class="dot" style="background:${col}"></span><div>Середній темп по парку — <b>${np==null?'—':np+' ₴/год чистими'}</b> (норма ${HOURLY} ₴/год). `+(ok?'Парк тримає норму — гарний день, тисніть.':'Темп нижче норми — варто підганяти водіїв.')+`</div>`;}
-function shown(){var base=A.filter(o=>isTaxi(o)&&!isHidden(o.name));return selDrivers.size?base.filter(o=>selDrivers.has(o.name)):base;}
+function shown(){if(typeof A==='undefined'||!Array.isArray(A))return [];var base=A.filter(o=>inScope(o)&&!isHidden(o.name));return selDrivers.size?base.filter(o=>selDrivers.has(o.name)):base;}
 function lastDriverByPlate(){var map={};try{var ks=Object.keys(DAYS||{}).sort();ks.forEach(function(k){var d=DAYS[k];var drv=(d&&d.drivers)||[];drv.forEach(function(o){if(o&&o.plate_norm&&o.name)map[o.plate_norm]=o.name;});});}catch(e){}(A||[]).forEach(function(o){if(o&&o.plate_norm&&o.name)map[o.plate_norm]=o.name;});return map;}
 function renderDrvSum(){var el=document.getElementById('drvSum');if(!el)return;if(!DATA){el.innerHTML='';return;}var base=(A||[]).filter(function(o){return (typeof isTaxi==='function')?isTaxi(o):true;});var total=base.length,work=base.filter(function(o){return o.start_h!=null;}).length,notout=total-work;var done=base.filter(function(o){return statusOf(o)==='done';}).length;el.innerHTML='<div class="mn-sum drvsum-grid">'+'<div class="mn-st"><div class="mn-stn">'+total+'</div><div class="mn-stl">усього</div></div>'+'<div class="mn-st good"><div class="mn-stn">'+work+'</div><div class="mn-stl">працюють</div></div>'+'<div class="mn-st bad"><div class="mn-stn">'+notout+'</div><div class="mn-stl">не виїхали</div></div>'+'<div class="mn-st amber"><div class="mn-stn">'+done+'</div><div class="mn-stl">виконали план</div></div>'+'</div>';}function renderDrivers(){renderDrvSum();if(typeof renderList==='function')renderList();}
 function renderMorning(){var el=document.getElementById('mornBody');if(el){el.innerHTML=morningPanel();el.querySelectorAll('.mn-add').forEach(function(b){b.onclick=function(){addToRoster(b.getAttribute('data-plate'));};});el.querySelectorAll('.mn-reason').forEach(function(sl){sl.onchange=function(){var pl=sl.getAttribute('data-pl');var cur=(typeof carNotes==='function'?carNotes()[pl]:null)||{};saveCarNote(pl,Object.assign({},cur,{reason:sl.value}));if(typeof renderMorning==='function')renderMorning();if(typeof kpis==='function')kpis();if(typeof renderStandingMini==='function')renderStandingMini();if(typeof renderFleetMini==='function')renderFleetMini();};});}}
@@ -2945,7 +3309,7 @@ function morningPanel(){
   var html=sum;
   if(noGo.length){
     html+='<div class="mn-sec"><div class="mn-h red">🔴 Не виїхали — подзвонити</div>';
-    noGo.forEach(function(x){var _nt=(typeof carNotes==='function'?carNotes()[x.plate]:null)||{};var _cur=_nt.reason||'';var _opts='<option value="">— причина —</option>'+REASONS.map(function(r){return '<option value="'+r+'"'+(r===_cur?' selected':'')+'>'+r+'</option>';}).join('');html+='<div class="mn-row"><div class="mn-main"><span class="mn-name">'+(x.name||'Невідомий водій')+'</span><span class="mn-plate">'+x.plate+'</span></div>'+'<select class="mn-reason" data-pl="'+x.plate+'" style="font-size:11px;border:1px solid var(--line);border-radius:7px;padding:4px 6px;max-width:170px;color:'+(_cur?'#9A6B12':'#999')+';font-weight:'+(_cur?'600':'400')+'">'+_opts+'</select>'+callBtn(x.name,false)+'</div>';});
+    noGo.forEach(function(x){var _nt=(typeof carNotes==='function'?carNotes()[x.plate]:null)||{};var _cur=_nt.reason||'';var _opts=reasonOptions(_cur);html+='<div class="mn-row"><div class="mn-main"><span class="mn-name">'+(x.name||'Невідомий водій')+'</span><span class="mn-plate">'+x.plate+'</span></div>'+'<select class="mn-reason" data-pl="'+x.plate+'" style="font-size:11px;border:1px solid var(--line);border-radius:7px;padding:4px 6px;max-width:170px;color:'+(_cur?'#9A6B12':'#999')+';font-weight:'+(_cur?'600':'400')+'">'+_opts+'</select>'+callBtn(x.name,false)+'</div>';});
     html+='</div>';
   }
   if(roaming.length){
@@ -2998,7 +3362,8 @@ function renderDayCal(){var cal=document.getElementById('dayCal');if(!cal)return
 function dayCutMin(){return Math.round((typeof DAYSTART!=='undefined'&&DAYSTART!=null?DAYSTART:5)*60);}
 function hydrate(day){if(!day||!day._parts||typeof PROC==='undefined'||!PROC.buildData)return day;try{var D=PROC.buildData(day._parts,dayCutMin());D._parts=day._parts;D.date=day.date||D.date;D.date_label=day.date_label||D.date_label;D.window=buildWin(D.date,D.now_min);if(D.demand===undefined&&day.demand!==undefined)D.demand=day.demand;return D;}catch(e){console.error('hydrate',e);return day;}}
 function setDay(date){if(DAYS[date]){DATA=hydrate(DAYS[date]);boot();}}const rank={nowork:0,low:1,behind:2,ontrack:3,done:4};
-function renderList(){let L=A.filter(o=>isTaxi(o)&&o.name.toLowerCase().includes(q)&&(selDrivers.size===0||selDrivers.has(o.name))&&(statusF=='all'||statusOf(o)==statusF||(statusF=='nowork'&&statusOf(o)=='low')));
+function renderList(){if(typeof A==='undefined'||!Array.isArray(A)){var _le=document.getElementById('list');if(_le)_le.innerHTML='<p class="sub">Ще немає даних за цей день.</p>';return;}
+let L=A.filter(o=>inScope(o)&&o.name.toLowerCase().includes(q)&&(selDrivers.size===0||selDrivers.has(o.name))&&(statusF=='all'||statusOf(o)==statusF||(statusF=='nowork'&&statusOf(o)=='low')));
 const key={attn:o=>[rank[statusOf(o)],-(o.idle||0)],start:o=>[o.start_h==null?99:o.start_h],plan:o=>{const p=plan(o);return p.done?[0,-(o.net||0)]:(p.hLeft!=null?[1,p.hLeft]:[2,0]);},gross:o=>[-(o.gross||0)],unacc:o=>[-(o.unacc_km||0)]}[sort];
 L.sort((a,b)=>{const ka=key(a),kb=key(b);for(let j=0;j<ka.length;j++)if(ka[j]!=kb[j])return ka[j]-kb[j];return 0;});
 document.getElementById('list').innerHTML=L.length?L.map(row).join(''):'<p style="color:var(--muted)">Нікого не знайдено.</p>';}
@@ -3111,13 +3476,55 @@ const avg=comp.length?comp.reduce((s,t)=>s+t.net,0)/comp.length:null;const toPla
 return `<div class="sect"><h3>Якість поїздок</h3>
 <div class="qbar"><i class="q-g" style="width:${g/tot*100}%"></i><i class="q-a" style="width:${a/tot*100}%"></i><i class="q-l" style="width:${l/tot*100}%"></i></div>
 <div class="qsum">Вигідних <b>${g}</b> · середніх <b>${a}</b> · невигідних <b>${l}</b> з ${comp.length}. Середня чиста поїздка <b>${avg?gv(avg):'—'} ₴</b> (${(avg&&planOf(o)?(avg/planOf(o)*100).toFixed(1):'—')}% плану кожна). ${p.done?'План уже закрито.':`Щоб закрити план — ще <b>~${toPlan}</b> таких поїздок.`} Поїздок сьогодні: <b>${o.orders||0} / ${TRIPGOAL}</b>${(o.orders||0)>=TRIPGOAL?' ✓':` (ще ${Math.max(0,TRIPGOAL-(o.orders||0))})`}.</div></div>`;})()}
-${dayDynamics(o)}
+${dynLink(o)}
 <div class="sect"><h3>Журнал поїздок (${o.trips.filter(t=>t.t).length})</h3>
 <table class="log"><thead><tr><th>Час</th><th>Платф.</th><th>Клас</th><th class="r">км</th><th class="r">Сума</th><th class="r">Чисте</th><th class="r">₴/км</th><th>Якість</th><th class="r">% плану</th><th>Оплата</th><th>Статус</th></tr></thead>
 <tbody>${trips||'<tr><td colspan=11 style="color:var(--muted)">Немає поїздок.</td></tr>'}</tbody></table></div>
 ${gpsSection(o)}
 <div class="sect"><h3>Повідомлення водієві</h3><div class="msg"><div class="mh"><span>Готово до надсилання</span><button class="copy" id="dcopy">Скопіювати</button></div>
 <div class="mt" id="dmt">${(function(){const nt=nightTail(o);return nt.n>0?`🌙 Увага: ${nt.n} поїзд. до ${hm(DAYSTART*60)} — це нічна зміна з учора (${gv(nt.g)} ₴), у старті дня не враховано. `:'';})()}${dayMessage(o,statusOf(o))}</div></div></div>`;}
+/* Коротке посилання в картці водія замість великого блоку динаміки.
+   Сам розбір по місяцях — на окремому екрані «Динаміка». */
+function dynLink(o){
+  try{
+    var ks=Object.keys(DAYS||{}).filter(function(k){return /^\d{4}-\d{2}-\d{2}$/.test(k);});
+    var mine=0,net=0;
+    ks.forEach(function(k){
+      var x=((DAYS[k].drivers)||[]).find(function(z){return z.name===o.name;});
+      if(x){mine++;net+=(x.net||0);}
+    });
+    if(mine<2)return '';
+    return '<div class="dynlink"><div class="dl-l"><b>'+mine+' днів</b> в історії \u00b7 '
+      +(Math.round(net)).toLocaleString('uk-UA')+' \u20b4 чистими разом</div>'
+      +'<button type="button" class="dl-btn" onclick="openDyn(&quot;'+encodeURIComponent(o.name)+'&quot;)">Динаміка по днях \u203a</button></div>';
+  }catch(e){return '';}
+}
+function openDyn(enc){
+  try{window._dynName=decodeURIComponent(enc);
+    if(typeof showView==='function')showView('dyn');}catch(e){}
+}
+function renderDyn(){
+  var el=document.getElementById('dyn');
+  if(!el)return;
+  var nm=window._dynName||'',o=null;
+  try{
+    var ks=Object.keys(DAYS||{}).filter(function(k){return /^\d{4}-\d{2}-\d{2}$/.test(k);}).sort();
+    for(var i=ks.length-1;i>=0&&!o;i--){
+      var f=((DAYS[ks[i]].drivers)||[]).find(function(z){return z.name===nm;});
+      if(f)o=f;
+    }
+  }catch(e){}
+  if(!nm||!o){
+    el.innerHTML='<p class="eyebrow">AVTO PARK Lviv</p><h1>Динаміка</h1>'
+      +'<p class="sub">Обери водія на екрані «Водії» і натисни «Динаміка по днях».</p>';
+    return;
+  }
+  el.innerHTML='<p class="eyebrow">AVTO PARK Lviv</p>'
+    +'<h1>'+rpt_esc(nameFor(nm))+' \u00b7 <span class="accent">динаміка</span></h1>'
+    +'<p class="sub">Робочий тиждень пн\u2013нд. Тисни на місяць або тиждень, щоб розгорнути деталі.</p>'
+    +'<button type="button" class="dyn-back" onclick="showView(&quot;drivers&quot;)">\u2039 До водіїв</button>'
+    +dayDynamics(o);
+}
 function dayDynamics(o){
   var ks=Object.keys(DAYS||{}).filter(function(k){return /^\d{4}-\d{2}-\d{2}$/.test(k);});
   if(ks.length<2)return '';
@@ -3135,16 +3542,16 @@ function dayDynamics(o){
   var out=monOrder.slice().reverse().map(function(mk){var M=months[mk];var opM=(mk===lastMon)?' open':'';M.wkOrder.sort();var lastWk=M.wkOrder[M.wkOrder.length-1];
     var weeksHtml=M.wkOrder.slice().reverse().map(function(wm){var W=M.weeks[wm];var opW=(mk===lastMon&&wm===lastWk)?' open':'';var rng=fmtd(wm)+'–'+fmtd(wkEnd(wm));
       var rowsHtml=W.rows.slice().reverse().map(function(r){return '<tr><td>'+r.lab+'</td><td class="r">'+gv2(r.net)+'</td><td class="r">'+(r.pace!=null?Math.round(r.pace):'—')+'</td><td class="r">'+r.ord+'</td><td class="r">'+r.pct+'%</td></tr>';}).join('');
-      return '<details'+opW+' style="margin:5px 0"><summary style="cursor:pointer;padding:8px 11px;background:var(--panel);border:1px solid var(--line);border-radius:8px;font-size:13px;font-weight:700">Тиждень '+rng+' · '+W.days+' дн. · '+gv2(W.net)+' ₴ · '+W.ord+' поїзд.</summary><table class="otable" style="margin-top:6px"><thead><tr><th>День</th><th class="r">Чистими</th><th class="r">₴/год</th><th class="r">Поїзд</th><th class="r">% плану</th></tr></thead><tbody>'+rowsHtml+'</tbody></table></details>';}).join('');
-    return '<details'+opM+' style="margin:9px 0"><summary style="cursor:pointer;padding:11px 13px;background:var(--ink);color:#fff;border-radius:9px;font-size:14px;font-weight:800">'+monLab(mk)+' · '+M.days+' дн. · '+gv2(M.net)+' ₴ · '+M.ord+' поїзд.</summary><div style="padding:4px 2px 2px">'+weeksHtml+'</div></details>';}).join('');
-  return '<div class="sect"><h3>Динаміка по днях</h3><div style="font-size:12px;color:var(--muted);margin:-4px 0 8px;line-height:1.4">Робочий тиждень пн–нд. Місяць рахується за понеділком тижня. Тисни на місяць або тиждень, щоб розгорнути деталі.</div>'+out+'</div>';
+      return '<details'+opW+' class="dyn-wk"><summary><span class="dw-t">'+rng+'</span><span class="dm-n">'+W.days+' дн.</span><span class="dw-s">'+gv2(W.net)+' \u20b4</span><span class="dm-n">'+W.ord+' поїзд.</span></summary><table class="otable" style="margin-top:6px"><thead><tr><th>День</th><th class="r">Чистими</th><th class="r">₴/год</th><th class="r">Поїзд</th><th class="r">% плану</th></tr></thead><tbody>'+rowsHtml+'</tbody></table></details>';}).join('');
+    return '<details'+opM+' class="dyn-mon"><summary><span class="dm-t">'+monLab(mk)+'</span><span class="dm-n">'+M.days+' дн.</span><span class="dm-s">'+gv2(M.net)+' \u20b4</span><span class="dm-n">'+M.ord+' поїзд.</span></summary><div class="dm-body">'+weeksHtml+'</div></details>';}).join('');
+  return '<div class="sect dyn-body">'+out+'</div>';
 }
 function gpsSection(o){
 if(!o.has_gps)return `<div class="sect"><h3>Трекер · GPS</h3><p style="color:var(--muted);font-size:12.5px">Немає даних трекера для цього авто.</p></div>`;
 const un=o.unacc||[];
 const sum=`<div class="gsum"><div class="c"><div class="v">${o.gps_km!=null?o.gps_km.toFixed(0):'—'} км</div><div class="l">GPS пробіг</div></div>
 <div class="c"><div class="v">${o.km_total!=null?o.km_total.toFixed(0):'—'} км</div><div class="l">оплачено агрегат.</div></div>
-<div class="c"><div class="v">~${o.deadhead_est!=null?o.deadhead_est.toFixed(0):'—'} км</div><div class="l">доїзд (${o.orders||0}×1.5)</div></div>
+<div class="c"><div class="v">~${o.deadhead_est!=null?o.deadhead_est.toFixed(0):'—'} км</div><div class="l">доїзд (${o.orders||0}×${(typeof dhCfg==='function'?dhCfg().km:1.5)})</div></div>
 <div class="c"><div class="v ${o.net_unexplained>=8?'bad':''}">${o.net_unexplained!=null?o.net_unexplained.toFixed(0):'—'} км</div><div class="l">залишок невідомий</div></div></div>`;
 let unb='';
 if(un.length){unb=`<div class="caveat">Біля кожного відрізка — <b>найближче замовлення</b> після нього. Якщо воно одразу (≤25 хв) — це <b>доїзд</b> до пасажира. Якщо далеко (напр. +160 хв) — це рух <b>без замовлення</b>. Так можна звірити з журналом поїздок, чи справді це доїзд.</div>
@@ -3175,7 +3582,7 @@ const dsin=document.getElementById('daystart');if(dsin){dsin.value=hm(Math.round
 const sein=document.getElementById('shiftend');sein.onchange=e=>{const m=/(\d+):(\d+)/.exec(e.target.value);if(m)SHIFTEND=+m[1]*60+ +m[2];var ls=document.getElementById('legshift');if(ls)ls.textContent=e.target.value;kpis();renderList();if(cur!=null)openDetail(cur);};
 
 function getFleet(){return [...new Set((document.getElementById('fleetTxt').value.split(/[\n,;]+/).map(x=>NORM(x.trim())).filter(Boolean)))];}
-function startedSet(){var s=new Set();(A||[]).forEach(function(o){if(o.start_h!=null&&o.plate_norm)s.add(o.plate_norm);});return s;}var _startedByDay={};function startedSetForDay(k){if(_startedByDay[k])return _startedByDay[k];var d=(typeof DAYS!=='undefined')?DAYS[k]:null;var s=new Set();if(d){var H=(d&&d._parts)?hydrate(d):d;((H&&H.drivers)||[]).forEach(function(o){if(o.start_h!=null&&o.plate_norm)s.add(o.plate_norm);});}_startedByDay[k]=s;return s;}function carIdleDays(plate){if(typeof DAYS==='undefined')return {n:1,exact:false};var ks=Object.keys(DAYS).sort();if(!ks.length)return {n:1,exact:false};var cur=(DATA&&DATA.date)||ks[ks.length-1];function dn(x){var p=String(x).split('-');return Date.UTC(+p[0],+p[1]-1,+p[2])/86400000;}var last=null;for(var i=ks.length-1;i>=0;i--){if(ks[i]>cur)continue;if(startedSetForDay(ks[i]).has(plate)){last=ks[i];break;}}if(last)return {n:Math.max(1,Math.round(dn(cur)-dn(last))),exact:true};return {n:Math.max(1,Math.round(dn(cur)-dn(ks[0]))+1),exact:false};}function standing(){const st=startedSet();const seen=new Set();const out=[];const gc=DATA.gps_cars||{};var _nm=(typeof lastDriverByPlate==='function')?lastDriverByPlate():{},_pp=(typeof drvPass==='function')?drvPass():{};
+function startedSet(){var s=new Set();(A||[]).forEach(function(o){if(o.start_h!=null&&o.plate_norm)s.add(o.plate_norm);});return s;}var _startedByDay={};function startedSetForDay(k){if(_startedByDay[k])return _startedByDay[k];var d=(typeof DAYS!=='undefined')?DAYS[k]:null;var s=new Set();if(d){var H=(d&&d._parts)?hydrate(d):d;((H&&H.drivers)||[]).forEach(function(o){if(o.start_h!=null&&o.plate_norm)s.add(o.plate_norm);});}_startedByDay[k]=s;return s;}function carIdleDays(plate){if(typeof DAYS==='undefined')return {n:1,exact:false};var ks=Object.keys(DAYS).sort();if(!ks.length)return {n:1,exact:false};var cur=(DATA&&DATA.date)||ks[ks.length-1];function dn(x){var p=String(x).split('-');return Date.UTC(+p[0],+p[1]-1,+p[2])/86400000;}var last=null;for(var i=ks.length-1;i>=0;i--){if(ks[i]>cur)continue;if(startedSetForDay(ks[i]).has(plate)){last=ks[i];break;}}if(last)return {n:Math.max(1,Math.round(dn(cur)-dn(last))),exact:true};return {n:Math.max(1,Math.round(dn(cur)-dn(ks[0]))+1),exact:false};}function standing(){if(typeof DATA==='undefined'||!DATA)return [];const st=startedSet();const seen=new Set();const out=[];const gc=DATA.gps_cars||{};var _nm=(typeof lastDriverByPlate==='function')?lastDriverByPlate():{},_pp=(typeof drvPass==='function')?drvPass():{};
 Object.keys(gc).forEach(pl=>{if(st.has(pl))return;if(!plateIsTaxi(pl,_nm,_pp))return;seen.add(pl);const c=gc[pl];out.push({plate:pl,car:c.car,gps_km:c.km,addr:c.addr,dur:c.dur,driver:'',gps:true});});
 getFleet().forEach(p=>{if(seen.has(p)||st.has(p))return;if(!plateIsTaxi(p,_nm,_pp))return;seen.add(p);out.push({plate:p,car:'',driver:'',gps:false});});
 return out.filter(c=>!isOOS(c.plate)).sort((a,b)=>(a.gps_km||0)-(b.gps_km||0));}
@@ -3672,19 +4079,19 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   monOrder.sort();var lastMon=monOrder[monOrder.length-1];
   var body=monOrder.slice().reverse().map(function(mk){var M=months[mk];var opM=(mk===lastMon)?' open':'';
     var rows=M.weeks.sort(function(a,b){return a.wm<b.wm?1:-1;}).map(function(W){
-      var cells='';for(var i=0;i<7;i++){var d=new Date(W.wm+'T00:00:00');d.setDate(d.getDate()+i);var dk=_wkYmd(d);var has=!!W.days[dk];cells+='<span title="'+DL[i]+' '+fmtd(dk)+(has?' — є дані':' — нема')+'" style="display:inline-block;width:24px;height:24px;line-height:24px;text-align:center;border-radius:6px;margin-right:4px;font-size:11px;font-weight:800;'+(has?'background:#127a3e;color:#fff':'background:var(--line);color:var(--muted)')+'">'+DL[i][0]+'</span>';}
-      var brandTxt=W.brand?('<span style="color:#0a7d33;font-weight:700">✓ Bolt: '+W.brand.cnt+' авто · '+gv2(W.brand.sum)+' ₴'+(W.brand.meta&&W.brand.meta.uploadedAt?(' <span style="color:var(--muted);font-weight:600">(завантажено '+_brandFmtD(W.brand.meta.uploadedAt)+')</span>'):'')+'</span>'):'<span style="color:var(--muted)">— Bolt: брендування не завантажено</span>';
-      var uklonTxt=W.uklon?('<span style="color:#0a7d33;font-weight:700">✓ Uklon: '+W.uklon.cnt+' авто · '+gv2(W.uklon.sum)+' ₴</span>'):'<span style="color:var(--muted)">— Uklon: не завантажено</span>';
+      var cells='';for(var i=0;i<7;i++){var d=new Date(W.wm+'T00:00:00');d.setDate(d.getDate()+i);var dk=_wkYmd(d);var has=!!W.days[dk];cells+='<span class="cvd'+(has?' has':'')+'" title="'+DL[i]+' '+fmtd(dk)+(has?' \u2014 є дані':' \u2014 нема')+'">'+DL[i][0]+'</span>';}
+      var brandTxt=W.brand?('<span class="cv-ok">✓ Bolt: '+W.brand.cnt+' авто · '+gv2(W.brand.sum)+' ₴'+(W.brand.meta&&W.brand.meta.uploadedAt?(' <span style="color:var(--muted);font-weight:600">(завантажено '+_brandFmtD(W.brand.meta.uploadedAt)+')</span>'):'')+'</span>'):'<span class="cv-no">— Bolt: брендування не завантажено</span>';
+      var uklonTxt=W.uklon?('<span class="cv-ok">✓ Uklon: '+W.uklon.cnt+' авто · '+gv2(W.uklon.sum)+' ₴</span>'):'<span class="cv-no">— Uklon: брендування не завантажено</span>';
       var rng=fmtd(W.wm)+'–'+fmtd(wkEnd(W.wm));
-      return '<div style="padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin:7px 0;background:var(--panel)"><div style="font-weight:700;font-size:13.5px;margin-bottom:7px">Тиждень '+rng+' <span style="color:var(--muted);font-weight:600">· дані '+W.dayCount+'/7 днів</span></div><div style="margin-bottom:7px">'+cells+'</div><div style="font-size:12.5px;line-height:1.8">'+brandTxt+'<br>'+uklonTxt+'</div></div>';
+      return '<div class="cv-wk"><div class="cv-h">Тиждень '+rng+' <span class="cv-cnt">\u00b7 дані '+W.dayCount+'/7 днів</span></div><div class="cv-days">'+cells+'</div><div class="cv-brand">'+brandTxt+uklonTxt+'</div></div>';
     }).join('');
     var mSub='дані за '+M.dayCount+' дн.'+(M.brandSum>0?(' · брендування '+gv2(M.brandSum)+' ₴ ('+M.brandWeeks+' тижн.)'):'');
-    return '<details'+opM+' style="margin:10px 0"><summary style="cursor:pointer;padding:12px 14px;background:var(--ink);color:#fff;border-radius:10px;font-size:14.5px;font-weight:800">'+monLab(mk)+' <span style="font-weight:600;opacity:.85">· '+mSub+'</span></summary><div style="padding:7px 2px 2px">'+rows+'</div></details>';
+    return '<details'+opM+' class="dyn-mon"><summary><span class="dm-t">'+monLab(mk)+'</span><span class="dm-n">'+mSub+'</span></summary><div class="dm-body">'+rows+'</div></details>';
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=48;
-var APP_BUILD='збірка 10.08 · v'+APP_BUILD_N;
+var APP_BUILD_N=63;
+var APP_BUILD='збірка 21.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
   var cv=(r&&r.data&&r.data.value!=null)?r.data.value:0;var cloudN=parseInt((typeof cv==='object'&&cv)?(cv.n||0):cv)||0;
@@ -3854,8 +4261,35 @@ function firedGone(name){var f=firedFrom(name);if(!f)return false;
 function plateOwner(plate,skip){try{if(!plate)return '';var m=drvPass();var sk=skip?nkey(skip):'';
   var hit='';Object.keys(m).forEach(function(k){if(hit)return;if(nkey(k)===sk)return;
     if(firedFrom(k))return;if((m[k]&&m[k].plate)===plate)hit=k;});return hit;}catch(e){return '';}}
+/* ===== ДОЇЗД ДО ПАСАЖИРА =====
+   km    — скільки км припадає на подачу до одного замовлення (оцінка порожнього пробігу)
+   maxKm — відрізок GPS довший за це вже не вважається доїздом
+   gap   — якщо замовлення почалось пізніше, це не доїзд, а рух без замовлення
+   На гроші водіїв НЕ впливає — лише на оцінку пробігу. */
+var DH_DEFAULT={km:1.5,maxKm:3,gap:25};
+function dhCfg(){
+  try{
+    var o=JSON.parse(localStorage.getItem('dh_cfg')||'null');
+    if(!o||typeof o!=='object')return Object.assign({},DH_DEFAULT);
+    return {km:(o.km>=0&&o.km<=20)?+o.km:DH_DEFAULT.km,
+            maxKm:(o.maxKm>=0&&o.maxKm<=50)?+o.maxKm:DH_DEFAULT.maxKm,
+            gap:(o.gap>=0&&o.gap<=180)?+o.gap:DH_DEFAULT.gap};
+  }catch(e){return Object.assign({},DH_DEFAULT);}
+}
+function dhSave(c){
+  var v={km:+c.km,maxKm:+c.maxKm,gap:+c.gap};
+  try{localStorage.setItem('dh_cfg',JSON.stringify(v));}catch(e){}
+  if(typeof cloudSaveKV==='function'){try{cloudSaveKV('dhcfg',v);}catch(e){}}
+}
 function ownOf(o){const p=dP(o&&o.name);return p.type||'taxi';}
+/* Які типи водіїв показувати на екрані «Водії».
+   'taxi' — лише таксі (як було); 'all' — і оренда, і лізинг.
+   Впливає ТІЛЬКИ на екран «Водії»: тиждень, звіт і розрахунки не змінюються. */
+function drvScope(){try{return localStorage.getItem('drv_scope')||'taxi';}catch(e){return 'taxi';}}
+function drvScopeSet(v){try{localStorage.setItem('drv_scope',v==='all'?'all':'taxi');}catch(e){}}
 function isTaxi(o){return ownOf(o)==='taxi';}
+/* Для екрана «Водії»: враховує вибраний режим. */
+function inScope(o){return drvScope()==='all'?true:isTaxi(o);}
 function planOf(o){const p=dP(o&&o.name);return PLAN(p.fuel||'std');}
 function saveCarNote(pl,o){const n=carNotes();n[pl]=o;try{localStorage.setItem('cars_notes',JSON.stringify(n))}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('notes',n);}
 function driverList(){var s={},out=[];try{if(typeof A!=='undefined'&&A)A.forEach(function(o){if(o&&o.name&&!isDeleted(o.name)&&!firedFrom(o.name)){var k=nkey(o.name);if(!s[k]){s[k]=1;out.push(o.name);}}});}catch(e){}try{Object.keys(drvPass()).forEach(function(n){if(isDeleted(n)||firedFrom(n))return;var k=nkey(n);if(!s[k]){s[k]=1;out.push(n);}});}catch(e){}out.sort(function(a,b){return nameFor(a).localeCompare(nameFor(b),'uk');});return out;}
@@ -3867,9 +4301,40 @@ function carDriver(plate){var nt=(typeof carNotes==='function'?carNotes()[plate]
   if(hist){var ap=(dP(hist)||{}).plate;if(ap&&ap!==plate)return '';}
   return hist;}
 function carDriverName(plate){var d=carDriver(plate);return d?nameFor(d):'';}
-const REASONS=['Готове авто — немає водія','Водій на вихідному','Водій захворів','Утримуємо як підмінне','Подобова оренда','Не готове до таксі / готуємо до випуску','На ремонті / ТО','ДТП / пошкоджено','Інше'];
+/* Причини, чому авто не возило таксі.
+   Згруповані за змістом — і, головне, поділені на два види:
+   • ті, що НЕ в OUT_OF_SERVICE — авто могло б працювати, але не працювало.
+     Це справжній простій, він іде в недобір до плану.
+   • ті, що в OUT_OF_SERVICE — авто фізично не могло возити таксі
+     або працювало на парк інакше. Простоєм не рахується. */
+const REASON_GROUPS=[
+  {t:'Немає кому їхати',r:['Готове авто — немає водія','Водій на вихідному','Водій захворів','Водій звільнився — шукаємо заміну','Утримуємо як підмінне']},
+  {t:'Працює на парк',r:['Подобова оренда','Авто у працівника парку','Службова поїздка парку','Передаємо іншому водієві']},
+  {t:'Технічний стан',r:['На ремонті / ТО','ДТП / пошкоджено','Не готове до таксі / готуємо до випуску','На мийці / хімчистці','Заміна гуми']},
+  {t:'Документи й інше',r:['Оформлення документів / страхування','Технічний огляд','На штрафмайданчику','Готуємо до продажу','Інше']}
+];
+const REASONS=REASON_GROUPS.reduce(function(a,g){return a.concat(g.r);},[]);
 const RENT_REASON='Подобова оренда';
-const OUT_OF_SERVICE=new Set(['Не готове до таксі / готуємо до випуску','На ремонті / ТО','ДТП / пошкоджено']);
+/* Авто не рахується простоєм: або воно фізично не могло їхати,
+   або працювало на парк іншим способом. */
+const OUT_OF_SERVICE=new Set([
+  'Не готове до таксі / готуємо до випуску','На ремонті / ТО','ДТП / пошкоджено',
+  'На мийці / хімчистці','Заміна гуми',
+  'Авто у працівника парку','Службова поїздка парку','Передаємо іншому водієві',
+  'Оформлення документів / страхування','Технічний огляд','На штрафмайданчику','Готуємо до продажу'
+]);
+/* <option>-и з групами — щоб у довгому списку було видно логіку */
+function reasonOptions(cur){
+  var h='<option value="">— причина —</option>';
+  REASON_GROUPS.forEach(function(g){
+    h+='<optgroup label="'+g.t+'">';
+    g.r.forEach(function(r){
+      h+='<option value="'+r+'"'+(r===cur?' selected':'')+'>'+r+'</option>';
+    });
+    h+='</optgroup>';
+  });
+  return h;
+}
 /* ===== ПОДОБОВА ОРЕНДА =====
    Оренда — це стан АВТО на період, а не водій. Дохід іде в касу парку окремо
    і НІКОЛИ не потрапляє в показники водіїв (темп, план, розрахунки). */
@@ -3958,8 +4423,8 @@ function isOOS(pl){
   }catch(e){}
   return false;
 }
-function outService(){const seen=new Set();const out=[];const gc=DATA.gps_cars||{};var _nm=(typeof lastDriverByPlate==='function')?lastDriverByPlate():{},_pp=(typeof drvPass==='function')?drvPass():{};Object.keys(gc).forEach(pl=>{if(!isOOS(pl))return;if(!plateIsTaxi(pl,_nm,_pp))return;seen.add(pl);const c=gc[pl];out.push({plate:pl,car:c.car,gps_km:c.km,addr:c.addr,dur:c.dur,gps:true});});getFleet().forEach(p=>{if(seen.has(p)||!isOOS(p))return;if(!plateIsTaxi(p,_nm,_pp))return;seen.add(p);out.push({plate:p,car:'',gps:false});});return out;}
-function carCard(c,notes){const nt=notes[c.plate]||{};const opts='<option value="">— причина —</option>'+REASONS.map(r=>`<option value="${r}" ${r===(nt.reason||'')?'selected':''}>${r}</option>`).join('');
+function outService(){if(typeof DATA==='undefined'||!DATA)return [];const seen=new Set();const out=[];const gc=DATA.gps_cars||{};var _nm=(typeof lastDriverByPlate==='function')?lastDriverByPlate():{},_pp=(typeof drvPass==='function')?drvPass():{};Object.keys(gc).forEach(pl=>{if(!isOOS(pl))return;if(!plateIsTaxi(pl,_nm,_pp))return;seen.add(pl);const c=gc[pl];out.push({plate:pl,car:c.car,gps_km:c.km,addr:c.addr,dur:c.dur,gps:true});});getFleet().forEach(p=>{if(seen.has(p)||!isOOS(p))return;if(!plateIsTaxi(p,_nm,_pp))return;seen.add(p);out.push({plate:p,car:'',gps:false});});return out;}
+function carCard(c,notes){const nt=notes[c.plate]||{};const opts=reasonOptions(nt.reason||'');
 var _curD=(nt.driver!=null?nt.driver:'');var _auto=carDriver(c.plate);
 var _dopts='<option value="">авто'+(_auto?' ('+rpt_esc(nameFor(_auto))+')':'')+'</option>'+'<option value="__none__"'+(_curD==='__none__'?' selected':'')+'>— немає водія —</option>'+driverList().map(function(n){var sel=(_curD&&_curD!=='__none__'&&nkey(_curD)===nkey(n))?' selected':'';return '<option value="'+encodeURIComponent(n)+'"'+sel+'>'+rpt_esc(nameFor(n))+'</option>';}).join('');
 var _dname=carDriverName(c.plate);
@@ -4142,9 +4607,19 @@ fleetTxt.addEventListener('input',()=>{try{localStorage.setItem('fleet_plates',f
 function saveSel(){try{localStorage.setItem('sel_drivers',JSON.stringify([...selDrivers]));}catch(e){}}
 function loadSel(){try{selDrivers=new Set(JSON.parse(localStorage.getItem('sel_drivers')||'[]'));}catch(e){selDrivers=new Set();}}
 function renderDriverPanel(){const p=document.getElementById('driverPanel');
-p.innerHTML='<div class="dpbar"><button id="dpAll">Усі</button><button id="dpClear">Очистити</button></div>'+
-A.filter(o=>!isHidden(o.name)).map(o=>`<label><input type="checkbox" data-n="${o.name}" ${selDrivers.has(o.name)?'checked':''}>${o.name}</label>`).join('');
+var _sc=drvScope();
+p.innerHTML='<div class="dpscope"><button type="button" data-sc="taxi"'+(_sc==='taxi'?' class="on"':'')+'>Лише таксі</button>'
+  +'<button type="button" data-sc="all"'+(_sc==='all'?' class="on"':'')+'>Усі типи</button></div>'
+  +'<div class="dpbar"><button id="dpAll">Усі</button><button id="dpClear">Очистити</button></div>'+
+A.filter(o=>!isHidden(o.name)&&inScope(o)).map(function(o){
+  var _t=ownOf(o),_lbl=(_t==='rent'?' <span class="dp-cat">оренда</span>':(_t==='lease'?' <span class="dp-cat">лізинг</span>':(_t==='auto'?' <span class="dp-cat">авто</span>':'')));
+  return '<label><input type="checkbox" data-n="'+o.name+'" '+(selDrivers.has(o.name)?'checked':'')+'>'+o.name+_lbl+'</label>';
+}).join('');
 p.querySelectorAll('input').forEach(c=>c.onchange=()=>{c.checked?selDrivers.add(c.dataset.n):selDrivers.delete(c.dataset.n);saveSel();drvLabel();daybar();kpis();renderList();});
+p.querySelectorAll('.dpscope button').forEach(function(b){b.onclick=function(e){
+  e.stopPropagation();drvScopeSet(b.getAttribute('data-sc'));
+  selDrivers=new Set();saveSel();renderDriverPanel();drvLabel();daybar();kpis();renderList();
+  if(typeof renderDrvSum==='function')renderDrvSum();};});
 document.getElementById('dpAll').onclick=()=>{selDrivers=new Set();saveSel();renderDriverPanel();drvLabel();daybar();kpis();renderList();};
 document.getElementById('dpClear').onclick=()=>{selDrivers=new Set();saveSel();renderDriverPanel();drvLabel();daybar();kpis();renderList();};}
 function drvLabel(){document.getElementById('drvBtn').textContent='Водії: '+(selDrivers.size?selDrivers.size:'усі');document.getElementById('drvBtn').classList.toggle('on',selDrivers.size>0);}
@@ -4335,7 +4810,8 @@ async function cloudLoadDays(){if(!supa)return;try{const r=await supa.from("app_
 async function cloudSaveDay(d){if(!supa||!d||!d.date)return;try{await supa.from("app_data").upsert({key:"day:"+d.date,value:d});}catch(e){console.error(e);}}
 async function cloudDeleteAllDays(){if(!supa)return;try{await supa.from("app_data").delete().like("key","day:%");}catch(e){console.error(e);}}
 async function cloudSaveKV(k,v){if(!supa)return;try{await supa.from("app_data").upsert({key:"kv:"+k,value:v});}catch(e){console.error(e);}}
-async function cloudLoadKV(){if(!supa)return;try{const r=await supa.from("app_data").select("key,value").in("key",["kv:fleet","kv:notes","kv:drvpass","kv:planfuel","kv:bordur","kv:plannames","kv:planorder","kv:drv_names","kv:drvdeleted","kv:promo","kv:boltbrand","kv:boltearn","kv:uklonbrand","kv:brand_fix","kv:brandsplit","kv:pct_cuts","kv:drv_cat","kv:rent"]);if(r.error){console.error(r.error);return;}(r.data||[]).forEach(x=>{if(x.key==="kv:rent"&&x.value&&typeof rentCloudMerge==="function"){try{rentCloudMerge(x.value);}catch(e){}}
+async function cloudLoadKV(){if(!supa)return;try{const r=await supa.from("app_data").select("key,value").in("key",["kv:fleet","kv:notes","kv:drvpass","kv:planfuel","kv:bordur","kv:plannames","kv:planorder","kv:drv_names","kv:drvdeleted","kv:promo","kv:boltbrand","kv:boltearn","kv:uklonbrand","kv:brand_fix","kv:brandsplit","kv:pct_cuts","kv:drv_cat","kv:rent","kv:dhcfg"]);if(r.error){console.error(r.error);return;}(r.data||[]).forEach(x=>{if(x.key==="kv:rent"&&x.value&&typeof rentCloudMerge==="function"){try{rentCloudMerge(x.value);}catch(e){}}
+if(x.key==="kv:dhcfg"&&x.value){try{localStorage.setItem("dh_cfg",(typeof x.value==="string")?x.value:JSON.stringify(x.value));}catch(e){}}
 if(x.key==="kv:fleet"&&typeof x.value==="string"){try{localStorage.setItem("fleet_plates",x.value);}catch(e){}}if(x.key==="kv:notes"&&x.value){try{localStorage.setItem("cars_notes",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:drvpass"&&x.value){try{localStorage.setItem("drv_pass",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:planfuel"&&x.value){try{localStorage.setItem("plan_fuel",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:bordur"&&x.value){try{localStorage.setItem("bordur_all",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:promo"&&x.value){try{localStorage.setItem("promo_all",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:boltbrand"&&x.value!=null){try{localStorage.setItem("boltbrand",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:boltearn"&&x.value!=null){try{localStorage.setItem("boltearn",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:uklonbrand"&&x.value!=null){try{localStorage.setItem("uklonbrand",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:brand_fix"&&x.value!=null){try{localStorage.setItem("brand_fix",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:pct_cuts"&&x.value!=null){try{localStorage.setItem("pct_cuts",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:drv_cat"&&x.value!=null){try{localStorage.setItem("drv_cat",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:brandsplit"&&x.value!=null){try{localStorage.setItem("brandsplit",String(x.value));}catch(e){}}if(x.key==="kv:plannames"&&x.value){try{localStorage.setItem("plan_names",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:planorder"&&x.value){try{localStorage.setItem("plan_order",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:drv_names"&&x.value){try{localStorage.setItem("drv_names",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:drvdeleted"&&x.value){try{localStorage.setItem("drv_deleted",JSON.stringify(x.value));}catch(e){}}});}catch(e){console.error(e);}}
 function showLogin(b){var el=document.getElementById("login");if(el)el.style.display=b?"flex":"none";}
 function revealForm(){var l=document.getElementById("loginLoading"),f=document.getElementById("loginForm");if(l)l.style.display="none";if(f)f.style.display="block";}
@@ -6863,7 +7339,337 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
   else init();
 })();
 </script>
+
+<script>
+/* ДИЗАЙН-ШАР v27 — налаштування доїзду до пасажира.
+   Раніше 1.5 км було зашите числом у коді. Тепер міняється в Налаштуваннях
+   без правки коду. На гроші водіїв не впливає — лише на оцінку порожнього пробігу. */
+(function(){
+  function el(id){return document.getElementById(id);}
+  function hint(){
+    var h=el('dhHint');if(!h)return;
+    var c=dhCfg(),n=0,km=0;
+    try{
+      var d=(typeof DATA!=='undefined'&&DATA&&DATA.drivers)||[];
+      d.forEach(function(o){n+=(o.orders||0);});
+      km=Math.round(n*c.km);
+    }catch(e){}
+    var def=(c.km===DH_DEFAULT.km&&c.maxKm===DH_DEFAULT.maxKm&&c.gap===DH_DEFAULT.gap);
+    h.innerHTML=(n?('За обраний день це <b>'+km+' км</b> доїзду на '+n+' замовлень по парку. '):'')
+      +(def?'Зараз стоять типові значення.':'Значення змінені вручну.');
+  }
+  function fill(){
+    var c=dhCfg();
+    if(el('dhKm'))el('dhKm').value=c.km;
+    if(el('dhMaxKm'))el('dhMaxKm').value=c.maxKm;
+    if(el('dhGap'))el('dhGap').value=c.gap;
+    hint();
+  }
+  function apply(){
+    var km=parseFloat(String((el('dhKm')||{}).value||'').replace(',','.'));
+    var mx=parseFloat(String((el('dhMaxKm')||{}).value||'').replace(',','.'));
+    var gp=parseFloat(String((el('dhGap')||{}).value||'').replace(',','.'));
+    if(isNaN(km)||km<0||km>20){alert('Км на замовлення: від 0 до 20.');fill();return;}
+    if(isNaN(mx)||mx<0||mx>50){alert('Довжина відрізка: від 0 до 50 км.');fill();return;}
+    if(isNaN(gp)||gp<0||gp>180){alert('Проміжок: від 0 до 180 хв.');fill();return;}
+    dhSave({km:km,maxKm:mx,gap:gp});
+    hint();
+    /* перерахувати день, щоб оцінка оновилась одразу */
+    try{if(typeof boot==='function'&&typeof DATA!=='undefined'&&DATA)boot();}catch(e){}
+    try{if(typeof renderCars==='function')renderCars();}catch(e){}
+  }
+  function init(){
+    var box=el('dhKm');
+    if(!box||box.getAttribute('data-on'))return;
+    ['dhKm','dhMaxKm','dhGap'].forEach(function(id){
+      var e=el(id);if(!e)return;
+      e.setAttribute('data-on','1');
+      e.addEventListener('change',apply);
+    });
+    var r=el('dhReset');
+    if(r)r.onclick=function(){dhSave(DH_DEFAULT);fill();
+      try{if(typeof boot==='function'&&typeof DATA!=='undefined'&&DATA)boot();}catch(e){}};
+    fill();
+  }
+  function watch(){
+    try{
+      var mo=new MutationObserver(function(){clearTimeout(window._dhT);window._dhT=setTimeout(init,80);});
+      mo.observe(document.getElementById('settings')||document.body,
+        {childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+    }catch(e){setInterval(init,1500);}
+    init();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watch);
+  else watch();
+})();
+</script>
+<script>
+/* ДИЗАЙН-ШАР v28 — Налаштування як картотека.
+   Замість шести розділів підряд — плитки вибору. Тиснеш плитку → відкривається
+   один розділ, решта згорнута. Кнопка «Усі розділи» повертає загальний вигляд.
+   Розмітку розділів не змінено — лише показ. */
+(function(){
+  var KEY='set_open';
+  function get(){try{return localStorage.getItem(KEY)||'';}catch(e){return '';}}
+  function set(v){try{v?localStorage.setItem(KEY,v):localStorage.removeItem(KEY);}catch(e){}}
+
+  function sects(){
+    var el=document.getElementById('settings');
+    return el?[].slice.call(el.querySelectorAll('.osect[data-set]')):[];
+  }
+  /* коротка довідка: скільки записів усередині */
+  function countOf(k,sec){
+    try{
+      if(k==='drivers')return (sec.querySelectorAll('.passrow[data-n]')||[]).length;
+      if(k==='fuel')return (sec.querySelectorAll('.passrow')||[]).length;
+      if(k==='names')return (sec.querySelectorAll('input')||[]).length;
+    }catch(e){}
+    return null;
+  }
+  function draw(){
+    var wrap=document.getElementById('setNav');
+    if(!wrap)return;
+    var list=sects(),cur=get();
+    if(!list.length)return;
+    var html='';
+    if(cur){
+      var one=list.filter(function(s){return s.getAttribute('data-set')===cur;})[0];
+      html='<button type="button" class="setback" data-go="">\u2039 Усі розділи</button>'
+         +'<span class="setwhere">'+((one&&one.getAttribute('data-nav'))||'')+'</span>';
+    }else{
+      html='<div class="settiles">'+list.map(function(s){
+        var k=s.getAttribute('data-set'),nav=s.getAttribute('data-nav')||'',
+            de=s.getAttribute('data-desc')||'',c=countOf(k,s);
+        return '<button type="button" class="settile" data-go="'+k+'">'
+          +'<span class="st-t">'+nav+'</span>'
+          +'<span class="st-d">'+de+'</span>'
+          +(c!=null&&c>0?'<span class="st-n">'+c+'</span>':'')
+          +'</button>';
+      }).join('')+'</div>';
+    }
+    wrap.innerHTML=html;
+    wrap.querySelectorAll('[data-go]').forEach(function(b){
+      b.onclick=function(){set(b.getAttribute('data-go'));apply();
+        try{document.getElementById('settings').scrollIntoView({block:'start',behavior:'smooth'});}catch(e){}};
+    });
+  }
+  function apply(){
+    var cur=get();
+    /* Нічого не обрано — показуємо ЛИШЕ плитки, без списку розділів унизу.
+       Інакше плитки й розділи дублюють одне одного і сторінка знову довга. */
+    sects().forEach(function(s){
+      s.style.display=(cur&&s.getAttribute('data-set')===cur)?'':'none';
+    });
+    var wrap=document.getElementById('setNav');
+    if(wrap)wrap.classList.toggle('open',!!cur);
+    draw();
+  }
+  function init(){
+    var el=document.getElementById('settings');
+    if(!el||el.classList.contains('hide'))return;
+    if(!document.getElementById('setNav'))return;
+    apply();
+  }
+  function watch(){
+    /* Спостерігач за #settings не годиться: showView міняє клас, а наш власний
+       apply() міняє розмітку — спостерігач глушить сам себе, і після повернення
+       на екран плитки не перемальовуються. Чіпляємось прямо до showView. */
+    var orig=window.showView;
+    if(typeof orig==='function'&&!orig._setnav){
+      window.showView=function(v){
+        var r=orig.apply(this,arguments);
+        if(v==='settings'){try{init();}catch(e){}}
+        return r;
+      };
+      window.showView._setnav=1;
+    }
+    /* запасний варіант, якщо showView зʼявиться пізніше */
+    var tries=0;
+    var iv=setInterval(function(){
+      tries++;
+      if(typeof window.showView==='function'&&!window.showView._setnav){
+        var o2=window.showView;
+        window.showView=function(v){var r=o2.apply(this,arguments);
+          if(v==='settings'){try{init();}catch(e){}}return r;};
+        window.showView._setnav=1;
+        clearInterval(iv);
+      }
+      if(tries>40)clearInterval(iv);
+    },300);
+    init();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watch);
+  else watch();
+})();
+</script>
+<script>
+/* ДИЗАЙН-ШАР v32 — гарні списки з пошуком у картці авто.
+   Замінює системний <select> на кнопку + вікно з пошуком.
+   Оригінальний select лишається в DOM і далі керує логікою — ми лише
+   ставимо йому value і шлемо change, тому всі обробники працюють як були. */
+(function(){
+  var SEL='#cars .cdriver, #cars .creason, #morning .creason';
+  var open=null;
+
+  function norm(s){return String(s||'').toLowerCase().replace(/[ʼ'`\u2019\u02bc]/g,'');}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+  function items(sel){
+    var out=[];
+    [].forEach.call(sel.children,function(ch){
+      if(ch.tagName==='OPTGROUP'){
+        var g=ch.getAttribute('label')||'';
+        [].forEach.call(ch.children,function(o){out.push({v:o.value,t:o.textContent,g:g});});
+      }else if(ch.tagName==='OPTION'){out.push({v:ch.value,t:ch.textContent,g:''});}
+    });
+    return out;
+  }
+  function mark(text,q){
+    if(!q)return esc(text);
+    var i=norm(text).indexOf(norm(q));
+    if(i<0)return esc(text);
+    return esc(text.slice(0,i))+'<span class="cp-hit">'+esc(text.slice(i,i+q.length))+'</span>'+esc(text.slice(i+q.length));
+  }
+  function close(){
+    if(!open)return;
+    open.pop.remove();
+    open.box.classList.remove('on');
+    open=null;
+  }
+  function place(pop,btn){
+    var r=btn.getBoundingClientRect();
+    var w=Math.max(r.width,230),h=pop.offsetHeight||280;
+    pop.style.width=w+'px';
+    var left=Math.min(Math.max(8,r.left),window.innerWidth-w-8);
+    var top=(r.bottom+6+h<window.innerHeight)?(r.bottom+6):Math.max(8,r.top-h-6);
+    pop.style.left=left+'px';pop.style.top=top+'px';
+  }
+
+  function enhance(sel){
+    if(sel.getAttribute('data-cp'))return;
+    sel.setAttribute('data-cp','1');
+    sel.style.display='none';
+
+    var kind=sel.classList.contains('cdriver')?'driver':'reason';
+    var box=document.createElement('div');
+    box.className='cpick '+(kind==='driver'?'cp-driver':'cp-reason');
+    var btn=document.createElement('button');
+    btn.type='button';btn.className='cp-btn';
+    box.appendChild(btn);
+    sel.parentNode.insertBefore(box,sel.nextSibling);
+
+    function label(){
+      var all=items(sel),cur=null;
+      for(var i=0;i<all.length;i++)if(all[i].v===sel.value){cur=all[i];break;}
+      var txt=(cur&&cur.v!=='')?cur.t:(kind==='driver'?'\u2014 немає водія \u2014':'\u2014 причина \u2014');
+      var empty=!(cur&&cur.v!=='');
+      btn.className='cp-btn'+(empty?' empty':'');
+      btn.disabled=!!sel.disabled;
+      if(sel.title)btn.title=sel.title;
+      btn.innerHTML='<span class="cp-lbl">'+esc(txt)+'</span>';
+    }
+
+    function draw(pop,q){
+      var list=pop.querySelector('.cp-list');
+      var all=items(sel);
+      var hit=all.filter(function(x){return !q||norm(x.t).indexOf(norm(q))>=0;});
+      if(!hit.length){list.innerHTML='<div class="cp-none">Нічого не знайдено</div>';return;}
+      var h='',lastG=null;
+      hit.forEach(function(x){
+        if(x.g!==lastG){lastG=x.g;if(x.g)h+='<div class="cp-g">'+esc(x.g)+'</div>';}
+        var cls='cp-o'+(x.v===sel.value?' sel':'')+(x.v===''?' clear':'');
+        h+='<div class="'+cls+'" data-v="'+esc(x.v)+'">'+mark(x.t,q)+'</div>';
+      });
+      list.innerHTML=h;
+      if(q){var f=list.querySelector('.cp-o:not(.clear)');if(f)f.classList.add('hot');}
+    }
+    function pick(v){
+      close();
+      sel.value=v;label();
+      try{sel.dispatchEvent(new Event('change',{bubbles:true}));}catch(e){}
+      if(typeof sel.onchange==='function'){try{sel.onchange({target:sel});}catch(e){}}
+    }
+
+    btn.onclick=function(e){
+      e.preventDefault();e.stopPropagation();
+      if(open&&open.box===box){close();return;}
+      close();
+      if(sel.disabled)return;
+      var pop=document.createElement('div');
+      pop.className='cp-pop';
+      var many=items(sel).length>7;
+      pop.innerHTML=(many?'<input type="text" class="cp-q" placeholder="Пошук…" autocomplete="off" spellcheck="false">':'')
+        +'<div class="cp-list"></div>';
+      document.body.appendChild(pop);
+      open={box:box,pop:pop};
+      box.classList.add('on');
+      draw(pop,'');
+      place(pop,btn);
+      var q=pop.querySelector('.cp-q');
+      if(q){
+        q.oninput=function(){draw(pop,q.value.trim());place(pop,btn);};
+        q.onkeydown=function(ev){
+          var list=pop.querySelector('.cp-list');
+          var hot=list.querySelector('.cp-o.hot')||list.querySelector('.cp-o:not(.clear)');
+          if(ev.key==='Enter'){ev.preventDefault();if(hot)pick(hot.getAttribute('data-v'));return;}
+          if(ev.key==='Escape'){ev.preventDefault();close();btn.focus();return;}
+          if(ev.key==='ArrowDown'||ev.key==='ArrowUp'){
+            ev.preventDefault();
+            var all=[].slice.call(list.querySelectorAll('.cp-o'));
+            if(!all.length)return;
+            var i=all.indexOf(hot);
+            i=(ev.key==='ArrowDown')?Math.min(all.length-1,i+1):Math.max(0,i-1);
+            all.forEach(function(x){x.classList.remove('hot');});
+            all[i].classList.add('hot');all[i].scrollIntoView({block:'nearest'});
+          }
+        };
+        setTimeout(function(){try{q.focus();}catch(e){}},20);
+      }
+      pop.onclick=function(ev){
+        ev.stopPropagation();
+        var o=ev.target.closest?ev.target.closest('.cp-o'):null;
+        if(o)pick(o.getAttribute('data-v'));
+      };
+    };
+    label();
+    /* якщо select змінили ззовні — оновити підпис */
+    try{
+      var mo=new MutationObserver(function(){label();});
+      mo.observe(sel,{attributes:true,attributeFilter:['disabled'],childList:true});
+    }catch(e){}
+  }
+
+  document.addEventListener('click',function(){close();});
+  window.addEventListener('resize',function(){if(open)close();});
+  window.addEventListener('scroll',function(){if(open)close();},true);
+
+  function scan(){
+    var l=document.querySelectorAll(SEL);
+    for(var i=0;i<l.length;i++)enhance(l[i]);
+  }
+  /* Екрани перемальовуються цілком при кожній зміні. Щоб списки не зникали
+     навіть на мить, даємо renderCars/renderMorning можливість покликати нас одразу. */
+  window.cpScan=scan;
+  function init(){
+    scan();
+    ['renderCars','renderMorning','renderStandingMini'].forEach(function(fn){
+      var orig=window[fn];
+      if(typeof orig!=='function')return;
+      window[fn]=function(){var r=orig.apply(this,arguments);try{scan();}catch(e){}return r;};
+    });
+    try{
+      var mo=new MutationObserver(function(){clearTimeout(window._cpT);window._cpT=setTimeout(scan,50);});
+      mo.observe(document.body,{childList:true,subtree:true});
+    }catch(e){setInterval(scan,1200);}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
+  else init();
+})();
+</script>
 </body></html>
+
+
 
 
 
