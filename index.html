@@ -4262,7 +4262,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=77;
+var APP_BUILD_N=79;
 var APP_BUILD='збірка 21.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
@@ -4464,7 +4464,39 @@ function isTaxi(o){return ownOf(o)==='taxi';}
 function inScope(o){return drvScope()==='all'?true:isTaxi(o);}
 function planOf(o){const p=dP(o&&o.name);return PLAN(p.fuel||'std');}
 function saveCarNote(pl,o){const n=carNotes();n[pl]=o;try{localStorage.setItem('cars_notes',JSON.stringify(n))}catch(e){}if(typeof cloudSaveKV==='function')cloudSaveKV('notes',n);}
-function driverList(){var s={},out=[];try{if(typeof A!=='undefined'&&A)A.forEach(function(o){if(o&&o.name&&!isDeleted(o.name)&&!firedFrom(o.name)){var k=nkey(o.name);if(!s[k]){s[k]=1;out.push(o.name);}}});}catch(e){}try{Object.keys(drvPass()).forEach(function(n){if(isDeleted(n)||firedFrom(n))return;var k=nkey(n);if(!s[k]){s[k]=1;out.push(n);}});}catch(e){}out.sort(function(a,b){return nameFor(a).localeCompare(nameFor(b),'uk');});return out;}
+/* Список водіїв для прив'язки до авто.
+   Береться з ТРЬОХ джерел, бо водій може бути відомий системі, але
+   не їздити саме сьогодні (вихідний, бордюр, щойно взятий на роботу):
+     1. A          — хто працював у відкритий день
+     2. drvPass()  — профілі (тип, авто, звільнення)
+     3. drvNames() — імена, вписані в «Імена водіїв у звітах»
+   Раніше третього джерела не було: новий водій, який ще не зробив
+   жодної поїздки, не з'являвся в списку — і його не можна було
+   закріпити за авто. */
+function driverList(){var s={},out=[];
+  function add(n){
+    if(!n)return;
+    try{if(isDeleted(n)||firedFrom(n))return;}catch(e){}
+    var k=nkey(n);
+    if(!k||s[k])return;
+    s[k]=1;out.push(n);
+  }
+  try{if(typeof A!=='undefined'&&A)A.forEach(function(o){if(o&&o.name)add(o.name);});}catch(e){}
+  try{Object.keys(drvPass()).forEach(add);}catch(e){}
+  try{
+    var nm=(typeof drvNames==='function')?drvNames():{};
+    Object.keys(nm).forEach(function(k){
+      var v=nm[k];
+      add((typeof v==='string'&&v.trim())?v:k);
+    });
+  }catch(e){}
+  /* водії з минулих днів — щоб той, хто сьогодні на вихідному, теж був */
+  try{
+    var ks=Object.keys(DAYS||{}).filter(function(k){return /^\d{4}-\d{2}-\d{2}$/.test(k);}).sort().slice(-30);
+    ks.forEach(function(k){((DAYS[k]||{}).drivers||[]).forEach(function(o){if(o&&o.name)add(o.name);});});
+  }catch(e){}
+  out.sort(function(a,b){return nameFor(a).localeCompare(nameFor(b),'uk');});
+  return out;}
 function carDriver(plate){var nt=(typeof carNotes==='function'?carNotes()[plate]:null)||{};
   if(nt.driver==='__none__')return '';
   if(nt.driver)return nt.driver;
@@ -7938,8 +7970,11 @@ var SEL='#cars .cdriver, #cars .creason, #morning .creason, #report #rptDaySel';
             +'</div>';
         }
       }
+      /* підказка пошуку залежить від того, що в списку */
+      var _ph=(kind==='date')?'Пошук за датою…'
+             :(kind==='driver'?'Пошук водія…':'Пошук причини…');
       pop.innerHTML=quick
-        +(many?'<input type="text" class="cp-q" placeholder="Пошук за датою…" autocomplete="off" spellcheck="false">':'')
+        +(many?'<input type="text" class="cp-q" placeholder="'+_ph+'" autocomplete="off" spellcheck="false">':'')
         +'<div class="cp-list"></div>';
       document.body.appendChild(pop);
       open={box:box,pop:pop};
