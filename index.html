@@ -4262,7 +4262,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=79;
+var APP_BUILD_N=80;
 var APP_BUILD='збірка 21.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
@@ -4371,7 +4371,40 @@ function renderHistory(){var el=document.getElementById('history');if(!el)return
 function driverAutoPlate(name){try{if(typeof A!=='undefined'&&A){for(var i=0;i<A.length;i++){if(A[i]&&A[i].name===name&&A[i].plate_norm)return A[i].plate_norm;}}var KS=Object.keys((typeof DAYS!=='undefined'&&DAYS)||{}).sort();for(var j=KS.length-1;j>=0;j--){var dr=(DAYS[KS[j]]&&DAYS[KS[j]].drivers)||[];for(var q=0;q<dr.length;q++){if(dr[q]&&dr[q].name===name&&dr[q].plate_norm)return dr[q].plate_norm;}}}catch(e){}return '';}
 function isHiddenOn(name,ymd){try{if(isDeleted(name))return true;if(!worksOn(name,ymd))return true;var pz=dP(name);return !!(pz&&pz.hidden);}catch(e){return false;}}
 function isHidden(name){return isHiddenOn(name,curDayKey());}
-function plateIsTaxi(pl,nm,pp){pp=pp||((typeof drvPass==='function')?drvPass():{});nm=nm||{};for(var k in pp){if(pp[k]&&pp[k].plate===pl&&!pp[k].hidden){return ((pp[k].type||'taxi')==='taxi');}}var lp=nm[pl];if(lp){var e=(typeof dP==='function')?dP(lp):(pp[lp]||{});if(e.hidden)return true;return ((e.type||'taxi')==='taxi');}return true;}
+/* Чи рахувати авто як таксі (тобто показувати в обліку «Авто», у простої,
+   у недоборі). Порядок такий:
+     1. Є ЧИННИЙ водій, за яким закріплене це авто → дивимось його тип.
+     2. Немає закріпленого → дивимось, хто їздив останнім.
+        АЛЕ якщо той водій уже звільнений — його тип більше нічого не вирішує:
+        авто вивільнилось і має бути в обліку як «немає водія».
+        Раніше цього не було: звільнивши орендаря, ти втрачав авто з усіх
+        екранів — воно й далі вважалось орендним і ніде не показувалось. */
+function plateIsTaxi(pl,nm,pp){
+  pp=pp||((typeof drvPass==='function')?drvPass():{});nm=nm||{};
+  function stillWorks(n){
+    try{
+      if(typeof isDeleted==='function'&&isDeleted(n))return false;
+      if(typeof firedFrom==='function'&&firedFrom(n))return false;
+      var ymd=(typeof curDayKey==='function')?curDayKey():null;
+      if(ymd&&typeof worksOn==='function'&&!worksOn(n,ymd))return false;
+    }catch(e){}
+    return true;
+  }
+  for(var k in pp){
+    if(pp[k]&&pp[k].plate===pl&&!pp[k].hidden){
+      if(!stillWorks(k))continue;          /* звільнений — шукаємо далі */
+      return ((pp[k].type||'taxi')==='taxi');
+    }
+  }
+  var lp=nm[pl];
+  if(lp){
+    if(!stillWorks(lp))return true;        /* останній водій пішов — авто вільне */
+    var e=(typeof dP==='function')?dP(lp):(pp[lp]||{});
+    if(e.hidden)return true;
+    return ((e.type||'taxi')==='taxi');
+  }
+  return true;
+}
 function plateCategory(pl,nm,pp){pp=pp||((typeof drvPass==='function')?drvPass():{});nm=nm||{};for(var k in pp){if(pp[k]&&pp[k].plate===pl&&!pp[k].hidden){return pp[k].type||'taxi';}}var lp=nm[pl];if(lp){var e=pp[lp]||{};if(!e.hidden)return e.type||'taxi';}return 'taxi';}
 function carCatSummary(){var fleet=(typeof getFleet==='function')?getFleet():[];var nm=(typeof lastDriverByPlate==='function')?lastDriverByPlate():{};var pp=(typeof drvPass==='function')?drvPass():{};var r={total:fleet.length,taxi:0,rent:0,lease:0};fleet.forEach(function(pl){var c=plateCategory(pl,nm,pp);if(c==='rent')r.rent++;else if(c==='lease')r.lease++;else r.taxi++;});return r;}
 function renderCarCatSum(){var el=document.getElementById('carCatSum');if(!el)return;var x=carCatSummary();function card(n,l,c){return '<div style="flex:1;min-width:68px;text-align:center;background:#fff;border:1px solid #eee;border-radius:10px;padding:8px 6px"><div style="font-size:20px;font-weight:800;color:'+c+'">'+n+'</div><div style="font-size:11px;color:#777;margin-top:2px">'+l+'</div></div>';}el.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap">'+card(x.total,'усього','#333')+card(x.taxi,'Таксі','#2b8659')+card(x.rent,'Оренда','#c77d2e')+card(x.lease,'Лізинг','#7a6cc7')+'</div>';}
