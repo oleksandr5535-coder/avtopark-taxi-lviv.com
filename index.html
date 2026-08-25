@@ -1870,6 +1870,37 @@ select:focus,textarea:focus{
   #cmpBody{transition:none}
   #cmpBody .cmp-wrap,#cmpBody table{animation:none}
 }
+
+
+/* ---- звірка з платформами на «Тижні» ---- */
+.wka-btn{border:1px solid var(--line);background:var(--panel);color:var(--ink2);
+  border-radius:var(--r-sm);padding:7px 12px;font:inherit;font-size:12px;
+  font-weight:700;cursor:pointer;margin-left:8px}
+.wka-btn:hover{border-color:var(--amber);color:var(--amber-tx)}
+.wkaudit{margin:14px 0;padding:15px 17px;background:var(--panel);
+  border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh-card)}
+.wkaudit[hidden]{display:none}
+.wka-h{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.wka-h b{font-size:13.5px;letter-spacing:-.01em}
+.wka-x{margin-left:auto;border:1px solid var(--line);background:transparent;
+  color:var(--muted);border-radius:8px;padding:4px 9px;cursor:pointer;font:inherit}
+.wka-p{margin:0 0 12px;font-size:12.5px;line-height:1.5;color:var(--muted)}
+.wka-wrap{overflow-x:auto;margin-bottom:12px}
+.wka-t{width:100%;border-collapse:collapse;font-size:12.5px}
+.wka-t th{text-align:left;font-size:10px;font-weight:800;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);padding:6px 9px;border-bottom:1px solid var(--line)}
+.wka-t td{padding:8px 9px;border-bottom:1px solid var(--line);color:var(--ink2)}
+.wka-t td.r,.wka-t th.r{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.wka-t td.b{font-weight:700;color:var(--ink)}
+.wka-t td.add{color:var(--amber-tx);font-weight:700}
+.wka-src{font-size:11px;color:var(--muted)}
+.wka-brand{color:var(--muted)}
+.wka-tot td{border-top:2px solid var(--line);border-bottom:0;font-weight:700;color:var(--ink)}
+.wka-sum{padding:11px 13px;border-radius:var(--r-md);background:var(--soft);
+  font-size:12.5px;line-height:1.55;color:var(--ink2);margin-top:8px}
+.wka-sum.warn{background:var(--warn-bg);border:1px solid var(--warn-line);color:var(--warn-tx)}
+.wka-sum b{font-family:var(--mono);color:var(--ink)}
+.wka-none{margin:0;font-size:12.5px;color:var(--muted)}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head><body>
 <script>try{var _th=localStorage.getItem("theme");if(_th)document.documentElement.setAttribute("data-theme",_th);}catch(e){}</script>
@@ -4204,7 +4235,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=74;
+var APP_BUILD_N=76;
 var APP_BUILD='збірка 21.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
@@ -4797,6 +4828,28 @@ var _ds=document.getElementById('daySel');if(_ds)_ds.onchange=e=>setDay(e.target
 function kyivToday(){var p=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());var g=function(t){return p.find(function(x){return x.type===t}).value};return g('year')+'-'+g('month')+'-'+g('day');}
 function boltOrdersToParts(orders){
   var TZ='Europe/Kyiv';
+  /* Гроші рахуємо ТІЛЬКИ по справді завершених поїздках.
+     Bolt інколи віддає той самий заїзд двічі:
+       • запис driver_did_not_respond, у якому вже є net_earnings,
+         і поруч finished з тими самими грошима (поїздку переприсвоїли);
+       • два finished з однаковим часом підтвердження ціни й тією ж сумою.
+     Кабінет Bolt рахує такий заїзд один раз — робимо так само.
+     Історія поїздок (hist) лишається повною: скасування потрібні для статистики. */
+  var _paid=(function(){
+    var seen={},ok={};
+    (orders||[]).forEach(function(o){
+      if(o.order_status!=='finished')return;
+      var pr=o.order_price||{};
+      var key=[o.payment_confirmed_timestamp||o.order_created_timestamp||'',
+               (pr.ride_price!=null?pr.ride_price:''),
+               o.driver_name||''].join('|');
+      if(seen[key])return;
+      seen[key]=1;
+      ok[o.order_reference||key]=1;
+    });
+    return ok;
+  })();
+  function countsMoney(o){return !!_paid[o.order_reference||([o.payment_confirmed_timestamp||o.order_created_timestamp||'',((o.order_price||{}).ride_price!=null?(o.order_price||{}).ride_price:''),o.driver_name||''].join('|'))];}
   function fmtDate(ts){if(!ts)return '';var d=new Date(ts*1000);var p=new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(d);var g=function(t){return p.find(function(x){return x.type===t}).value};return g('year')+'-'+g('month')+'-'+g('day')+' '+g('hour')+':'+g('minute');}
   var stMap={finished:'Завершено',driver_rejected:'Водій відмінив',driver_did_not_respond:'Водій не відповів',driver_cancelled_after_accept:'Водій відмінив',client_cancelled:'Скасовано пасажиром',client_did_not_show:'Пасажир не прийшов'};
   var payMap={in_app:'Через додаток',cash:'Готівка',business:'Через додаток'};
@@ -4804,7 +4857,7 @@ function boltOrdersToParts(orders){
   (orders||[]).forEach(function(o){
     var pr=o.order_price||{};var st=stMap[o.order_status]||o.order_status||'';var pay=payMap[o.payment_method]||'Через додаток';
     hist.push({'Дата':fmtDate(o.payment_confirmed_timestamp||o.order_created_timestamp),'Водій':o.driver_name||'','Номерний знак':o.vehicle_license_plate||'','Модель авто':o.vehicle_model||'','Категорія':(o.category_info&&o.category_info.name)||'','Статус':st,'Відстань|км':(o.ride_distance!=null)?(o.ride_distance/1000).toFixed(2):'','Ціна поїздки|₴':(pr.ride_price!=null)?String(pr.ride_price):'','Спосіб оплати':pay,'Тривалість поїздки (мінімум)':(o.order_pickup_timestamp&&o.order_drop_off_timestamp)?String(Math.round((o.order_drop_off_timestamp-o.order_pickup_timestamp)/60)):''});
-    if(pr.net_earnings!=null){var n=o.driver_name||'';var a=inc[n]||(inc[n]={n:n,g:0,gfin:0,net:0,cash:0,tip:0,cdisc:0});a.g+=(pr.ride_price||0);if(o.order_status==='finished'&&(pr.ride_price||0)>0)a.gfin+=(pr.ride_price||0);a.net+=(pr.net_earnings||0);if(o.payment_method==='cash'&&(pr.ride_price||0)>0)a.cash+=(pr.ride_price||0);a.cdisc+=(pr.cash_discount||0);a.tip+=(pr.tip||0);}
+    if(pr.net_earnings!=null&&countsMoney(o)){var n=o.driver_name||'';var a=inc[n]||(inc[n]={n:n,g:0,gfin:0,net:0,cash:0,tip:0,cdisc:0});a.g+=(pr.ride_price||0);if(o.order_status==='finished'&&(pr.ride_price||0)>0)a.gfin+=(pr.ride_price||0);a.net+=(pr.net_earnings||0);if(o.payment_method==='cash'&&(pr.ride_price||0)>0)a.cash+=(pr.ride_price||0);a.cdisc+=(pr.cash_discount||0);a.tip+=(pr.tip||0);}
   });
   var income=Object.keys(inc).map(function(k){var a=inc[k];return {'Водій':a.n,'Валовий дохід (всього)|₴':a.g.toFixed(2),'Валове виконаних|₴':(a.gfin||0).toFixed(2),'Отримано готівкою|₴':(a.cash-a.cdisc).toFixed(2),'Чистий дохід|₴':a.net.toFixed(2),'Чайові від пасажирів|₴':a.tip.toFixed(2)};});
   return {bolt_income:income,bolt_hist:hist,uklon_agg:[],uklon_trips:[],wialon_trips_rows:[],wialon_stops_rows:[]};
@@ -7908,7 +7961,114 @@ var SEL='#cars .cdriver, #cars .creason, #morning .creason, #report #rptDaySel';
   else init();
 })();
 </script>
+<script>
+/* ДІАГНОСТИКА ГРОШЕЙ — «Тиждень» → кнопка «звірка з Bolt».
+   Показує, з чого складається каса кожного водія: скільки прийшло
+   з платформ, скільки додано вручну (промо, бордюр, брендування).
+   Нічого не рахує по-своєму — розбирає ті самі числа, що в таблиці. */
+(function(){
+  function f(v){return Math.round(v||0).toLocaleString('uk-UA');}
+  function esc(s){return String(s==null?'':s).replace(/[&<>]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+
+  window.wkAudit=function(){
+    var box=document.getElementById('wkAuditBox');
+    if(box&&!box.hidden){box.hidden=true;return;}
+    if(!box){
+      box=document.createElement('div');
+      box.id='wkAuditBox';box.className='wkaudit';
+      var el=document.getElementById('week');
+      var nav=el&&el.querySelector('.wk-nav');
+      if(nav&&nav.parentNode)nav.parentNode.insertBefore(box,nav.nextSibling);
+      else if(el)el.appendChild(box);
+    }
+    var A=(typeof weekAgg==='function'&&window.weekMon)?weekAgg(window.weekMon):null;
+    if(!A||!A.list||!A.list.length){
+      box.innerHTML='<p class="wka-none">За цей тиждень немає даних.</p>';
+      box.hidden=false;return;
+    }
+    var rows='',T={plat:0,bord:0,promo:0,brand:0,total:0};
+    A.list.forEach(function(m){
+      var tok=rpt_toks(m.name).join('|');
+      var bv=(typeof weekBrandVal==='function')?weekBrandVal(m):0;
+      var brand=bv<0?0:bv;
+      var bord=(typeof bordurGet==='function')?bordurGet(tok):0;
+      var wkP=(typeof wkPromoGet==='function')?wkPromoGet(tok):0;
+      var dsum=(typeof wkDailyPromoSum==='function')?wkDailyPromoSum(tok):0;
+      var promo=wkP>0?wkP:dsum;
+      var plat=m.net||0;
+      var total=plat+bord+promo;
+      T.plat+=plat;T.bord+=bord;T.promo+=promo;T.brand+=brand;T.total+=total;
+      var src=wkP>0?'вручну':(dsum>0?'з денних звітів':'');
+      rows+='<tr>'
+        +'<td>'+esc(nameFor(m.name))+'</td>'
+        +'<td class="r">'+f(plat)+'</td>'
+        +'<td class="r'+(bord?' add':'')+'">'+(bord?('+'+f(bord)):'—')+'</td>'
+        +'<td class="r'+(promo?' add':'')+'">'+(promo?('+'+f(promo)):'—')+'</td>'
+        +'<td class="wka-src">'+esc(src)+'</td>'
+        +'<td class="r b">'+f(total)+'</td>'
+        +'<td class="r wka-brand">'+(brand?f(brand):'—')+'</td>'
+        +'</tr>';
+    });
+    var diff=T.bord+T.promo;
+    box.innerHTML=
+      '<div class="wka-h"><b>Звірка з платформами</b>'
+      +'<button type="button" class="wka-x" onclick="wkAudit()">✕</button></div>'
+      +'<p class="wka-p">«З платформ» — те, що прийшло з Bolt і Uklon. Решта — те, '
+      +'що додано в дашборді. Якщо в Bolt менше, різниця має дорівнювати цим доданкам.</p>'
+      +'<div class="wka-wrap"><table class="wka-t"><thead><tr>'
+      +'<th>Водій</th><th class="r">З платформ</th><th class="r">Бордюр</th>'
+      +'<th class="r">Промо</th><th>Джерело промо</th><th class="r">Разом у дашборді</th>'
+      +'<th class="r">Брендування</th></tr></thead><tbody>'+rows
+      +'<tr class="wka-tot"><td>Разом</td><td class="r">'+f(T.plat)+'</td>'
+      +'<td class="r">'+(T.bord?('+'+f(T.bord)):'—')+'</td>'
+      +'<td class="r">'+(T.promo?('+'+f(T.promo)):'—')+'</td><td></td>'
+      +'<td class="r b">'+f(T.total)+'</td><td class="r">'+f(T.brand)+'</td></tr>'
+      +'</tbody></table></div>'
+      +'<div class="wka-sum'+(diff?' warn':'')+'">'
+      +(diff
+        ? ('Дашборд показує на <b>'+f(diff)+' \u20b4</b> більше, ніж прийшло з платформ. '
+          +'З них промо <b>'+f(T.promo)+' \u20b4</b>, бордюр <b>'+f(T.bord)+' \u20b4</b>. '
+          +'Це не помилка — це доданки, вписані вручну. Якщо промо вже входить у виплату Bolt, '
+          +'його треба прибрати у Звіті за той день, інакше воно рахується двічі.')
+        : 'Доданків немає — каса дашборда дорівнює тому, що прийшло з платформ.')
+      +'</div>'
+      +'<div class="wka-sum">Брендування <b>'+f(T.brand)+' \u20b4</b> у касу не входить — '
+      +'воно рахується окремо в розрахунку з водієм.</div>';
+    box.hidden=false;
+  };
+
+  function attach(){
+    var el=document.getElementById('week');
+    if(!el||el.classList.contains('hide'))return;
+    if(el.querySelector('.wka-btn'))return;
+    var b=document.createElement('button');
+    b.type='button';b.className='wka-btn';
+    b.textContent='звірка з платформами';
+    b.onclick=function(){wkAudit();};
+    /* ставимо після заголовка або підпису — на що натрапимо першим */
+    var host=el.querySelector('.wk-nav')||el.querySelector('.sub')||el.querySelector('h1');
+    if(host&&host.parentNode){
+      if(host.classList&&host.classList.contains('wk-nav'))host.appendChild(b);
+      else host.parentNode.insertBefore(b,host.nextSibling);
+    }else{el.insertBefore(b,el.firstChild);}
+  }
+  function init(){
+    var o=window.showView;
+    if(typeof o==='function'&&!o._wka){
+      window.showView=function(v){var r=o.apply(this,arguments);
+        if(v==='week'){try{attach();}catch(e){}}return r;};
+      window.showView._wka=1;
+    }
+    setInterval(attach,1500);
+    attach();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
+  else init();
+})();
+</script>
 </body></html>
+
 
 
 
