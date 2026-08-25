@@ -83,7 +83,33 @@ async function fetchAll(token, start_ts, end_ts, trt) {
 
 function r2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
 
+// Гроші рахуються ТІЛЬКИ по справді завершених поїздках.
+// Bolt інколи віддає той самий заїзд двічі:
+//   • запис зі статусом driver_did_not_respond, у якому вже є net_earnings,
+//     і поруч finished з тими самими грошима (поїздку переприсвоїли);
+//   • два finished з однаковим часом підтвердження ціни й однаковою сумою.
+// Кабінет Bolt рахує такий заїзд один раз — робимо так само.
+function earningOrders(orders) {
+  const fin = orders.filter(o => o.order_status === 'finished');
+  const seen = new Set();
+  const out = [];
+  for (const o of fin) {
+    const op = o.order_price || {};
+    // ключ заїзду: час підтвердження ціни + ціна + водій
+    const key = [
+      o.payment_confirmed_timestamp || o.order_created_timestamp || '',
+      op.ride_price != null ? op.ride_price : '',
+      o.driver_name || '',
+    ].join('|');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(o);
+  }
+  return out;
+}
+
 function summarize(orders) {
+  orders = earningOrders(orders);
   const by = {};
   for (const o of orders) {
     const op = o.order_price || {};
@@ -217,10 +243,13 @@ export default async function handler(req, res) {
         .sort((a, b) => (a.order_created_timestamp || 0) - (b.order_created_timestamp || 0));
       const fmtT = ts => ts ? new Date(ts * 1000).toLocaleString('uk-UA', { timeZone: 'Europe/Kyiv', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
       const n = v => (v == null) ? '' : (Math.round(v * 100) / 100).toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      let sumNet = 0, cnt = 0;
+      const paid = new Set(earningOrders(list).map(o => o.order_reference));
+      let sumNet = 0, cnt = 0, skipped = 0, skippedSum = 0;
       const rows = list.map(o => {
         const p = o.order_price || {};
-        if (p.net_earnings != null) { sumNet += p.net_earnings; cnt++; }
+        const counted = paid.has(o.order_reference);
+        if (counted && p.net_earnings != null) { sumNet += p.net_earnings; cnt++; }
+        else if (p.net_earnings != null) { skipped++; skippedSum += p.net_earnings; }
         return '<tr><td>' + fmtT(o.order_created_timestamp) + '</td><td>' + fmtT(o.payment_confirmed_timestamp) + '</td><td>' + (o.order_status || '') + '</td><td>' + ((o.category_info && o.category_info.name) || '') + '</td><td class=r>' + n(p.ride_price) + '</td><td class=r>' + n(p.commission) + '</td><td class=r><b>' + n(p.net_earnings) + '</b></td><td class=r>' + n(p.in_app_discount) + '</td><td class=r>' + n(p.booking_fee) + '</td><td class=r>' + n(p.cancellation_fee) + '</td><td class=r>' + n(p.tip) + '</td><td>' + (o.payment_method || '') + '</td></tr>';
       }).join('');
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
