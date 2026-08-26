@@ -2025,6 +2025,13 @@ select:focus,textarea:focus{
 .cst.notyet{color:var(--muted);background:var(--soft)}
 .cst.nodriver{color:var(--bad);background:var(--bad-bg,var(--soft))}
 .cst.work{color:var(--good);background:var(--good-bg)}
+
+
+/* ---- позначка застарілої причини ---- */
+.stale{display:inline-block;margin-left:6px;font-size:9.5px;font-weight:800;
+  letter-spacing:.04em;text-transform:uppercase;color:var(--amber-tx);
+  background:var(--warn-bg);border:1px solid var(--warn-line);
+  border-radius:5px;padding:1px 6px;cursor:help;vertical-align:middle}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head><body>
 <script>try{var _th=localStorage.getItem("theme");if(_th)document.documentElement.setAttribute("data-theme",_th);}catch(e){}</script>
@@ -4392,7 +4399,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=93;
+var APP_BUILD_N=94;
 var APP_BUILD='збірка 21.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
@@ -4549,14 +4556,17 @@ function nonCarsHtml(){var fl=fleetStats();var non=fl.non||[];var nm=(typeof las
     var n=notes[pl];
     /* Ручна причина головніша — її вписала людина. Якщо її немає,
        беремо автоматичну: «ще не виїхав» замість «немає водія». */
-    var why=(n&&n.reason)?n.reason:(st.short||"не виїхав");
+    /* Якщо вписана причина суперечить фактам — показуємо реальний стан,
+       а стару причину лишаємо підказкою, щоб було зрозуміло, звідки вона. */
+    var why=st.stale?st.short:((n&&n.reason)?n.reason:(st.short||"не виїхав"));
+    var stale=st.stale?(' <span class="stale" title="Вписано: '+st.stale+'. '+(st.conflict||'')+'">потребує уваги</span>'):'';
     /* Колір за змістом: чекаємо — спокійно, немає водія — тривожно. */
     var col=(st.kind==='notyet')?'var(--muted)'
            :(st.kind==='nodriver'?'var(--bad)'
            :((st.kind==='rent_taxi'||st.kind==='rent_daily')?'var(--good)':'var(--bad)'));
     return "<div class='ncr'>"
       +"<span>\ud83d\ude97 <b>"+pl+"</b>"+(who?" — "+who:"")+"</span>"
-      +"<span style='color:"+col+";white-space:nowrap'>"+why+"</span></div>";
+      +"<span style='color:"+col+";white-space:nowrap'>"+why+stale+"</span></div>";
   }).join("");}
 function renderFleet(){const st=fleetStats();const el=document.getElementById('fleetStat');if(el)el.innerHTML=`<div class="big">${st.work} <b>/ ${st.total}</b></div><div class="l">робочих авто сьогодні</div>`;if(typeof renderCarCatSum==='function')renderCarCatSum();}
 function carNotes(){try{return JSON.parse(localStorage.getItem('cars_notes')||'{}')}catch(e){return{}}}
@@ -5026,9 +5036,40 @@ function carStateLabel(plate,ymd){
       };
     }
   }catch(e){}
+  /* Вписана причина головніша — АЛЕ тільки якщо вона не суперечить фактам.
+     Класичний випадок: колись вписали «Готове авто — немає водія», потім
+     на авто сів водій, а підпис лишився. Дашборд має це помічати сам,
+     а не показувати нісенітницю: імʼя водія поруч зі словами «немає водія». */
   try{
     var nt=(typeof carNotes==='function')?(carNotes()[plate]||{}):{};
-    if(nt.reason)return {kind:'note',short:nt.reason,text:nt.reason+(nt.desc?(' — '+nt.desc):''),rent:null};
+    if(nt.reason){
+      var di0=(typeof carDriverInfo==='function')?carDriverInfo(plate,ymd):null;
+      var conflict='';
+      /* «немає водія» — а водій є */
+      if(di0&&di0.has&&/немає водія/i.test(nt.reason))
+        conflict='у цього авто є водій: '+di0.name;
+      /* «водій на вихідному / захворів / звільнився» — а він возить */
+      if(di0&&di0.started&&/вихідн|захворі|звільнив/i.test(nt.reason))
+        conflict=di0.name+' сьогодні на лінії';
+      /* «на ремонті / не готове» — а авто їздить за GPS */
+      if(!conflict&&/ремонт|не готове|ДТП/i.test(nt.reason)){
+        try{
+          var gc0=(typeof DATA!=='undefined'&&DATA&&DATA.gps_cars)||{};
+          var c0=gc0[(typeof NPL==='function')?NPL(plate):plate];
+          var km0=(c0&&typeof c0==='object')?(c0.km||0):(c0||0);
+          if(km0>=15)conflict='авто проїхало '+Math.round(km0)+' км за GPS';
+        }catch(e){}
+      }
+      if(!conflict)
+        return {kind:'note',short:nt.reason,text:nt.reason+(nt.desc?(' — '+nt.desc):''),rent:null,driver:(di0&&di0.name)||''};
+      /* Причина застаріла — показуємо реальний стан і кажемо про суперечність. */
+      var real=(di0&&di0.has)
+        ? (di0.started?{k:'work',s:'на лінії'}:{k:'notyet',s:'ще не виїхав'})
+        : {k:'nodriver',s:'немає водія'};
+      return {kind:real.k,short:real.s,
+        text:((di0&&di0.name)?(di0.name+' · '):'')+real.s,
+        stale:nt.reason, conflict:conflict, rent:null, driver:(di0&&di0.name)||''};
+    }
   }catch(e){}
   /* Ручної причини немає — визначаємо самі. Головне: не писати
      «немає водія», коли водій насправді є і просто ще не почав день. */
