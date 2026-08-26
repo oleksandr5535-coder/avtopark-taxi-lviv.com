@@ -1901,6 +1901,20 @@ select:focus,textarea:focus{
 .wka-sum.warn{background:var(--warn-bg);border:1px solid var(--warn-line);color:var(--warn-tx)}
 .wka-sum b{font-family:var(--mono);color:var(--ink)}
 .wka-none{margin:0;font-size:12.5px;color:var(--muted)}
+
+
+/* ---- вид оренди й завершення ---- */
+.rn-kind{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--muted);background:var(--soft);border:1px solid var(--line);
+  border-radius:6px;padding:2px 7px;margin-left:8px;white-space:nowrap}
+.rn-kind.taxi{color:var(--amber-tx);background:var(--warn-bg);border-color:var(--warn-line)}
+.rn-closed{font-size:10.5px;font-weight:700;color:var(--muted);background:var(--soft);
+  border:1px solid var(--line);border-radius:6px;padding:2px 8px;margin-left:8px;white-space:nowrap}
+.rn-close{margin-left:auto;margin-right:6px;border:1px solid var(--line);
+  background:var(--panel);color:var(--ink2);border-radius:var(--r-sm);
+  padding:6px 12px;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap}
+.rn-close:hover{border-color:var(--amber);color:var(--amber-tx);background:var(--warn-bg)}
+.rn-card .rn-h{flex-wrap:wrap;gap:6px}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head><body>
 <script>try{var _th=localStorage.getItem("theme");if(_th)document.documentElement.setAttribute("data-theme",_th);}catch(e){}</script>
@@ -4262,7 +4276,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=80;
+var APP_BUILD_N=82;
 var APP_BUILD='збірка 21.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
@@ -4583,26 +4597,77 @@ function rentSave(list,del){
   if(del)try{localStorage.setItem('rent_del',JSON.stringify(del));}catch(e){}
   if(typeof cloudSaveKV==='function'){try{cloudSaveKV('rent',{list:list,del:del||rentDelSet()});}catch(e){}}
 }
+/* Днів оренди — за ФАКТИЧНИМ періодом. Якщо завершили достроково,
+   рахуємо до дати завершення: домовлена сума лишається тією самою,
+   просто ділиться на менше днів. Інакше дохід «розмазувався» б на дні,
+   коли авто вже стояло вільне. */
 function rentDays(r){
-  if(!r||!r.from||!r.to)return 0;
+  if(!r||!r.from)return 0;
+  var end=(typeof rentEnd==='function')?rentEnd(r):(r.to||null);
+  if(!end)return 0;
   try{
-    var a=new Date(r.from+'T12:00:00Z'),b=new Date(r.to+'T12:00:00Z');
+    var a=new Date(r.from+'T12:00:00Z'),b=new Date(end+'T12:00:00Z');
     return Math.max(1,Math.round((b-a)/86400000)+1);
   }catch(e){return 1;}
 }
 function rentPerDay(r){var d=rentDays(r);return d?((r.sum||0)/d):0;}
+/* Дні оренди — до ФАКТИЧНОГО кінця (з урахуванням дострокового завершення). */
 function rentKeys(r){
   var out=[];
-  if(!r||!r.from||!r.to)return out;
+  if(!r||!r.from)return out;
+  var end=(typeof rentEnd==='function')?rentEnd(r):(r.to||null);
+  if(!end)return out;
   try{
-    var d=new Date(r.from+'T12:00:00Z'),e=new Date(r.to+'T12:00:00Z'),g=0;
+    var d=new Date(r.from+'T12:00:00Z'),e=new Date(end+'T12:00:00Z'),g=0;
     while(d<=e&&g<400){out.push(d.toISOString().slice(0,10));d.setUTCDate(d.getUTCDate()+1);g++;}
   }catch(e){}
   return out;
 }
+/* Фактичний кінець оренди: якщо її завершили достроково — рахуємо по
+   даті завершення, а не по домовленій. Запис і платежі при цьому цілі. */
+function rentEnd(r){
+  if(!r)return null;
+  if(r.closed&&r.closed<(r.to||''))return r.closed;
+  return r.to||null;
+}
 function rentsOn(ymd){
   if(!ymd)return [];
-  return rentAll().filter(function(r){return r&&r.from&&r.to&&ymd>=r.from&&ymd<=r.to;});
+  return rentAll().filter(function(r){
+    if(!r||!r.from)return false;
+    var end=rentEnd(r);
+    return end&&ymd>=r.from&&ymd<=end;
+  });
+}
+/* Завершити оренду датою (за замовчуванням — сьогодні).
+   Авто одразу вивільняється, історія й платежі лишаються. */
+function rentClose(id,ymd){
+  var list=rentAll(),i=-1;
+  for(var k=0;k<list.length;k++)if(list[k].id===id){i=k;break;}
+  if(i<0)return;
+  var r=list[i];
+  var day=ymd||((typeof kyivToday==='function')?kyivToday():new Date().toISOString().slice(0,10));
+  if(day<r.from){alert('Дата завершення раніша за початок оренди.');return;}
+  var km=prompt('Пробіг при поверненні (можна лишити порожнім):', r.km_end!=null?r.km_end:'');
+  if(km===null)return;
+  var kmv=parseFloat(String(km).replace(',','.'));
+  r.closed=day;
+  if(!isNaN(kmv))r.km_end=kmv;
+  r._upd=Date.now();
+  list[i]=r;
+  rentSave(list);
+  if(typeof renderRent==='function')renderRent();
+  if(typeof renderCars==='function')renderCars();
+}
+/* Скасувати завершення — якщо натиснув помилково. */
+function rentReopen(id){
+  var list=rentAll();
+  for(var k=0;k<list.length;k++)if(list[k].id===id){
+    list[k].closed=null;list[k]._upd=Date.now();
+    rentSave(list);
+    if(typeof renderRent==='function')renderRent();
+    if(typeof renderCars==='function')renderCars();
+    return;
+  }
 }
 function isRentedOn(plate,ymd){
   if(!plate||!ymd)return false;
@@ -4645,6 +4710,25 @@ function rentCarInfo(plate,ymd){
     });
   });
   return {cur:cur,month_sum:Math.round(monSum),month_days:monDays,last:lastR,owed:Math.round(owed*100)/100};
+}
+/* Пробіг за період оренди — за GPS. Трекер наш, тому видно навіть тоді,
+   коли людина возить через свій акаунт: поїздок ми не бачимо, а км — так. */
+function rentGpsKm(r){
+  if(!r||!r.plate)return null;
+  var pl=(typeof NPL==='function')?NPL(r.plate):r.plate;
+  var sum=0,seen=0;
+  try{
+    rentKeys(r).forEach(function(k){
+      var d=(typeof DAYS!=='undefined')?DAYS[k]:null;
+      var gc=(d&&d.gps_cars)||null;
+      if(!gc)return;
+      var c=gc[pl];
+      if(c==null)return;
+      var km=(typeof c==='object')?(c.km||0):c;
+      if(km>0){sum+=km;seen++;}
+    });
+  }catch(e){}
+  return seen?Math.round(sum):null;
 }
 function rentKm(r){
   if(r&&r.km_end!=null&&r.km_start!=null){var d=r.km_end-r.km_start;return d>0?Math.round(d):null;}
@@ -7022,8 +7106,9 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
     if(!from||!to){alert('Вкажи дати оренди.');return;}
     if(to<from){alert('Дата «по» раніша за «з».');return;}
     if(sum<=0){alert('Вкажи домовлену суму.');return;}
-    var rec={id:uid(),plate:pl,from:from,to:to,sum:sum,renter:who.trim(),
-      km_start:isNaN(k1)?null:k1,km_end:null,note:'',pays:[],ts:Date.now(),_upd:Date.now()};
+    var kind=((document.getElementById('rnKind')||{}).value)||'daily';
+    var rec={id:uid(),plate:pl,kind:kind,from:from,to:to,sum:sum,renter:who.trim(),
+      km_start:isNaN(k1)?null:k1,km_end:null,note:'',pays:[],closed:null,ts:Date.now(),_upd:Date.now()};
     var ov=overlaps(rec,null);
     if(ov.length&&!confirm('Це авто вже має оренду на ці дні ('+dmy(ov[0].from)+' – '+dmy(ov[0].to)+').\nВсе одно додати?'))return;
     var cf=conflicts(rec);
@@ -7076,13 +7161,19 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
               :(rest<-0.5?('Переплата: <b>'+f(-rest)+' \u20b4</b>'):'Оплачено повністю');
     return '<div class="rn-card'+(active?' on':'')+'">'
       +'<div class="rn-h"><span class="rn-plate">'+esc(r.plate)+'</span>'
+      +'<span class="rn-kind'+(r.kind==='taxi'?' taxi':'')+'">'+(r.kind==='taxi'?'під таксі':'подобова')+'</span>'
       +(active?'<span class="rn-live">в оренді зараз</span>':'')
-      +'<span class="rn-per">'+esc(dmy(r.from))+' \u2013 '+esc(dmy(r.to))+' \u00b7 '+days+' дн.</span>'
-      +'<button class="rn-del" title="Видалити" onclick="rentRemove(&quot;'+r.id+'&quot;)">\u2715</button></div>'
+      +(r.closed?'<span class="rn-closed">завершено '+esc(dmy(r.closed))+'</span>':'')
+      +'<span class="rn-per">'+esc(dmy(r.from))+' \u2013 '+esc(dmy(rentEnd(r)||r.to))+' \u00b7 '+days+' дн.</span>'
+      +(active&&!r.closed
+        ? '<button class="rn-close" title="Завершити оренду — авто вивільниться, історія лишиться" onclick="rentClose(&quot;'+r.id+'&quot;)">Завершити</button>'
+        : (r.closed?'<button class="rn-close" title="Скасувати завершення" onclick="rentReopen(&quot;'+r.id+'&quot;)">Повернути</button>':''))
+      +'<button class="rn-del" title="Видалити разом з платежами" onclick="rentRemove(&quot;'+r.id+'&quot;)">\u2715</button></div>'
       +(r.renter?'<div class="rn-who">'+esc(r.renter)+'</div>':'')
       +'<div class="rn-nums"><div><span>'+f(r.sum)+' \u20b4</span>домовлена сума</div>'
       +'<div><span>'+f(per)+' \u20b4</span>за добу</div>'
-      +'<div><span>'+(km!=null?km:'\u2014')+'</span>км за період</div></div>'
+      +'<div><span>'+(km!=null?km:'\u2014')+'</span>км за одометром</div>'
+      +(function(){var g=rentGpsKm(r);return g!=null?'<div><span>'+g+'</span>км за GPS</div>':'';})()+'</div>'
       +(cf.length?'<div class="rn-warn">У '+cf.length+' дн. авто також їздило в таксі (напр. '+esc(dmy(cf[0].date))+', '+esc(cf[0].driver)+'). Перевір дати.</div>':'')
       +'<div class="rn-km"><label>Пробіг на початку<input type="number" inputmode="numeric" value="'+(r.km_start!=null?r.km_start:'')+'" onchange="rentSetField(&quot;'+r.id+'&quot;,&quot;km_start&quot;,this.value)"></label>'
       +'<label>Пробіг на кінець<input type="number" inputmode="numeric" value="'+(r.km_end!=null?r.km_end:'')+'" onchange="rentSetField(&quot;'+r.id+'&quot;,&quot;km_end&quot;,this.value)"></label></div>'
@@ -7136,6 +7227,10 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
 
     var form='<div class="rn-form"><h3>Нова оренда</h3><div class="rn-fgrid">'
       +'<label>Авто<select id="rnPlate">'+opts+'</select></label>'
+      +'<label>Вид оренди<select id="rnKind">'
+        +'<option value="daily">Подобова \u2014 не таксі</option>'
+        +'<option value="taxi">\u041fід таксі \u2014 поза парком</option>'
+      +'</select></label>'
       +'<label>З<input type="date" id="rnFrom" value="'+t+'"></label>'
       +'<label>По<input type="date" id="rnTo" value="'+t+'"></label>'
       +'<label>Домовлена сума, \u20b4<input type="number" inputmode="decimal" id="rnSum" placeholder="0"></label>'
