@@ -2016,6 +2016,15 @@ select:focus,textarea:focus{
 .tp-no{border:1px solid var(--line);background:var(--panel);color:var(--ink2);
   border-radius:var(--r-sm);padding:11px 16px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
 .tp-no:hover{background:var(--soft)}
+
+
+/* ---- «Не виїхали»: рядок і кольори за змістом ---- */
+.ncr{display:flex;justify-content:space-between;gap:10px;padding:6px 0;
+  border-bottom:1px solid var(--line);font-size:13px}
+.ncr:last-child{border-bottom:none}
+.cst.notyet{color:var(--muted);background:var(--soft)}
+.cst.nodriver{color:var(--bad);background:var(--bad-bg,var(--soft))}
+.cst.work{color:var(--good);background:var(--good-bg)}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head><body>
 <script>try{var _th=localStorage.getItem("theme");if(_th)document.documentElement.setAttribute("data-theme",_th);}catch(e){}</script>
@@ -4383,7 +4392,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=90;
+var APP_BUILD_N=93;
 var APP_BUILD='збірка 21.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
@@ -4534,7 +4543,21 @@ const work=f.filter(p=>ACT.has(p)),non=f.filter(p=>!ACT.has(p));return{work:work
 function toggleNonCars(){var b=document.getElementById('nonCarsBox');if(b)b.classList.toggle('hide');}
 function roamedCars(){var _nm=(typeof lastDriverByPlate==='function')?lastDriverByPlate():{},_pp=(typeof drvPass==='function')?drvPass():{};var fleet=(typeof getFleet==='function')?getFleet().filter(function(p){return !isOOS(p)&&plateIsTaxi(p,_nm,_pp);}):[];var gc=(DATA&&DATA.gps_cars)||{};var ord={};(A||[]).forEach(function(o){if(o&&o.plate_norm)ord[o.plate_norm]=(ord[o.plate_norm]||0)+(o.orders||0);});return fleet.filter(function(pl){var g=gc[pl];var km=g?(g.day_km!=null?g.day_km:g.km):0;return (km||0)>=5&&(ord[pl]||0)===0;}).map(function(pl){var g=gc[pl];return {plate:pl,km:(g?(g.day_km!=null?g.day_km:g.km):0)||0};});}
 function roamedHtml(){var out=roamedCars();if(!out.length)return '';var gc=(DATA&&DATA.gps_cars)||{};return '<div style="font-weight:700;font-size:13px;margin:10px 0 4px;color:var(--warn,#B5651D)">Катались без замовлень ('+out.length+'):</div>'+out.map(function(r){var who=(typeof carDriverName==='function')?carDriverName(r.plate):'';return '<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid #f3f3f3;font-size:13px"><span>🚗 <b>'+r.plate+'</b>'+(who?' — '+rpt_esc(who):'')+'</span><span style="color:var(--warn,#B5651D);white-space:nowrap">'+Math.round(r.km)+' км · 0 замовлень</span></div>';}).join('');}
-function nonCarsHtml(){var fl=fleetStats();var non=fl.non||[];var nm=(typeof lastDriverByPlate==="function")?lastDriverByPlate():{};var notes=(typeof carNotes==="function")?carNotes():{};var gc=(DATA&&DATA.gps_cars)||{};if(!non.length)return "<div style='padding:4px 0;color:var(--good);font-size:13px'>Усі авто виїхали 👍</div>";return non.map(function(pl){var who=carDriverName(pl)||((gc[pl]&&gc[pl].car)||"");var n=notes[pl];var why=(n&&n.reason)?n.reason:"не виїхав";return "<div style='display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid #f3f3f3;font-size:13px'>"+"<span>🚗 <b>"+pl+"</b>"+(who?" — "+who:"")+"</span>"+"<span style='color:var(--bad);white-space:nowrap'>"+why+"</span></div>";}).join("");}
+function nonCarsHtml(){var fl=fleetStats();var non=fl.non||[];var nm=(typeof lastDriverByPlate==="function")?lastDriverByPlate():{};var notes=(typeof carNotes==="function")?carNotes():{};var gc=(DATA&&DATA.gps_cars)||{};if(!non.length)return "<div style='padding:4px 0;color:var(--good);font-size:13px'>Усі авто виїхали 👍</div>";return non.map(function(pl){
+    var st=(typeof carStateLabel==='function')?carStateLabel(pl):{kind:'',short:''};
+    var who=(st.driver||carDriverName(pl))||((gc[pl]&&gc[pl].car)||"");
+    var n=notes[pl];
+    /* Ручна причина головніша — її вписала людина. Якщо її немає,
+       беремо автоматичну: «ще не виїхав» замість «немає водія». */
+    var why=(n&&n.reason)?n.reason:(st.short||"не виїхав");
+    /* Колір за змістом: чекаємо — спокійно, немає водія — тривожно. */
+    var col=(st.kind==='notyet')?'var(--muted)'
+           :(st.kind==='nodriver'?'var(--bad)'
+           :((st.kind==='rent_taxi'||st.kind==='rent_daily')?'var(--good)':'var(--bad)'));
+    return "<div class='ncr'>"
+      +"<span>\ud83d\ude97 <b>"+pl+"</b>"+(who?" — "+who:"")+"</span>"
+      +"<span style='color:"+col+";white-space:nowrap'>"+why+"</span></div>";
+  }).join("");}
 function renderFleet(){const st=fleetStats();const el=document.getElementById('fleetStat');if(el)el.innerHTML=`<div class="big">${st.work} <b>/ ${st.total}</b></div><div class="l">робочих авто сьогодні</div>`;if(typeof renderCarCatSum==='function')renderCarCatSum();}
 function carNotes(){try{return JSON.parse(localStorage.getItem('cars_notes')||'{}')}catch(e){return{}}}
 function plansGet(){var d={std:(typeof TARGET!=='undefined'&&TARGET)||3000,hybrid:3000,gas:2500};try{return Object.assign(d,JSON.parse(localStorage.getItem('plan_fuel')||'{}'))}catch(e){return d}}
@@ -4929,6 +4952,63 @@ function isOOS(pl){
    Один текст на всі екрани: «Зведення», «Ранок», «Стоять», «Авто», «Власнику».
    Оренда має пріоритет над ручною причиною: якщо авто здане — воно працює,
    і показувати «не готове до таксі» неправильно. */
+/* ===== ЧИ Є В АВТО ВОДІЙ =====
+   Розрізняємо три різні речі, які раніше злипались в одне
+   «Готове авто — немає водія»:
+     1. Водія НЕМАЄ взагалі — справжній простій, треба когось шукати.
+     2. Водій Є, але сьогодні ще НЕ ВИЇХАВ — нормально зранку, тривожно ввечері.
+     3. Водій Є і виїхав, але без замовлень — окремий стан.
+   Водієм вважаємо того, хто закріплений у профілі АБО їздив на цьому авто
+   в останні дні (щоб не втрачати того, хто вчора працював). */
+function carDriverInfo(plate,ymd){
+  var day=ymd||((typeof DATA!=='undefined'&&DATA&&DATA.date)?DATA.date:'');
+  var pl=(typeof NPL==='function')?NPL(plate):plate;
+  var name='',src='';
+  /* 1. закріплений у профілі */
+  try{
+    var pp=(typeof drvPass==='function')?drvPass():{};
+    for(var k in pp){
+      if(!pp[k]||pp[k].plate!==plate)continue;
+      if(typeof isDeleted==='function'&&isDeleted(k))continue;
+      if(day&&typeof worksOn==='function'&&!worksOn(k,day))continue;
+      name=k;src='profile';break;
+    }
+  }catch(e){}
+  /* 2. хто їздив на цьому авто останніми днями */
+  if(!name){
+    try{
+      var ks=Object.keys(DAYS||{}).filter(function(x){return /^\d{4}-\d{2}-\d{2}$/.test(x)&&(!day||x<=day);}).sort();
+      for(var i=ks.length-1;i>=0&&i>=ks.length-14;i--){
+        var drv=((DAYS[ks[i]]||{}).drivers)||[];
+        for(var j=0;j<drv.length;j++){
+          var o=drv[j];
+          if(!o||!o.name)continue;
+          if(((typeof NPL==='function')?NPL(o.plate_norm||''):(o.plate_norm||''))!==pl)continue;
+          if(typeof isDeleted==='function'&&isDeleted(o.name))continue;
+          if(day&&typeof worksOn==='function'&&!worksOn(o.name,day))continue;
+          name=o.name;src=(ks[i]===day)?'today':'recent';break;
+        }
+        if(name)break;
+      }
+    }catch(e){}
+  }
+  /* що з ним сьогодні */
+  var today=null;
+  try{
+    (((typeof A!=='undefined'&&A)||[])).forEach(function(o){
+      if(!o||!o.name||!name)return;
+      if(nkey(o.name)!==nkey(name))return;
+      today=o;
+    });
+  }catch(e){}
+  var orders=today?(today.orders||0):0;
+  var online=today?(today.online||0):0;
+  return {
+    name:name, src:src, has:!!name,
+    started:!!(today&&(orders>0||online>0)),
+    orders:orders, online:online
+  };
+}
 function carStateLabel(plate,ymd){
   var day=ymd||((typeof DATA!=='undefined'&&DATA&&DATA.date)?DATA.date:'');
   try{
@@ -4949,6 +5029,18 @@ function carStateLabel(plate,ymd){
   try{
     var nt=(typeof carNotes==='function')?(carNotes()[plate]||{}):{};
     if(nt.reason)return {kind:'note',short:nt.reason,text:nt.reason+(nt.desc?(' — '+nt.desc):''),rent:null};
+  }catch(e){}
+  /* Ручної причини немає — визначаємо самі. Головне: не писати
+     «немає водія», коли водій насправді є і просто ще не почав день. */
+  try{
+    var di=(typeof carDriverInfo==='function')?carDriverInfo(plate,ymd):null;
+    if(di&&di.has){
+      if(di.started)return {kind:'work',short:'на лінії',
+        text:di.name+' \u00b7 на лінії'+(di.orders?(' \u00b7 '+di.orders+' поїзд.'):' \u00b7 без замовлень'),rent:null,driver:di.name};
+      return {kind:'notyet',short:'ще не виїхав',
+        text:di.name+' \u00b7 ще не виїхав',rent:null,driver:di.name};
+    }
+    return {kind:'nodriver',short:'немає водія',text:'Готове авто \u2014 немає водія',rent:null,driver:''};
   }catch(e){}
   return {kind:'',short:'',text:'',rent:null};
 }
@@ -8552,15 +8644,25 @@ var SEL='#cars .cdriver, #cars .creason, #morning .creason, #report #rptDaySel';
       return !(to&&to<r.from)&&!(from>e);
     });
     if(busy.length&&!confirm('Це авто вже має оренду ('+dmy(busy[0].from)+' – '+dmy(busy[0].to||'—')+').\nВсе одно додати?'))return;
-    var list=rentAll();
-    list.push({id:nid(),plate:pl,kind:'taxi',rate_period:per,from:from,
-      to:to||'2099-12-31',sum:sum,deposit:dep,deposit_back:false,
-      renter:who.trim(),km_start:isNaN(k1)?null:k1,km_end:null,note:'',
-      pays:[],closed:null,ts:Date.now(),_upd:Date.now()});
-    rentSave(list);
-    ['trSum','trDep','trWho','trKm1'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
-    renderTaxiRent();
-    if(typeof renderCars==='function')renderCars();
+    try{
+      var list=rentAll();
+      list.push({id:nid(),plate:pl,kind:'taxi',rate_period:per,from:from,
+        to:to||'2099-12-31',sum:sum,deposit:dep,deposit_back:false,
+        renter:who.trim(),km_start:isNaN(k1)?null:k1,km_end:null,note:'',
+        pays:[],closed:null,ts:Date.now(),_upd:Date.now()});
+      rentSave(list);
+      var saved=rentAll().some(function(x){return x.plate===pl&&x.from===from&&x.kind==='taxi';});
+      if(!saved)throw new Error('запис не зберігся');
+      ['trSum','trDep','trWho','trKm1'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
+      renderTaxiRent();
+      if(typeof renderCars==='function')renderCars();
+    }catch(err){
+      /* Ніколи не падати мовчки: якщо щось не так — людина має це побачити,
+         а не тиснути кнопку вдруге і втретє. */
+      console.error('Оренда не додалась:',err);
+      alert('Не вдалося додати оренду.\n\n'+(err&&err.message?err.message:'невідома помилка')
+        +'\n\nСпробуй оновити сторінку (Cmd+Shift+R). Якщо не допоможе — покажи це повідомлення.');
+    }
   };
 
   /* Форма платежу — нормальне вікно з полем дати, а не системні запити.
