@@ -2032,6 +2032,39 @@ select:focus,textarea:focus{
   letter-spacing:.04em;text-transform:uppercase;color:var(--amber-tx);
   background:var(--warn-bg);border:1px solid var(--warn-line);
   border-radius:5px;padding:1px 6px;cursor:help;vertical-align:middle}
+
+
+/* ---- швидка позначка причини ---- */
+.qr-dlg{position:fixed;inset:0;z-index:640;background:rgba(20,22,27,.42);
+  display:flex;align-items:center;justify-content:center;padding:16px;animation:dcalIn .16s ease}
+.qr-box{width:100%;max-width:360px;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-lg);box-shadow:var(--sh-pop);padding:18px}
+.qr-hd{font-family:var(--mono);font-size:15px;font-weight:800;color:var(--ink)}
+.qr-now{font-size:12px;color:var(--muted);margin:4px 0 14px}
+.qr-quick{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px}
+.qr-b{border:1px solid var(--line);background:var(--soft);color:var(--ink2);
+  border-radius:var(--r-sm);padding:10px 8px;font:inherit;font-size:11.5px;
+  font-weight:700;cursor:pointer;line-height:1.3;text-align:center}
+.qr-b:hover{border-color:var(--amber);color:var(--amber-tx);background:var(--warn-bg)}
+.qr-b.on{border-color:var(--amber);background:var(--warn-bg);color:var(--amber-tx)}
+.qr-f{display:block;font-size:11px;font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:11px}
+.qr-f select,.qr-f input{display:block;width:100%;margin-top:5px;padding:10px 12px;
+  border:1px solid var(--line);border-radius:var(--r-sm);font:inherit;font-size:13.5px;
+  background:var(--soft);color:var(--ink)}
+.qr-f select:focus,.qr-f input:focus{outline:none;border-color:var(--amber);background:var(--panel)}
+.qr-acts{display:flex;gap:7px;margin-top:14px;flex-wrap:wrap}
+.qr-ok{flex:1;border:none;background:var(--inkp);color:var(--inkp-fg);border-radius:var(--r-sm);
+  padding:11px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.qr-ok:hover{opacity:.9}
+.qr-clr,.qr-no{border:1px solid var(--line);background:var(--panel);color:var(--ink2);
+  border-radius:var(--r-sm);padding:11px 13px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.qr-clr:hover{color:var(--bad);border-color:var(--bad)}
+.qr-no:hover{background:var(--soft)}
+
+/* стан авто у списку простою — кольором */
+.standchip.waiting{border-color:var(--line);background:var(--soft);color:var(--ink2)}
+.standchip.nodrv{border-color:var(--warn-line);background:var(--warn-bg);color:var(--amber-tx)}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head><body>
 <script>try{var _th=localStorage.getItem("theme");if(_th)document.documentElement.setAttribute("data-theme",_th);}catch(e){}</script>
@@ -3520,7 +3553,22 @@ function dayDashboard(){
   var byNet=S.filter(function(o){return (o.orders||0)>0;}).sort(function(a,b){return (a.net||0)-(b.net||0);}).slice(0,3);
   var arRow=function(o,val){return '<div class="ld-row" data-i="'+o._i+'"><span class="ld-name" style="width:auto;flex:1">'+rpt_esc(nameFor(o.name))+'</span><span class="ld-v">'+val+'</span></div>';};
   var antiCard='<div class="dd-card"><div class="dd-t">Кому увага</div><div class="ar-sub">Найбільше стояли</div>'+(byIdle.length?byIdle.map(function(o){return arRow(o,hmd(o.idle));}).join(''):'<div class="dd-empty">—</div>')+'<div class="ar-sub" style="margin-top:11px">Найменше заробили</div>'+(byNet.length?byNet.map(function(o){return arRow(o,gv(o.net)+' ₴');}).join(''):'<div class="dd-empty">—</div>')+'</div>';
-  var _sd=(typeof standing==='function')?standing():[];var _os=(typeof outService==='function')?outService():[];var _cn=(typeof carNotes==='function')?carNotes():{};function _why(c){var n=_cn[c.plate]||{};return n.reason||(c.gps?(((c.gps_km||0)>=5)?(c.gps_km+' км'):'стоїть'):'не виходило');}function _idleBadge(pl){var d=carIdleDays(pl);return '<i class="ddays">'+(d.exact?'':'\u2265')+d.n+'\u0434</i>';}var _byR={};_sd.forEach(function(c){var r=(_cn[c.plate]||{}).reason||'без причини';_byR[r]=(_byR[r]||0)+1;});var _rsum=Object.keys(_byR).sort(function(a,b){return _byR[b]-_byR[a];}).map(function(r){return r+' \u2014 '+_byR[r];}).join(' \u00b7 ');var idleCard='<div class="dd-card"><div class="dd-t">\u23f8 Простоюють авто \u00b7 '+_sd.length+'</div>'+(_sd.length?('<div class="dd-note">'+_rsum+'</div><div class="standchips">'+_sd.map(function(c){return '<span class="standchip clk" onclick="showView(\'cars\')"><b>'+c.plate+'</b> \u00b7 '+_why(c)+' '+_idleBadge(c.plate)+'</span>';}).join('')+'</div><div class="dd-more" onclick="showView(\'cars\')">усі та причини \u2192</div>'):'<div class="dd-empty">Усі авто в роботі</div>')+'</div>';var osCard='<div class="dd-card"><div class="dd-t">\ud83d\udd27 Поза лінією \u00b7 '+_os.length+'</div>'+(_os.length?('<div class="dd-note">Не рахуються як активні чи в недозаробітку.</div><div class="standchips">'+_os.map(function(c){var _st=(typeof carStateLabel==='function')?carStateLabel(c.plate):{short:'',kind:''};
+  var _sd=(typeof standing==='function')?standing():[];var _os=(typeof outService==='function')?outService():[];var _cn=(typeof carNotes==='function')?carNotes():{};/* Підпис у «Простоюють» — з тієї самої функції, що на решті екранів.
+   Раніше брався просто з нотаток: якщо колись вписали «немає водія»,
+   воно висіло навіть тоді, коли водій є і просто на вихідному. */
+function _why(c){
+  var st=(typeof carStateLabel==='function')?carStateLabel(c.plate):null;
+  if(st&&st.short){
+    /* до підпису додаємо імʼя, щоб було видно, ЧИЙ це вихідний */
+    if(st.driver&&/вихідн|захворі|ще не виїхав/i.test(st.short))return st.driver+' \u00b7 '+st.short;
+    return st.short;
+  }
+  var n=_cn[c.plate]||{};
+  return n.reason||(c.gps?(((c.gps_km||0)>=5)?(c.gps_km+' км'):'стоїть'):'не виходило');
+}function _idleBadge(pl){var d=carIdleDays(pl);return '<i class="ddays">'+(d.exact?'':'\u2265')+d.n+'\u0434</i>';}var _byR={};_sd.forEach(function(c){var r=(_cn[c.plate]||{}).reason||'без причини';_byR[r]=(_byR[r]||0)+1;});var _rsum=Object.keys(_byR).sort(function(a,b){return _byR[b]-_byR[a];}).map(function(r){return r+' \u2014 '+_byR[r];}).join(' \u00b7 ');var idleCard='<div class="dd-card"><div class="dd-t">\u23f8 Простоюють авто \u00b7 '+_sd.length+'</div>'+(_sd.length?('<div class="dd-note">'+_rsum+'</div><div class="standchips">'+_sd.map(function(c){var _st=(typeof carStateLabel==='function')?carStateLabel(c.plate):{kind:''};
+      var _cls=(_st.kind==='notyet')?' waiting':(_st.kind==='nodriver'?' nodrv':'');
+      return '<span class="standchip clk'+_cls+'" title="Клік — позначити причину" '
+        +'onclick="carQuickReason(&quot;'+c.plate+'&quot;)"><b>'+c.plate+'</b> \u00b7 '+_why(c)+' '+_idleBadge(c.plate)+'</span>';}).join('')+'</div><div class="dd-more" onclick="showView(\'cars\')">усі та причини \u2192</div>'):'<div class="dd-empty">Усі авто в роботі</div>')+'</div>';var osCard='<div class="dd-card"><div class="dd-t">\ud83d\udd27 Поза лінією \u00b7 '+_os.length+'</div>'+(_os.length?('<div class="dd-note">Не рахуються як активні чи в недозаробітку.</div><div class="standchips">'+_os.map(function(c){var _st=(typeof carStateLabel==='function')?carStateLabel(c.plate):{short:'',kind:''};
       var r=_st.short||(_cn[c.plate]||{}).reason;
       var _rc=(_st.kind==='rent_taxi')?' rtaxi':(_st.kind==='rent_daily'?' rday':'');
       return '<span class="standchip oosc clk'+_rc+'" onclick="showView(\'cars\')"><b>'+c.plate+'</b>'+(c.car?' \u00b7 '+c.car:'')+(r?' \u00b7 '+r:'')+' '+_idleBadge(c.plate)+'</span>';}).join('')+'</div><div class="dd-more" onclick="showView(\'cars\')">керувати \u2192</div>'):'<div class="dd-empty">Немає авто поза лінією</div>')+'</div>';return '<div class="dd-h">День у цифрах</div><div class="dd-grid">'
@@ -4399,7 +4447,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=94;
+var APP_BUILD_N=96;
 var APP_BUILD='збірка 21.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
@@ -4988,7 +5036,10 @@ function carDriverInfo(plate,ymd){
   if(!name){
     try{
       var ks=Object.keys(DAYS||{}).filter(function(x){return /^\d{4}-\d{2}-\d{2}$/.test(x)&&(!day||x<=day);}).sort();
-      for(var i=ks.length-1;i>=0&&i>=ks.length-14;i--){
+      /* Дивимось усю історію, а не лише два тижні: водій на вихідному чи
+         у відпустці не має «зникати» з авто. Раніше вікно було 14 днів —
+         і після двох тижнів простою авто ставало «без водія». */
+      for(var i=ks.length-1;i>=0;i--){
         var drv=((DAYS[ks[i]]||{}).drivers)||[];
         for(var j=0;j<drv.length;j++){
           var o=drv[j];
@@ -8870,7 +8921,69 @@ var SEL='#cars .cdriver, #cars .creason, #morning .creason, #report #rptDaySel';
   };
 })();
 </script>
+<script>
+/* ДИЗАЙН-ШАР v37 — швидка позначка причини просто зі «Зведення».
+   Раніше треба було йти в «Авто», шукати картку, відкривати список.
+   Тепер клік по авто в «Простоюють» — і одразу вибір. */
+(function(){
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+  window.carQuickReason=function(plate){
+    var old=document.getElementById('qrDlg');if(old)old.remove();
+    var nt={};try{nt=(carNotes()[plate])||{};}catch(e){}
+    var di=(typeof carDriverInfo==='function')?carDriverInfo(plate):null;
+    var st=(typeof carStateLabel==='function')?carStateLabel(plate):null;
+
+    /* Найчастіші причини — великими кнопками, решта у списку. */
+    var quick=['Водій на вихідному','Водій захворів','Готове авто — немає водія','На ремонті / ТО'];
+    var d=document.createElement('div');
+    d.id='qrDlg';d.className='qr-dlg';
+    d.innerHTML='<div class="qr-box">'
+      +'<div class="qr-hd">'+esc(plate)+(di&&di.name?(' \u00b7 '+esc(nameFor(di.name))):'')+'</div>'
+      +'<div class="qr-now">'+(st&&st.short?('Зараз: '+esc(st.short)):'Причину не вказано')
+        +(st&&st.stale?(' \u00b7 вписано «'+esc(st.stale)+'»'):'')+'</div>'
+      +'<div class="qr-quick">'+quick.map(function(r){
+          return '<button type="button" class="qr-b'+(nt.reason===r?' on':'')+'" data-r="'+esc(r)+'">'+esc(r)+'</button>';
+        }).join('')+'</div>'
+      +'<label class="qr-f">Інша причина'
+        +'<select id="qrSel">'+((typeof reasonOptions==='function')?reasonOptions(nt.reason||''):'')+'</select></label>'
+      +'<label class="qr-f">Нотатка<input type="text" id="qrDesc" value="'+esc(nt.desc||'')+'" placeholder="необовʼязково"></label>'
+      +'<div class="qr-acts"><button class="qr-ok">Зберегти</button>'
+      +'<button class="qr-clr">Прибрати причину</button>'
+      +'<button class="qr-no">Скасувати</button></div></div>';
+    document.body.appendChild(d);
+
+    var close=function(){d.remove();};
+    d.onclick=function(e){if(e.target===d)close();};
+    d.querySelector('.qr-no').onclick=close;
+
+    function save(reason){
+      try{
+        var desc=(document.getElementById('qrDesc')||{}).value||'';
+        /* saveCarNote(plate, {reason, desc}) — по одному авто */
+        saveCarNote(plate,(!reason&&!desc)?{}:{reason:reason||'',desc:desc});
+      }catch(e){console.error(e);alert('Не вдалося зберегти причину: '+e.message);return;}
+      close();
+      try{if(typeof kpis==='function')kpis();}catch(e){}
+      try{if(typeof renderCars==='function')renderCars();}catch(e){}
+      try{if(typeof renderMorning==='function')renderMorning();}catch(e){}
+    }
+    d.querySelectorAll('.qr-b').forEach(function(b){
+      b.onclick=function(){save(b.getAttribute('data-r'));};
+    });
+    d.querySelector('.qr-ok').onclick=function(){
+      save((document.getElementById('qrSel')||{}).value||'');
+    };
+    d.querySelector('.qr-clr').onclick=function(){
+      var e=document.getElementById('qrDesc');if(e)e.value='';
+      save('');
+    };
+  };
+})();
+</script>
 </body></html>
+
 
 
 
