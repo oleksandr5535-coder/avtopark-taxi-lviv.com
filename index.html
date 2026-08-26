@@ -2065,6 +2065,15 @@ select:focus,textarea:focus{
 /* стан авто у списку простою — кольором */
 .standchip.waiting{border-color:var(--line);background:var(--soft);color:var(--ink2)}
 .standchip.nodrv{border-color:var(--warn-line);background:var(--warn-bg);color:var(--amber-tx)}
+
+.qr-last{font-size:12px;color:var(--ink2);background:var(--soft);
+  border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:9px 11px;margin-bottom:12px;line-height:1.5}
+.qr-last b{color:var(--ink)}
+.qr-take{margin-left:6px;border:1px solid var(--line);background:var(--panel);
+  color:var(--amber-tx);border-radius:6px;padding:3px 9px;font:inherit;
+  font-size:11px;font-weight:700;cursor:pointer}
+.qr-take:hover{background:var(--warn-bg);border-color:var(--amber)}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head><body>
 <script>try{var _th=localStorage.getItem("theme");if(_th)document.documentElement.setAttribute("data-theme",_th);}catch(e){}</script>
@@ -3567,7 +3576,11 @@ function _why(c){
   return n.reason||(c.gps?(((c.gps_km||0)>=5)?(c.gps_km+' км'):'стоїть'):'не виходило');
 }function _idleBadge(pl){var d=carIdleDays(pl);return '<i class="ddays">'+(d.exact?'':'\u2265')+d.n+'\u0434</i>';}var _byR={};_sd.forEach(function(c){var r=(_cn[c.plate]||{}).reason||'без причини';_byR[r]=(_byR[r]||0)+1;});var _rsum=Object.keys(_byR).sort(function(a,b){return _byR[b]-_byR[a];}).map(function(r){return r+' \u2014 '+_byR[r];}).join(' \u00b7 ');var idleCard='<div class="dd-card"><div class="dd-t">\u23f8 Простоюють авто \u00b7 '+_sd.length+'</div>'+(_sd.length?('<div class="dd-note">'+_rsum+'</div><div class="standchips">'+_sd.map(function(c){var _st=(typeof carStateLabel==='function')?carStateLabel(c.plate):{kind:''};
       var _cls=(_st.kind==='notyet')?' waiting':(_st.kind==='nodriver'?' nodrv':'');
-      return '<span class="standchip clk'+_cls+'" title="Клік — позначити причину" '
+      var _tip=(_st.kind==='nodriver'&&_st.last)
+        ? ('Востаннє тут їздив: '+((typeof nameFor==='function')?nameFor(_st.last):_st.last)
+           +(_st.last_ago!=null?(', '+_st.last_ago+' дн. тому'):'')+'. Клік — призначити водія або причину.')
+        : 'Клік — позначити причину';
+      return '<span class="standchip clk'+_cls+'" title="'+_tip+'" '
         +'onclick="carQuickReason(&quot;'+c.plate+'&quot;)"><b>'+c.plate+'</b> \u00b7 '+_why(c)+' '+_idleBadge(c.plate)+'</span>';}).join('')+'</div><div class="dd-more" onclick="showView(\'cars\')">усі та причини \u2192</div>'):'<div class="dd-empty">Усі авто в роботі</div>')+'</div>';var osCard='<div class="dd-card"><div class="dd-t">\ud83d\udd27 Поза лінією \u00b7 '+_os.length+'</div>'+(_os.length?('<div class="dd-note">Не рахуються як активні чи в недозаробітку.</div><div class="standchips">'+_os.map(function(c){var _st=(typeof carStateLabel==='function')?carStateLabel(c.plate):{short:'',kind:''};
       var r=_st.short||(_cn[c.plate]||{}).reason;
       var _rc=(_st.kind==='rent_taxi')?' rtaxi':(_st.kind==='rent_daily'?' rday':'');
@@ -4447,7 +4460,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=96;
+var APP_BUILD_N=99;
 var APP_BUILD='збірка 21.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
@@ -5022,54 +5035,79 @@ function carDriverInfo(plate,ymd){
   var day=ymd||((typeof DATA!=='undefined'&&DATA&&DATA.date)?DATA.date:'');
   var pl=(typeof NPL==='function')?NPL(plate):plate;
   var name='',src='';
-  /* 1. закріплений у профілі */
+
+  /* ДЖЕРЕЛО ПРАВДИ №1: призначення в картці авто (carNotes[plate].driver).
+     Це найсвіжіше — те, що ти щойно поставив на екрані «Авто». */
   try{
-    var pp=(typeof drvPass==='function')?drvPass():{};
-    for(var k in pp){
-      if(!pp[k]||pp[k].plate!==plate)continue;
-      if(typeof isDeleted==='function'&&isDeleted(k))continue;
-      if(day&&typeof worksOn==='function'&&!worksOn(k,day))continue;
-      name=k;src='profile';break;
+    var nt=(typeof carNotes==='function')?(carNotes()[plate]||{}):{};
+    var dv=nt.driver;
+    if(dv&&dv!=='__none__'){
+      var nm2=decodeURIComponent(dv);
+      if(!(typeof isDeleted==='function'&&isDeleted(nm2))
+         &&!(day&&typeof worksOn==='function'&&!worksOn(nm2,day))){
+        name=nm2;src='car';
+      }
     }
   }catch(e){}
-  /* 2. хто їздив на цьому авто останніми днями */
+
+  /* ДЖЕРЕЛО ПРАВДИ №2: закріплення в профілі водія (drvPass[name].plate). */
   if(!name){
     try{
-      var ks=Object.keys(DAYS||{}).filter(function(x){return /^\d{4}-\d{2}-\d{2}$/.test(x)&&(!day||x<=day);}).sort();
-      /* Дивимось усю історію, а не лише два тижні: водій на вихідному чи
-         у відпустці не має «зникати» з авто. Раніше вікно було 14 днів —
-         і після двох тижнів простою авто ставало «без водія». */
-      for(var i=ks.length-1;i>=0;i--){
-        var drv=((DAYS[ks[i]]||{}).drivers)||[];
-        for(var j=0;j<drv.length;j++){
-          var o=drv[j];
-          if(!o||!o.name)continue;
-          if(((typeof NPL==='function')?NPL(o.plate_norm||''):(o.plate_norm||''))!==pl)continue;
-          if(typeof isDeleted==='function'&&isDeleted(o.name))continue;
-          if(day&&typeof worksOn==='function'&&!worksOn(o.name,day))continue;
-          name=o.name;src=(ks[i]===day)?'today':'recent';break;
-        }
-        if(name)break;
+      var pp=(typeof drvPass==='function')?drvPass():{};
+      for(var k in pp){
+        if(!pp[k]||pp[k].plate!==plate)continue;
+        if(typeof isDeleted==='function'&&isDeleted(k))continue;
+        if(day&&typeof worksOn==='function'&&!worksOn(k,day))continue;
+        name=k;src='profile';break;
       }
     }catch(e){}
   }
-  /* що з ним сьогодні */
+
+  /* Історія — НЕ закріплення. Це лише підказка «востаннє тут їздив…».
+     Раніше я брав звідси імʼя як факт — і виходила вигадка:
+     авто стоїть два тижні, а дашборд пише імʼя того, хто колись возив. */
+  var last='',lastDay='',lastAgo=null;
+  try{
+    var ks=Object.keys(DAYS||{}).filter(function(x){return /^\d{4}-\d{2}-\d{2}$/.test(x)&&(!day||x<=day);}).sort();
+    for(var i2=ks.length-1;i2>=0&&!last;i2--){
+      var drv=((DAYS[ks[i2]]||{}).drivers)||[];
+      for(var j2=0;j2<drv.length;j2++){
+        var o=drv[j2];
+        if(!o||!o.name)continue;
+        if(((typeof NPL==='function')?NPL(o.plate_norm||''):(o.plate_norm||''))!==pl)continue;
+        if((o.orders||0)<=0&&(o.online||0)<=0)continue;
+        last=o.name;lastDay=ks[i2];break;
+      }
+    }
+    if(lastDay&&day){
+      var a1=new Date(lastDay+'T12:00:00Z'),b1=new Date(day+'T12:00:00Z');
+      lastAgo=Math.round((b1-a1)/86400000);
+    }
+  }catch(e){}
+
+  /* Що з закріпленим водієм САМЕ НА ЦЬОМУ АВТО сьогодні.
+     Важливо: якщо він сьогодні возить на іншому авто — це авто все одно стоїть. */
   var today=null;
   try{
     (((typeof A!=='undefined'&&A)||[])).forEach(function(o){
       if(!o||!o.name||!name)return;
       if(nkey(o.name)!==nkey(name))return;
+      var opl=(typeof NPL==='function')?NPL(o.plate_norm||''):(o.plate_norm||'');
+      if(opl&&opl!==pl)return;          /* працює, але не на цьому авто */
       today=o;
     });
   }catch(e){}
+
   var orders=today?(today.orders||0):0;
   var online=today?(today.online||0):0;
   return {
     name:name, src:src, has:!!name,
     started:!!(today&&(orders>0||online>0)),
-    orders:orders, online:online
+    orders:orders, online:online,
+    last:last, last_day:lastDay, last_ago:lastAgo
   };
 }
+
 function carStateLabel(plate,ymd){
   var day=ymd||((typeof DATA!=='undefined'&&DATA&&DATA.date)?DATA.date:'');
   try{
@@ -5132,7 +5170,17 @@ function carStateLabel(plate,ymd){
       return {kind:'notyet',short:'ще не виїхав',
         text:di.name+' \u00b7 ще не виїхав',rent:null,driver:di.name};
     }
-    return {kind:'nodriver',short:'немає водія',text:'Готове авто \u2014 немає водія',rent:null,driver:''};
+    /* Закріплення немає — кажемо чесно. Історію даємо ПІДКАЗКОЮ,
+       а не видаємо за факт: авто може стояти тижнями, і той, хто колись
+       на ньому їздив, давно не має до нього стосунку. */
+    var hint2='';
+    if(di&&di.last){
+      hint2=((typeof nameFor==='function')?nameFor(di.last):di.last)
+        +(di.last_ago!=null?(' \u00b7 '+di.last_ago+' дн. тому'):'');
+    }
+    return {kind:'nodriver',short:'немає водія',
+      text:'Готове авто \u2014 немає водія'+(hint2?(' \u00b7 востаннє: '+hint2):''),
+      rent:null,driver:'',last:(di?di.last:''),last_ago:(di?di.last_ago:null)};
   }catch(e){}
   return {kind:'',short:'',text:'',rent:null};
 }
@@ -8943,6 +8991,19 @@ var SEL='#cars .cdriver, #cars .creason, #morning .creason, #report #rptDaySel';
       +'<div class="qr-hd">'+esc(plate)+(di&&di.name?(' \u00b7 '+esc(nameFor(di.name))):'')+'</div>'
       +'<div class="qr-now">'+(st&&st.short?('Зараз: '+esc(st.short)):'Причину не вказано')
         +(st&&st.stale?(' \u00b7 вписано «'+esc(st.stale)+'»'):'')+'</div>'
+      +'<label class="qr-f">Водій за цим авто'
+        +'<select id="qrDrv"><option value="">\u2014 не призначено \u2014</option>'
+        +((typeof driverList==='function')?driverList():[]).map(function(nn){
+            var sel=(di&&di.name&&nkey(di.name)===nkey(nn))?' selected':'';
+            return '<option value="'+esc(encodeURIComponent(nn))+'"'+sel+'>'
+              +esc((typeof nameFor==='function')?nameFor(nn):nn)+'</option>';
+          }).join('')+'</select></label>'
+      +((di&&!di.has&&di.last)
+        ? '<div class="qr-last">Востаннє тут їздив <b>'
+          +esc((typeof nameFor==='function')?nameFor(di.last):di.last)+'</b>'
+          +(di.last_ago!=null?(' \u00b7 '+di.last_ago+' дн. тому'):'')
+          +' <button type="button" class="qr-take" data-n="'+esc(encodeURIComponent(di.last))+'">призначити його</button></div>'
+        : '')
       +'<div class="qr-quick">'+quick.map(function(r){
           return '<button type="button" class="qr-b'+(nt.reason===r?' on':'')+'" data-r="'+esc(r)+'">'+esc(r)+'</button>';
         }).join('')+'</div>'
@@ -8961,14 +9022,27 @@ var SEL='#cars .cdriver, #cars .creason, #morning .creason, #report #rptDaySel';
     function save(reason){
       try{
         var desc=(document.getElementById('qrDesc')||{}).value||'';
-        /* saveCarNote(plate, {reason, desc}) — по одному авто */
-        saveCarNote(plate,(!reason&&!desc)?{}:{reason:reason||'',desc:desc});
-      }catch(e){console.error(e);alert('Не вдалося зберегти причину: '+e.message);return;}
+        var drv=(document.getElementById('qrDrv')||{}).value||'';
+        var cur={};try{cur=(carNotes()[plate])||{};}catch(e){}
+        var rec={};
+        if(reason)rec.reason=reason;
+        if(desc)rec.desc=desc;
+        /* Закріплення водія — головне: саме воно визначає, чий це автомобіль.
+           Порожньо — знімаємо закріплення. */
+        if(drv)rec.driver=drv; else if(cur.driver&&drv==='')rec.driver='';
+        saveCarNote(plate,(Object.keys(rec).length?rec:{}));
+      }catch(e){console.error(e);alert('Не вдалося зберегти: '+e.message);return;}
       close();
       try{if(typeof kpis==='function')kpis();}catch(e){}
       try{if(typeof renderCars==='function')renderCars();}catch(e){}
       try{if(typeof renderMorning==='function')renderMorning();}catch(e){}
     }
+    var take=d.querySelector('.qr-take');
+    if(take)take.onclick=function(){
+      var sel=document.getElementById('qrDrv');
+      if(sel)sel.value=take.getAttribute('data-n');
+      save((document.getElementById('qrSel')||{}).value||'');
+    };
     d.querySelectorAll('.qr-b').forEach(function(b){
       b.onclick=function(){save(b.getAttribute('data-r'));};
     });
