@@ -1932,6 +1932,67 @@ select:focus,textarea:focus{
 /* авто в оренді у списках — теплим, щоб не читалось як поламане */
 .standchip.rtaxi{border-color:var(--warn-line);background:var(--warn-bg);color:var(--amber-tx)}
 .standchip.rday{border-color:var(--good-bg);background:var(--good-bg);color:var(--good)}
+
+
+/* ===================================================================== */
+/* ДИЗАЙН-ШАР v36 — екран «Оренда · таксі».                              */
+/* ===================================================================== */
+.tr-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0 20px}
+.tr-sum>div{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);
+  box-shadow:var(--sh-card);padding:13px 15px;font-size:11.5px;color:var(--muted)}
+.tr-sum>div span{display:block;font-family:var(--mono);font-size:19px;font-weight:800;
+  color:var(--ink);margin-bottom:3px;font-variant-numeric:tabular-nums}
+.tr-sum>div.bad span{color:var(--bad)}
+
+.tr-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);
+  box-shadow:var(--sh-card);padding:14px 16px;margin-bottom:11px}
+.tr-card.on{border-color:var(--amber);box-shadow:0 0 0 2px var(--warn-bg),var(--sh-card)}
+.tr-card.owe{border-left:3px solid var(--bad)}
+.tr-h{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.tr-plate{font-family:var(--mono);font-size:15px;font-weight:800;color:var(--ink)}
+.tr-live{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--amber-tx);background:var(--warn-bg);border:1px solid var(--warn-line);
+  border-radius:6px;padding:2px 8px}
+.tr-per{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+
+.tr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:9px;margin-top:12px}
+.tr-grid>div{background:var(--soft);border:1px solid var(--line);border-radius:var(--r-md);
+  padding:9px 11px;font-size:10.5px;color:var(--muted)}
+.tr-grid>div span{display:block;font-family:var(--mono);font-size:15px;font-weight:800;
+  color:var(--ink);margin-bottom:2px;font-variant-numeric:tabular-nums}
+.tr-grid>div.bad span{color:var(--bad)}
+.tr-grid>div.good span{color:var(--good)}
+
+.tr-dep{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:11px;
+  padding:10px 13px;background:var(--good-bg);border-radius:var(--r-md);font-size:12.5px;color:var(--ink2)}
+.tr-dep.back{background:var(--soft);opacity:.75}
+.tr-dep .td-l{flex:1;min-width:180px}
+.tr-dep b{font-family:var(--mono);color:var(--ink)}
+.td-b{border:1px solid var(--line);background:var(--panel);color:var(--ink2);
+  border-radius:var(--r-sm);padding:6px 11px;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer}
+.td-b:hover{color:var(--ink);border-color:var(--muted)}
+
+.tr-acts{display:flex;gap:8px;margin-top:11px;flex-wrap:wrap}
+.tr-pay-btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);
+  border-radius:var(--r-sm);padding:8px 14px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.tr-pay-btn:hover{border-color:var(--amber);color:var(--amber-tx);background:var(--warn-bg)}
+.tr-pay-btn.dep:hover{border-color:var(--good);color:var(--good);background:var(--good-bg)}
+
+.tr-pays{margin-top:11px;border-top:1px solid var(--line);padding-top:9px}
+.tr-pay{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:12.5px}
+.tr-pay+.tr-pay{border-top:1px solid var(--line)}
+.tp-d{font-family:var(--mono);font-size:11.5px;color:var(--muted);width:72px}
+.tp-k{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--muted);background:var(--soft);border:1px solid var(--line);
+  border-radius:5px;padding:1px 6px}
+.tr-pay.dep .tp-k{color:var(--good);background:var(--good-bg);border-color:var(--good-bg)}
+.tp-a{margin-left:auto;font-family:var(--mono);font-weight:700;color:var(--ink);
+  font-variant-numeric:tabular-nums}
+.tp-x{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 5px}
+.tp-x:hover{color:var(--bad)}
+.tr-nopay{margin-top:11px;font-size:12px;color:var(--muted)}
+
+@media (max-width:760px){.tr-sum{grid-template-columns:repeat(2,1fr)}}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head><body>
 <script>try{var _th=localStorage.getItem("theme");if(_th)document.documentElement.setAttribute("data-theme",_th);}catch(e){}</script>
@@ -1946,7 +2007,7 @@ select:focus,textarea:focus{
 <div id="fileList" class="filelist"></div><button id="clearFiles" class="btnf hide" style="margin-top:8px">Очистити список</button><div id="upErr" class="up-err hide"></div>
 <button id="processBtn" class="processb" disabled>Порахувати день</button></div></div></div>
 <div id="app" class="hide">
-<div class="navrow"><div class="topnav" id="topnav"><div class="ncat" data-cat="today"><button type="button" class="ncat-h">🔴 Сьогодні <span class="ncat-caret">▾</span></button><div class="ncat-menu"><button data-v="morning" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 18a5 5 0 0 0-10 0"/><line x1="12" y1="3" x2="12" y2="9"/><line x1="5.5" y1="11" x2="7" y2="9.5"/><line x1="18.5" y1="11" x2="17" y2="9.5"/><line x1="2" y1="14" x2="4" y2="14"/><line x1="20" y1="14" x2="22" y2="14"/><line x1="3" y1="18" x2="21" y2="18"/></svg></span><span class="tl">Ранок</span></button><button data-v="overview" aria-pressed="true"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="20" x2="21" y2="20"/><rect x="5" y="11" width="3.2" height="8" rx="1"/><rect x="10.4" y="6" width="3.2" height="13" rx="1"/><rect x="15.8" y="13" width="3.2" height="6" rx="1"/></svg></span><span class="tl">Зведення</span></button><button data-v="status" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg></span><span class="tl">Статус</span></button><button data-v="standing" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="9.5" y1="9" x2="9.5" y2="15"/><line x1="14.5" y1="9" x2="14.5" y2="15"/></svg></span><span class="tl">Стоять</span><span class="navbadge" id="standBadge" style="display:none"></span></button><button data-v="tracker" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-5.2-6.5-10a6.5 6.5 0 0 1 13 0c0 4.8-6.5 10-6.5 10z"/><circle cx="12" cy="11" r="2.4"/></svg></span><span class="tl">Трекер</span></button></div></div><div class="ncat" data-cat="analytics"><button type="button" class="ncat-h">📈 Аналітика <span class="ncat-caret">▾</span></button><div class="ncat-menu"><button data-v="week" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="8" y1="3" x2="8" y2="6"/><line x1="16" y1="3" x2="16" y2="6"/><line x1="7" y1="13.5" x2="7.01" y2="13.5"/><line x1="11" y1="13.5" x2="11.01" y2="13.5"/><line x1="15" y1="13.5" x2="15.01" y2="13.5"/><line x1="7" y1="17" x2="7.01" y2="17"/><line x1="11" y1="17" x2="11.01" y2="17"/></svg></span><span class="tl">Тиждень</span></button><button data-v="history" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l3 2"/></svg></span><span class="tl">Історія</span></button><button data-v="drivers" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg></span><span class="tl">Водії</span></button><button data-v="compare" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="4" y2="10"/><line x1="10" y1="20" x2="10" y2="4"/><line x1="16" y1="20" x2="16" y2="14"/><line x1="20" y1="20" x2="20" y2="8"/></svg></span><span class="tl">Порівняння</span></button><button data-v="cars" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11l1.6-4h10.8L19 11"/><rect x="3" y="11" width="18" height="6" rx="1.6"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg></span><span class="tl">Авто</span></button></div></div><div class="ncat" data-cat="money"><button type="button" class="ncat-h">💰 Гроші <span class="ncat-caret">▾</span></button><div class="ncat-menu"><button data-v="branding" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span><span class="tl">Брендування</span></button><button data-v="report" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v4h4"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></span><span class="tl">Звіт</span></button><button data-v="owner" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17h16M4 17l-1-9 5 3.5L12 6l4 5.5 5-3.5-1 9"/></svg></span><span class="tl">Власнику</span></button><button data-v="rent" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M6 17l1.5-5h9L18 17"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/><path d="M9 7h6M12 4v6"/></svg></span><span class="tl">Оренда</span></button></div></div><div class="ncat" data-cat="data"><button type="button" class="ncat-h">⚙️ Дані <span class="ncat-caret">▾</span></button><div class="ncat-menu"><button data-v="coverage" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><line x1="12" y1="11" x2="12" y2="21"/></svg></span><span class="tl">Завантажено</span></button><button data-v="settings" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="8" x2="20" y2="8"/><line x1="4" y1="16" x2="20" y2="16"/><circle cx="9" cy="8" r="2.2"/><circle cx="15" cy="16" r="2.2"/></svg></span><span class="tl">Налашт.</span></button></div></div></div><div id="dayPickWrap" style="position:relative;flex:1;min-width:130px;display:none"><button id="dayPickBtn" type="button" onclick="toggleDayCal(event)" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">День</button><div id="dayCal" class="dcal-pop" style="display:none"></div></div><button id="logout" class="btnf" style="margin-left:auto">Вийти</button></div>
+<div class="navrow"><div class="topnav" id="topnav"><div class="ncat" data-cat="today"><button type="button" class="ncat-h">🔴 Сьогодні <span class="ncat-caret">▾</span></button><div class="ncat-menu"><button data-v="morning" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 18a5 5 0 0 0-10 0"/><line x1="12" y1="3" x2="12" y2="9"/><line x1="5.5" y1="11" x2="7" y2="9.5"/><line x1="18.5" y1="11" x2="17" y2="9.5"/><line x1="2" y1="14" x2="4" y2="14"/><line x1="20" y1="14" x2="22" y2="14"/><line x1="3" y1="18" x2="21" y2="18"/></svg></span><span class="tl">Ранок</span></button><button data-v="overview" aria-pressed="true"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="20" x2="21" y2="20"/><rect x="5" y="11" width="3.2" height="8" rx="1"/><rect x="10.4" y="6" width="3.2" height="13" rx="1"/><rect x="15.8" y="13" width="3.2" height="6" rx="1"/></svg></span><span class="tl">Зведення</span></button><button data-v="status" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg></span><span class="tl">Статус</span></button><button data-v="standing" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="9.5" y1="9" x2="9.5" y2="15"/><line x1="14.5" y1="9" x2="14.5" y2="15"/></svg></span><span class="tl">Стоять</span><span class="navbadge" id="standBadge" style="display:none"></span></button><button data-v="tracker" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-5.2-6.5-10a6.5 6.5 0 0 1 13 0c0 4.8-6.5 10-6.5 10z"/><circle cx="12" cy="11" r="2.4"/></svg></span><span class="tl">Трекер</span></button></div></div><div class="ncat" data-cat="analytics"><button type="button" class="ncat-h">📈 Аналітика <span class="ncat-caret">▾</span></button><div class="ncat-menu"><button data-v="week" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="8" y1="3" x2="8" y2="6"/><line x1="16" y1="3" x2="16" y2="6"/><line x1="7" y1="13.5" x2="7.01" y2="13.5"/><line x1="11" y1="13.5" x2="11.01" y2="13.5"/><line x1="15" y1="13.5" x2="15.01" y2="13.5"/><line x1="7" y1="17" x2="7.01" y2="17"/><line x1="11" y1="17" x2="11.01" y2="17"/></svg></span><span class="tl">Тиждень</span></button><button data-v="history" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l3 2"/></svg></span><span class="tl">Історія</span></button><button data-v="drivers" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg></span><span class="tl">Водії</span></button><button data-v="compare" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="4" y2="10"/><line x1="10" y1="20" x2="10" y2="4"/><line x1="16" y1="20" x2="16" y2="14"/><line x1="20" y1="20" x2="20" y2="8"/></svg></span><span class="tl">Порівняння</span></button><button data-v="cars" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11l1.6-4h10.8L19 11"/><rect x="3" y="11" width="18" height="6" rx="1.6"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg></span><span class="tl">Авто</span></button></div></div><div class="ncat" data-cat="money"><button type="button" class="ncat-h">💰 Гроші <span class="ncat-caret">▾</span></button><div class="ncat-menu"><button data-v="branding" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span><span class="tl">Брендування</span></button><button data-v="report" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v4h4"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></span><span class="tl">Звіт</span></button><button data-v="owner" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17h16M4 17l-1-9 5 3.5L12 6l4 5.5 5-3.5-1 9"/></svg></span><span class="tl">Власнику</span></button><button data-v="trent" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M6 17V9l2-4h8l2 4v8M7 13h10"/><circle cx="8" cy="17" r="1.5"/><circle cx="16" cy="17" r="1.5"/></svg></span><span class="tl">Оренда · таксі</span></button><button data-v="rent" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M6 17l1.5-5h9L18 17"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/><path d="M9 7h6M12 4v6"/></svg></span><span class="tl">Оренда</span></button></div></div><div class="ncat" data-cat="data"><button type="button" class="ncat-h">⚙️ Дані <span class="ncat-caret">▾</span></button><div class="ncat-menu"><button data-v="coverage" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><line x1="12" y1="11" x2="12" y2="21"/></svg></span><span class="tl">Завантажено</span></button><button data-v="settings" aria-pressed="false"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="8" x2="20" y2="8"/><line x1="4" y1="16" x2="20" y2="16"/><circle cx="9" cy="8" r="2.2"/><circle cx="15" cy="16" r="2.2"/></svg></span><span class="tl">Налашт.</span></button></div></div></div><div id="dayPickWrap" style="position:relative;flex:1;min-width:130px;display:none"><button id="dayPickBtn" type="button" onclick="toggleDayCal(event)" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">День</button><div id="dayCal" class="dcal-pop" style="display:none"></div></div><button id="logout" class="btnf" style="margin-left:auto">Вийти</button></div>
 <div id="morning" class="hide"><h1>🌅 <span class="accent">Ранок</span></h1><p class="sub">Хто ще не виїхав, хто катається без замовлень, і які авто не в ростері. Станом на останнє оновлення.</p><div id="mornBody"></div></div><div id="report" class="hide"><h1>📋 <span class="accent">Звіт</span> за день</h1><p class="sub">Натисни «Копіювати дані» під таблицею — рядки копіюються через Tab і лягають рівно по клітинках у твоїй щоденній таблиці. Копіюються заголовки + рядки даних.</p><div id="reportBody"></div></div><div id="compare" class="hide"></div>
 <div id="week" class="hide"></div>
 <div id="overview">
@@ -1985,6 +2046,7 @@ select:focus,textarea:focus{
 <div class="osect"><h3>Не працювали / простоюють</h3><div id="carsList"></div></div></div>
 <div id="owner" class="hide"></div>
 <div id="rent" class="hide"></div>
+<div id="trent" class="hide"></div>
 <div id="dyn" class="hide"></div>
 <div id="settings" class="hide"><h1>Нала<span class="accent">штування</span></h1><p class="sub">Разові налаштування парку. Обери розділ, щоб відкрити його.</p><div id="setNav" class="setnav"></div><div class="osect" data-set="theme" data-nav="Вигляд" data-desc="Світла або темна тема"><h3>Тема оформлення</h3><p class="sub" style="margin-top:-4px">Світле або темне.</p><div class="rpt-modes" id="themeToggle"><button class="on" data-theme-val="light" onclick="setTheme('light')">Світла</button><button data-theme-val="dark" onclick="setTheme('dark')">Темна</button></div></div><div class="osect" data-set="names" data-nav="Імена у звітах" data-desc="Як писати водіїв у звітах"><h3>Імена водіїв у звітах</h3><p class="sub" style="margin-top:-4px">Впиши ім'я так, як у твоїх формулах. Воно вживатиметься в усіх звітах однаково — і для Bolt, і для Uklon, незалежно від того, як пишуть платформи.</p><div id="drvNamesBox"></div></div><div class="osect" data-set="plan" data-nav="План і зміна" data-desc="План, норма, межі дня"><h3>Параметри плану й зміни</h3><p class="sub" style="margin-top:-4px">Денний план, норма темпу, ціль поїздок, межі зміни.</p><div class="planset"><label>План/день</label><input id="plan" type="number" min="0" step="100"><span class="u">₴</span><span style="width:1px;height:20px;background:var(--line);margin:0 4px"></span><label>Норма/год</label><input id="hourly" type="number" min="0" step="50"><span class="u">₴</span><span style="width:1px;height:20px;background:var(--line);margin:0 4px"></span><label>Поїздок/день</label><input id="tripgoal" type="number" min="0" step="1"><span class="u">шт.</span><span style="width:1px;height:20px;background:var(--line);margin:0 4px"></span><label>Зміна до</label><input id="shiftend" type="time" value="22:00"><span style="width:1px;height:20px;background:var(--line);margin:0 4px"></span><label>День з</label><input id="daystart" type="time" step="60"></div></div><div class="osect" data-set="fuel" data-nav="Плани за паливом" data-desc="Денний план по типах авто"><h3>Плани за паливом</h3><p class="sub" style="margin-top:-4px">Денний план чистими для кожного типу авто. Зміниш — застосується скрізь.</p><div id="planSettings"></div></div><div class="osect" data-set="dh" data-nav="Доїзд" data-desc="Км на подачу до замовлення"><h3>Доїзд до пасажира</h3><p class="sub" style="margin-top:-4px">Скільки кілометрів припадає на подачу до кожного замовлення. Використовується для оцінки порожнього пробігу — на гроші водіїв не впливає.</p>
 <div class="dhcard">
@@ -3383,7 +3445,7 @@ function renderWeekDriver(name){var el=document.getElementById('week');if(!el)re
   +trk+'<div class="osect"><h3>По днях (Пн\u2013Нд)</h3><div style="overflow-x:auto"><table class="otable"><thead><tr><th>День</th><th class="r">Чистими</th><th class="r">Валове</th><th class="r">Поїзд</th><th class="r">Онлайн</th><th class="r">\u20b4/год</th><th>План</th></tr></thead><tbody>'+dayRows+'</tbody></table></div></div>';
  try{window.scrollTo(0,0);}catch(e){}}
 
-function showView(v){view=v;try{localStorage.setItem('lastView',v);}catch(e){}document.getElementById('overview').classList.toggle('hide',v!=='overview');document.getElementById('owner').classList.toggle('hide',v!=='owner');document.getElementById('cars').classList.toggle('hide',v!=='cars');document.getElementById('settings').classList.toggle('hide',v!=='settings');document.getElementById('morning').classList.toggle('hide',v!=='morning');document.getElementById('drivers').classList.toggle('hide',v!=='drivers');document.getElementById('report').classList.toggle('hide',v!=='report');document.getElementById('week').classList.toggle('hide',v!=='week');document.getElementById('standing').classList.toggle('hide',v!=='standing');document.getElementById('history').classList.toggle('hide',v!=='history');document.getElementById('branding').classList.toggle('hide',v!=='branding');document.getElementById('coverage').classList.toggle('hide',v!=='coverage');document.getElementById('status').classList.toggle('hide',v!=='status');document.getElementById('tracker').classList.toggle('hide',v!=='tracker');var _rv=document.getElementById('rent');if(_rv)_rv.classList.toggle('hide',v!=='rent');var _dv=document.getElementById('dyn');if(_dv)_dv.classList.toggle('hide',v!=='dyn');if(v!=='status'&&window._statusTimer){clearTimeout(window._statusTimer);window._statusTimer=null;}document.getElementById('detail').classList.add('hide');if(v==='rent'&&typeof renderRent==='function')renderRent();if(v==='dyn'&&typeof renderDyn==='function')renderDyn();if(v==='cars')renderCars();if(v==='settings'){renderSettings();renderDriverNames();}if(v==='morning')renderMorning();if(v==='drivers')renderDrivers();if(v==='report')renderReport();if(v==='week')renderWeek();if(v==='standing')renderStanding();if(v==='history')renderHistory();if(v==='branding')renderBranding();if(v==='coverage')renderCoverage();if(v==='status')renderStatus();if(v==='tracker')renderTracker();if(v==='overview')renderStandingMini();(function(){var _nav=document.getElementById('topnav');if(!_nav)return;[..._nav.querySelectorAll('button[data-v]')].forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v));[..._nav.querySelectorAll('.ncat')].forEach(function(c){var has=[...c.querySelectorAll('button[data-v]')].some(b=>b.dataset.v===v);c.classList.toggle('active',has);c.classList.remove('open');});})();if(v==='owner')renderOwner();window.scrollTo(0,0);}
+function showView(v){view=v;try{localStorage.setItem('lastView',v);}catch(e){}document.getElementById('overview').classList.toggle('hide',v!=='overview');document.getElementById('owner').classList.toggle('hide',v!=='owner');document.getElementById('cars').classList.toggle('hide',v!=='cars');document.getElementById('settings').classList.toggle('hide',v!=='settings');document.getElementById('morning').classList.toggle('hide',v!=='morning');document.getElementById('drivers').classList.toggle('hide',v!=='drivers');document.getElementById('report').classList.toggle('hide',v!=='report');document.getElementById('week').classList.toggle('hide',v!=='week');document.getElementById('standing').classList.toggle('hide',v!=='standing');document.getElementById('history').classList.toggle('hide',v!=='history');document.getElementById('branding').classList.toggle('hide',v!=='branding');document.getElementById('coverage').classList.toggle('hide',v!=='coverage');document.getElementById('status').classList.toggle('hide',v!=='status');document.getElementById('tracker').classList.toggle('hide',v!=='tracker');var _rv=document.getElementById('rent');if(_rv)_rv.classList.toggle('hide',v!=='rent');var _tv=document.getElementById('trent');if(_tv)_tv.classList.toggle('hide',v!=='trent');var _dv=document.getElementById('dyn');if(_dv)_dv.classList.toggle('hide',v!=='dyn');if(v!=='status'&&window._statusTimer){clearTimeout(window._statusTimer);window._statusTimer=null;}document.getElementById('detail').classList.add('hide');if(v==='rent'&&typeof renderRent==='function')renderRent();if(v==='trent'&&typeof renderTaxiRent==='function')renderTaxiRent();if(v==='dyn'&&typeof renderDyn==='function')renderDyn();if(v==='cars')renderCars();if(v==='settings'){renderSettings();renderDriverNames();}if(v==='morning')renderMorning();if(v==='drivers')renderDrivers();if(v==='report')renderReport();if(v==='week')renderWeek();if(v==='standing')renderStanding();if(v==='history')renderHistory();if(v==='branding')renderBranding();if(v==='coverage')renderCoverage();if(v==='status')renderStatus();if(v==='tracker')renderTracker();if(v==='overview')renderStandingMini();(function(){var _nav=document.getElementById('topnav');if(!_nav)return;[..._nav.querySelectorAll('button[data-v]')].forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v));[..._nav.querySelectorAll('.ncat')].forEach(function(c){var has=[...c.querySelectorAll('button[data-v]')].some(b=>b.dataset.v===v);c.classList.toggle('active',has);c.classList.remove('open');});})();if(v==='owner')renderOwner();window.scrollTo(0,0);}
 function daybar(){const S=shown();const pv=S.map(o=>o.pace_net).filter(x=>x!=null).sort((a,b)=>a-b);const np=pv.length?Math.round(pv[Math.floor(pv.length/2)]):null;const ok=np!=null&&np>=HOURLY;const col=np==null?'var(--amber)':(ok?'var(--good)':'var(--bad)');
 document.getElementById('daybar').innerHTML=`<span class="dot" style="background:${col}"></span><div>Середній темп по парку — <b>${np==null?'—':np+' ₴/год чистими'}</b> (норма ${HOURLY} ₴/год). `+(ok?'Парк тримає норму — гарний день, тисніть.':'Темп нижче норми — варто підганяти водіїв.')+`</div>`;}
 function shown(){if(typeof A==='undefined'||!Array.isArray(A))return [];var base=A.filter(o=>inScope(o)&&!isHidden(o.name));return selDrivers.size?base.filter(o=>selDrivers.has(o.name)):base;}
@@ -4298,7 +4360,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=85;
+var APP_BUILD_N=88;
 var APP_BUILD='збірка 21.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
@@ -4710,6 +4772,80 @@ function rentIncomeRange(from,to){
     });
   });
   return {sum:Math.round(s),cars:Object.keys(cars).length};
+}
+/* ===== ОРЕНДА ПІД ТАКСІ =====
+   Інша логіка, ніж у подобової: ставка за тиждень (або місяць),
+   завдаток окремо від оренди, нарахування йде періодами.
+   Записи лежать у тому самому rent_all — розділені полем kind,
+   бо авто не може бути одночасно в подобовій і під таксі. */
+function isTaxiRent(r){return !!r&&r.kind==='taxi';}
+function taxiRents(){return rentAll().filter(isTaxiRent);}
+function dailyRents(){return rentAll().filter(function(r){return !isTaxiRent(r);});}
+
+/* Скільки повних періодів минуло від початку до дати (включно з поточним). */
+function rentPeriodsPassed(r,ymd){
+  if(!r||!r.from)return 0;
+  var day=ymd||((typeof kyivToday==='function')?kyivToday():new Date().toISOString().slice(0,10));
+  var end=(typeof rentEnd==='function')?(rentEnd(r)||r.to):r.to;
+  if(end&&day>end)day=end;
+  try{
+    var a=new Date(r.from+'T12:00:00Z'),b=new Date(day+'T12:00:00Z');
+    var days=Math.floor((b-a)/86400000)+1;
+    if(days<=0)return 0;
+    var len=(r.rate_period==='month')?30:7;
+    return Math.max(1,Math.ceil(days/len));
+  }catch(e){return 0;}
+}
+/* Платежі за видом: оренда чи завдаток. */
+function rentPaidBy(r,kind){
+  var t=0;
+  ((r&&r.pays)||[]).forEach(function(x){
+    var k=x.kind||'rent';
+    if(k===kind)t+=(parseFloat(x.amt)||0);
+  });
+  return Math.round(t*100)/100;
+}
+/* Повний розрахунок по одній оренді під таксі. */
+function taxiRentCalc(r,ymd){
+  var periods=rentPeriodsPassed(r,ymd);
+  var rate=(r&&r.sum)||0;
+  var charged=Math.round(rate*periods);
+  var paidRent=rentPaidBy(r,'rent');
+  var paidDep=rentPaidBy(r,'deposit');
+  var debt=Math.round(charged-paidRent);
+  var dep=(r&&r.deposit)||0;
+  var depLeft=Math.round(dep-paidDep);
+  return {
+    periods:periods,
+    rate:rate,
+    unit:(r&&r.rate_period==='month')?'місяць':'тиждень',
+    charged:charged,
+    paid:paidRent,
+    debt:debt,
+    deposit:dep,
+    deposit_paid:paidDep,
+    deposit_left:depLeft>0?depLeft:0,
+    deposit_back:!!(r&&r.deposit_back),
+    gps_km:(typeof rentGpsKm==='function')?rentGpsKm(r):null,
+    active:(typeof isRentedOn==='function')&&r&&r.plate
+      ? isRentedOn(r.plate,ymd||((typeof kyivToday==='function')?kyivToday():''))
+      : false
+  };
+}
+/* Дохід парку від оренди під таксі за період — тільки орендна плата,
+   завдаток не дохід, він застава і повертається. */
+function taxiRentIncome(from,to){
+  var s=0,dep=0,cars={};
+  taxiRents().forEach(function(r){
+    ((r.pays)||[]).forEach(function(p){
+      if(!p||!p.ymd)return;
+      if(from&&p.ymd<from)return;
+      if(to&&p.ymd>to)return;
+      var amt=parseFloat(p.amt)||0;
+      if((p.kind||'rent')==='deposit')dep+=amt; else {s+=amt;cars[r.plate]=1;}
+    });
+  });
+  return {sum:Math.round(s),deposit:Math.round(dep),cars:Object.keys(cars).length};
 }
 function rentPaid(r){var t=0;((r&&r.pays)||[]).forEach(function(x){t+=(parseFloat(x.amt)||0);});return Math.round(t*100)/100;}
 function rentRest(r){return Math.round(((r&&r.sum||0)-rentPaid(r))*100)/100;}
@@ -8358,7 +8494,184 @@ var SEL='#cars .cdriver, #cars .creason, #morning .creason, #report #rptDaySel';
   else init();
 })();
 </script>
+<script>
+/* ДИЗАЙН-ШАР v36 — екран «Оренда · таксі».
+   Окремо від подобової, бо логіка грошей інша: ставка за тиждень/місяць,
+   завдаток окремою сумою, нарахування періодами, борг за прострочені тижні.
+   Записи лежать у тому самому rent_all (поле kind:'taxi') — авто не може
+   бути одночасно в подобовій і під таксі, тож сховище одне. */
+(function(){
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function f(n){return Math.round(n||0).toLocaleString('uk-UA');}
+  function dmy(k){return k?String(k).split('-').reverse().join('.'):'';}
+  function today(){try{return kyivToday();}catch(e){return new Date().toISOString().slice(0,10);}}
+
+  window.trentAdd=function(){
+    var pl=(document.getElementById('trPlate')||{}).value||'';
+    var from=(document.getElementById('trFrom')||{}).value||'';
+    var to=(document.getElementById('trTo')||{}).value||'';
+    var per=(document.getElementById('trPer')||{}).value||'week';
+    var sum=parseFloat(String((document.getElementById('trSum')||{}).value||'').replace(',','.'))||0;
+    var dep=parseFloat(String((document.getElementById('trDep')||{}).value||'').replace(',','.'))||0;
+    var who=(document.getElementById('trWho')||{}).value||'';
+    var k1=parseFloat((document.getElementById('trKm1')||{}).value||'');
+    if(!pl){alert('Обери авто.');return;}
+    if(!from){alert('Вкажи дату початку.');return;}
+    if(to&&to<from){alert('Дата «по» раніша за початок.');return;}
+    if(sum<=0){alert('Вкажи ставку оренди.');return;}
+    var busy=rentAll().filter(function(r){
+      if(((typeof NPL==='function')?NPL(r.plate):r.plate)!==((typeof NPL==='function')?NPL(pl):pl))return false;
+      var e=(typeof rentEnd==='function')?(rentEnd(r)||r.to):r.to;
+      if(!e)return true;
+      return !(to&&to<r.from)&&!(from>e);
+    });
+    if(busy.length&&!confirm('Це авто вже має оренду ('+dmy(busy[0].from)+' – '+dmy(busy[0].to||'—')+').\nВсе одно додати?'))return;
+    var list=rentAll();
+    list.push({id:uid(),plate:pl,kind:'taxi',rate_period:per,from:from,
+      to:to||'2099-12-31',sum:sum,deposit:dep,deposit_back:false,
+      renter:who.trim(),km_start:isNaN(k1)?null:k1,km_end:null,note:'',
+      pays:[],closed:null,ts:Date.now(),_upd:Date.now()});
+    rentSave(list);
+    ['trSum','trDep','trWho','trKm1'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
+    renderTaxiRent();
+    if(typeof renderCars==='function')renderCars();
+  };
+
+  window.trentPay=function(id,kind){
+    var list=rentAll(),i=-1;
+    for(var k=0;k<list.length;k++)if(list[k].id===id){i=k;break;}
+    if(i<0)return;
+    var label=(kind==='deposit')?'Завдаток':'Оплата оренди';
+    var v=prompt(label+', ₴:','');
+    if(v===null)return;
+    var amt=parseFloat(String(v).replace(',','.'));
+    if(isNaN(amt)||amt<=0){alert('Вкажи суму.');return;}
+    var day=prompt('Дата платежу:',today());
+    if(day===null)return;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(day)){alert('Формат дати: 2026-08-26');return;}
+    list[i].pays=list[i].pays||[];
+    list[i].pays.push({id:uid(),ymd:day,amt:amt,kind:kind||'rent',m:'cash'});
+    list[i]._upd=Date.now();
+    rentSave(list);renderTaxiRent();
+  };
+  window.trentPayDel=function(id,pid){
+    var list=rentAll();
+    for(var k=0;k<list.length;k++)if(list[k].id===id){
+      list[k].pays=(list[k].pays||[]).filter(function(p){return p.id!==pid;});
+      list[k]._upd=Date.now();rentSave(list);renderTaxiRent();return;
+    }
+  };
+  window.trentDepBack=function(id){
+    var list=rentAll();
+    for(var k=0;k<list.length;k++)if(list[k].id===id){
+      list[k].deposit_back=!list[k].deposit_back;
+      list[k]._upd=Date.now();rentSave(list);renderTaxiRent();return;
+    }
+  };
+
+  window.renderTaxiRent=function(){
+    var el=document.getElementById('trent');
+    if(!el)return;
+    var list=taxiRents().slice().sort(function(a,b){return (b.ts||0)-(a.ts||0);});
+    var day=today(),mon=day.slice(0,7);
+    var inc=taxiRentIncome(mon+'-01',mon+'-31');
+
+    /* підсумки згори */
+    var act=0,debtTot=0,depTot=0;
+    list.forEach(function(r){
+      var c=taxiRentCalc(r,day);
+      if(c.active)act++;
+      if(c.debt>0)debtTot+=c.debt;
+      if(!c.deposit_back)depTot+=c.deposit_paid;
+    });
+
+    var head='<p class="eyebrow">AVTO PARK Lviv</p>'
+      +'<h1>Оренда <span class="accent">під таксі</span></h1>'
+      +'<p class="sub">Авто здані під таксі поза парком. Водій возить через свій акаунт — '
+      +'поїздок ми не бачимо, але бачимо пробіг за GPS і всі платежі.</p>'
+      +'<div class="tr-sum">'
+      +'<div><span>'+act+'</span>авто в оренді</div>'
+      +'<div><span>'+f(inc.sum)+' \u20b4</span>дохід за місяць</div>'
+      +'<div class="'+(debtTot>0.5?'bad':'')+'"><span>'+f(debtTot)+' \u20b4</span>заборгованість</div>'
+      +'<div><span>'+f(depTot)+' \u20b4</span>завдатків у парку</div>'
+      +'</div>';
+
+    /* форма */
+    var fleet=[];try{fleet=getFleet()||[];}catch(e){}
+    var opts='<option value="">— оберіть авто —</option>'
+      +fleet.map(function(p){return '<option value="'+esc(p)+'">'+esc(p)+'</option>';}).join('');
+    var form='<div class="rn-form"><h3>Нова оренда під таксі</h3><div class="rn-fgrid">'
+      +'<label>Авто<select id="trPlate">'+opts+'</select></label>'
+      +'<label>Ставка за<select id="trPer">'
+        +'<option value="week">тиждень</option><option value="month">місяць</option></select></label>'
+      +'<label>Ставка, \u20b4<input type="text" inputmode="decimal" id="trSum" placeholder="8000"></label>'
+      +'<label>Завдаток, \u20b4<input type="text" inputmode="decimal" id="trDep" placeholder="—"></label>'
+      +'<label>З<input type="date" id="trFrom" value="'+day+'"></label>'
+      +'<label>По (можна лишити)<input type="date" id="trTo"></label>'
+      +'<label>Орендар<input type="text" id="trWho" placeholder="імʼя або телефон"></label>'
+      +'<label>Пробіг на початку<input type="text" inputmode="numeric" id="trKm1" placeholder="—"></label>'
+      +'</div><button class="rn-add" onclick="trentAdd()">Додати оренду</button></div>';
+
+    /* картки */
+    var cards=list.map(function(r){
+      var c=taxiRentCalc(r,day);
+      var end=(typeof rentEnd==='function')?(rentEnd(r)||r.to):r.to;
+      var openEnd=(end==='2099-12-31');
+      var pays=(r.pays||[]).slice().sort(function(a,b){return (a.ymd<b.ymd)?1:-1;});
+      var payHtml=pays.length?('<div class="tr-pays">'+pays.map(function(p){
+          var isDep=(p.kind==='deposit');
+          return '<div class="tr-pay'+(isDep?' dep':'')+'">'
+            +'<span class="tp-d">'+dmy(p.ymd)+'</span>'
+            +'<span class="tp-k">'+(isDep?'завдаток':'оренда')+'</span>'
+            +'<span class="tp-a">'+f(p.amt)+' \u20b4</span>'
+            +'<button class="tp-x" onclick="trentPayDel(&quot;'+r.id+'&quot;,&quot;'+p.id+'&quot;)">\u2715</button></div>';
+        }).join('')+'</div>'):'<div class="tr-nopay">Платежів ще немає</div>';
+
+      return '<div class="tr-card'+(c.active?' on':'')+(c.debt>0.5?' owe':'')+'">'
+        +'<div class="tr-h"><span class="tr-plate">'+esc(r.plate)+'</span>'
+        +(c.active?'<span class="tr-live">в оренді</span>':'')
+        +(r.closed?'<span class="rn-closed">завершено '+dmy(r.closed)+'</span>':'')
+        +'<span class="tr-per">'+dmy(r.from)+' \u2013 '+(openEnd?'без кінця':dmy(end))+'</span>'
+        +(c.active&&!r.closed
+          ?'<button class="rn-close" onclick="rentClose(&quot;'+r.id+'&quot;)">Завершити</button>'
+          :(r.closed?'<button class="rn-close" onclick="rentReopen(&quot;'+r.id+'&quot;)">Повернути</button>':''))
+        +'<button class="rn-del" onclick="rentRemove(&quot;'+r.id+'&quot;)">\u2715</button></div>'
+        +(r.renter?'<div class="rn-who">'+esc(r.renter)+'</div>':'')
+
+        +'<div class="tr-grid">'
+        +'<div><span>'+f(c.rate)+' \u20b4</span>за '+c.unit+'</div>'
+        +'<div><span>'+c.periods+'</span>'+(c.unit==='місяць'?'місяців':'тижнів')+' минуло</div>'
+        +'<div><span>'+f(c.charged)+' \u20b4</span>нараховано</div>'
+        +'<div><span>'+f(c.paid)+' \u20b4</span>внесено</div>'
+        +'<div class="'+(c.debt>0.5?'bad':(c.debt<-0.5?'good':''))+'"><span>'
+          +(c.debt>0.5?f(c.debt):(c.debt<-0.5?('+'+f(-c.debt)):'0'))+' \u20b4</span>'
+          +(c.debt>0.5?'борг':(c.debt<-0.5?'наперед':'розраховано'))+'</div>'
+        +(c.gps_km!=null?'<div><span>'+f(c.gps_km)+'</span>км за GPS</div>':'')
+        +'</div>'
+
+        +(c.deposit>0?('<div class="tr-dep'+(c.deposit_back?' back':'')+'">'
+          +'<div class="td-l">Завдаток <b>'+f(c.deposit)+' \u20b4</b>'
+          +(c.deposit_left>0?(' \u00b7 не внесено '+f(c.deposit_left)+' \u20b4'):' \u00b7 внесено')
+          +(c.deposit_back?' \u00b7 повернено':'')+'</div>'
+          +'<button class="td-b" onclick="trentDepBack(&quot;'+r.id+'&quot;)">'
+          +(c.deposit_back?'скасувати повернення':'позначити поверненим')+'</button></div>'):'')
+
+        +'<div class="tr-acts">'
+        +'<button class="tr-pay-btn" onclick="trentPay(&quot;'+r.id+'&quot;,&quot;rent&quot;)">+ оплата оренди</button>'
+        +'<button class="tr-pay-btn dep" onclick="trentPay(&quot;'+r.id+'&quot;,&quot;deposit&quot;)">+ завдаток</button>'
+        +'</div>'
+        +payHtml
+        +'</div>';
+    }).join('');
+
+    el.innerHTML=head+form
+      +(list.length?cards:'<div class="dd-empty">Ще немає жодної оренди під таксі.</div>');
+  };
+})();
+</script>
 </body></html>
+
 
 
 
