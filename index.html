@@ -3683,15 +3683,15 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=49;
+var APP_BUILD_N=50;
 var APP_BUILD='збірка 11.09 · v'+APP_BUILD_N+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
   var cv=(r&&r.data&&r.data.value!=null)?r.data.value:0;var cloudN=parseInt((typeof cv==='object'&&cv)?(cv.n||0):cv)||0;
-  if(cloudN>APP_BUILD_N){showUpdateBanner();}
-  if(APP_BUILD_N>=cloudN){try{await supa.from('app_data').upsert({key:'kv:appbuild',value:APP_BUILD_N});}catch(e2){}}
+  if(cloudN>APP_BUILD_N){showUpdateBanner();}else{var _eb=document.getElementById('updBanner');if(_eb)_eb.remove();try{await supa.from('app_data').upsert({key:'kv:appbuild',value:APP_BUILD_N});}catch(e2){}}
 }catch(e){}}
-function showUpdateBanner(){if(document.getElementById('updBanner'))return;var d=document.createElement('div');d.id='updBanner';d.style.cssText='position:fixed;left:0;right:0;top:0;z-index:99999;background:#1E6E42;color:#fff;padding:11px 14px;display:flex;justify-content:center;gap:12px;align-items:center;font-family:inherit;font-size:14px;box-shadow:0 2px 12px rgba(0,0,0,.22)';d.innerHTML='<span>🔄 Доступна нова версія дашборду</span><button onclick="appForceUpdate()" style="border:none;background:#fff;color:#1E6E42;font-weight:800;border-radius:8px;padding:6px 15px;cursor:pointer;font-family:inherit">Оновити</button>';document.body.appendChild(d);}
+function showUpdateBanner(){if(document.getElementById('updBanner'))return;var d=document.createElement('div');d.id='updBanner';d.style.cssText='position:fixed;left:0;right:0;top:0;z-index:99999;background:#1E6E42;color:#fff;padding:11px 14px;display:flex;justify-content:center;gap:12px;align-items:center;font-family:inherit;font-size:14px;box-shadow:0 2px 12px rgba(0,0,0,.22)';d.innerHTML='<span>🔄 Доступна нова версія дашборду</span><button onclick="appForceUpdate()" style="border:none;background:#fff;color:#1E6E42;font-weight:800;border-radius:8px;padding:6px 15px;cursor:pointer;font-family:inherit">Оновити</button><button onclick="dismissUpdateBanner()" title="Закрити" style="border:none;background:transparent;color:#fff;font-size:18px;line-height:1;cursor:pointer;padding:2px 6px;margin-left:4px">\u00d7</button>';document.body.appendChild(d);}
+async function dismissUpdateBanner(){var b=document.getElementById('updBanner');if(b)b.remove();try{if(typeof supa!=='undefined'&&supa)await supa.from('app_data').upsert({key:'kv:appbuild',value:APP_BUILD_N});}catch(e){}}
 function appForceUpdate(){try{if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(x){x.unregister();});});}}catch(e){}try{if('caches'in window){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});});}}catch(e){}location.href=location.pathname+'?v='+Date.now();}
 function histSyncNow(){try{var b=(typeof event!=='undefined'&&event)?event.target:null;if(b){b.disabled=true;b.textContent='Синхронізую…';}}catch(e){}
   Promise.resolve((typeof payCalcInit==='function')?payCalcInit():null).then(function(){if(typeof renderHistory==='function')renderHistory();}).catch(function(){if(typeof renderHistory==='function')renderHistory();});}
