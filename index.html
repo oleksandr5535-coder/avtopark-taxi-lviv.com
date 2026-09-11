@@ -3822,7 +3822,11 @@ function fillDaySel(){var wrap=document.getElementById('dayPickWrap');var btn=do
 function toggleDayCal(ev){if(ev&&ev.stopPropagation)ev.stopPropagation();var cal=document.getElementById('dayCal');if(!cal)return;if(cal.style.display==='none'){window._calYM=((DATA&&DATA.date)||Object.keys(DAYS||{}).filter(function(k){return /^\d{4}-\d{2}-\d{2}$/.test(k);}).sort().reverse()[0]||'').slice(0,7);renderDayCal();cal.style.display='';}else{cal.style.display='none';}}
 function dayCalStep(d,ev){if(ev&&ev.stopPropagation)ev.stopPropagation();if(!window._calYM)return;var y=+window._calYM.slice(0,4),m=+window._calYM.slice(5,7)-1;var nd=new Date(Date.UTC(y,m+d,1));window._calYM=nd.getUTCFullYear()+'-'+String(nd.getUTCMonth()+1).padStart(2,'0');renderDayCal();}
 function pickDay(k,ev){if(ev&&ev.stopPropagation)ev.stopPropagation();var cal=document.getElementById('dayCal');if(cal)cal.style.display='none';if(typeof setDay==='function')setDay(k);if(typeof fillDaySel==='function')fillDaySel();}
-function renderDayCal(){var cal=document.getElementById('dayCal');if(!cal)return;var ym=window._calYM||((DATA&&DATA.date)||'').slice(0,7);if(!/^\d{4}-\d{2}$/.test(ym)){cal.innerHTML='';return;}var y=+ym.slice(0,4),m=+ym.slice(5,7);var MONF=['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];var has={};Object.keys(DAYS||{}).forEach(function(k){if(/^\d{4}-\d{2}-\d{2}$/.test(k))has[k]=1;});var cur=(DATA&&DATA.date)||'';var first=new Date(Date.UTC(y,m-1,1));var startWd=(first.getUTCDay()+6)%7;var dim=new Date(Date.UTC(y,m,0)).getUTCDate();var DL=['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];var head='<div class="dcal-h"><button type="button" class="dcal-nav" onclick="dayCalStep(-1,event)">\u2039</button><b class="dcal-t">'+MONF[m-1]+' '+y+'</b><button type="button" class="dcal-nav" onclick="dayCalStep(1,event)">\u203a</button></div>';var wd='<div class="dcal-wd">'+DL.map(function(d){return '<div>'+d+'</div>';}).join('')+'</div>';var cells='';for(var i=0;i<startWd;i++)cells+='<div></div>';for(var day=1;day<=dim;day++){var k=y+'-'+String(m).padStart(2,'0')+'-'+String(day).padStart(2,'0');var h=!!has[k];var sel=(k===cur);var cl='dcal-c '+(sel?'sel':(h?'has':'off'));if(h||sel){cells+='<div role="button" class="'+cl+'" onclick="pickDay(&quot;'+k+'&quot;,event)">'+day+'</div>';}else{cells+='<div class="'+cl+'">'+day+'</div>';}}var grid='<div class="dcal-g">'+cells+'</div>';var hint='<div class="dcal-hint">Зелені дні \u2014 є дані. Стрілками \u2039 \u203a \u2014 інші місяці.</div>';cal.innerHTML='<div class="dcal">'+head+wd+grid+hint+'</div>';}
+function renderDayCal(){var cal=document.getElementById('dayCal');if(!cal)return;var ym=window._calYM||((DATA&&DATA.date)||'').slice(0,7);if(!/^\d{4}-\d{2}$/.test(ym)){cal.innerHTML='';return;}var y=+ym.slice(0,4),m=+ym.slice(5,7);var MONF=['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];/* Позначаємо дні, за якими є дані — і завантажені, і ті, що лежать
+   у хмарі. Раніше бралися тільки завантажені 45 днів, тому старіші
+   місяці виглядали порожніми, хоч дані там були. */
+  var has={};Object.keys(DAYS||{}).forEach(function(k){if(/^\d{4}-\d{2}-\d{2}$/.test(k))has[k]=1;});
+  try{(CLOUD_DAY_KEYS||[]).forEach(function(k){has[k]=1;});}catch(e){}var cur=(DATA&&DATA.date)||'';var first=new Date(Date.UTC(y,m-1,1));var startWd=(first.getUTCDay()+6)%7;var dim=new Date(Date.UTC(y,m,0)).getUTCDate();var DL=['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];var head='<div class="dcal-h"><button type="button" class="dcal-nav" onclick="dayCalStep(-1,event)">\u2039</button><b class="dcal-t">'+MONF[m-1]+' '+y+'</b><button type="button" class="dcal-nav" onclick="dayCalStep(1,event)">\u203a</button></div>';var wd='<div class="dcal-wd">'+DL.map(function(d){return '<div>'+d+'</div>';}).join('')+'</div>';var cells='';for(var i=0;i<startWd;i++)cells+='<div></div>';for(var day=1;day<=dim;day++){var k=y+'-'+String(m).padStart(2,'0')+'-'+String(day).padStart(2,'0');var h=!!has[k];var sel=(k===cur);var cl='dcal-c '+(sel?'sel':(h?'has':'off'));if(h||sel){cells+='<div role="button" class="'+cl+'" onclick="pickDay(&quot;'+k+'&quot;,event)">'+day+'</div>';}else{cells+='<div class="'+cl+'">'+day+'</div>';}}var grid='<div class="dcal-g">'+cells+'</div>';var hint='<div class="dcal-hint">Зелені дні \u2014 є дані. Стрілками \u2039 \u203a \u2014 інші місяці.</div>';cal.innerHTML='<div class="dcal">'+head+wd+grid+hint+'</div>';}
 function dayCutMin(){return Math.round((typeof DAYSTART!=='undefined'&&DAYSTART!=null?DAYSTART:5)*60);}
 function hydrate(day){if(!day||!day._parts||typeof PROC==='undefined'||!PROC.buildData)return day;try{var D=PROC.buildData(day._parts,dayCutMin());D._parts=day._parts;D.date=day.date||D.date;D.date_label=day.date_label||D.date_label;D.window=buildWin(D.date,D.now_min);if(D.demand===undefined&&day.demand!==undefined)D.demand=day.demand;return D;}catch(e){console.error('hydrate',e);return day;}}
 function setDay(date){if(DAYS[date]){DATA=hydrate(DAYS[date]);boot();}}const rank={nowork:0,low:1,behind:2,ontrack:3,done:4};
@@ -4554,7 +4558,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=106;
+var APP_BUILD_N=107;
 var APP_BUILD='збірка 21.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
@@ -5723,6 +5727,28 @@ function showUploaderOnly(){var up=document.getElementById("uploader"),ap=docume
 /* Дні тягнемо ПОРЦІЯМИ і починаючи з найновіших.
    Раніше йшов один запит на всі дні — з ~100 записів база не встигала
    і повертала 500 (canceling statement due to statement timeout). */
+/* Перелік ВСІХ днів, що є в хмарі. Самі дані не тягнемо — лише ключі,
+   тому запит легкий. Потрібно, щоб календар підсвічував усі дні з даними,
+   а не тільько ті 45, які завантажені в браузер. */
+var CLOUD_DAY_KEYS=null;
+async function cloudDayIndex(){
+  if(!supa)return CLOUD_DAY_KEYS||[];
+  try{
+    const r=await supa.from("app_data").select("key").like("key","day:%");
+    if(r.error){console.error(r.error);return CLOUD_DAY_KEYS||[];}
+    CLOUD_DAY_KEYS=(r.data||[]).map(function(x){return String(x.key||'').slice(4);})
+      .filter(function(k){return /^\d{4}-\d{2}-\d{2}$/.test(k);}).sort();
+    return CLOUD_DAY_KEYS;
+  }catch(e){console.error(e);return CLOUD_DAY_KEYS||[];}
+}
+/* Чи є дані за цей день — локально або в хмарі. */
+function dayHasData(ymd){
+  try{
+    if(DAYS&&DAYS[ymd])return true;
+    if(CLOUD_DAY_KEYS&&CLOUD_DAY_KEYS.indexOf(ymd)>=0)return true;
+  }catch(e){}
+  return false;
+}
 async function cloudLoadDays(limitDays){
   if(!supa)return;
   var KEEP=(typeof limitDays==='number')?limitDays:LOCAL_DAYS_KEEP;
@@ -5746,6 +5772,8 @@ async function cloudLoadDays(limitDays){
     }
     cleanDays();
     saveDays();
+    /* оновити перелік днів для календаря */
+    try{await cloudDayIndex();if(typeof drawCal==='function')drawCal();}catch(e){}
   }catch(e){console.error(e);}
 }
 /* Підвантажити конкретний день, якого немає локально (наприклад, червневий). */
@@ -6354,7 +6382,15 @@ try{var _t0=(document.documentElement.getAttribute('data-theme')==='dark')?'dark
     if(pop)pop.hidden=true;
     target=null;
   }
-  function pick(k){
+  async function pick(k){
+    /* Дня може не бути локально — тоді тягнемо з хмари. */
+    try{
+      if(!DAYS[k]&&typeof cloudLoadDay==='function'){
+        var st=document.querySelector('.dcal-hint');
+        if(st)st.textContent='Завантажую '+k+' з хмари…';
+        await cloudLoadDay(k);
+      }
+    }catch(e){console.error(e);}
     if(!target)return;
     var inp=target;
     inp.value=k;
