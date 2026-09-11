@@ -126,8 +126,46 @@ function ordersToTrips(items) {
   const fmtDate = ts => { const p = new Intl.DateTimeFormat('en-CA', { timeZone:'Europe/Kyiv', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false }).formatToParts(new Date(ts * 1000)); const g = t => p.find(x => x.type === t).value; return g('day')+'.'+g('month')+'.'+g('year')+' '+g('hour')+':'+g('minute'); };
   const stMap = s => { s = (s || '').toLowerCase(); if (s === 'completed') return 'Виконано'; if (s === 'running' || s === 'waiting_for_processing') return 'Виконується'; return 'Скасовано'; };
   const payMap = f => { f = (f || '').toLowerCase(); if (f === 'cash') return 'Готівка'; if (f.indexOf('mix') >= 0) return 'Змішаний'; return 'Безготівковий'; };
+  /* Uklon міняє назви полів між версіями API. Щоб не ламатись щоразу,
+     шукаємо імʼя водія й номер авто в усіх відомих варіантах, а якщо
+     не знайдено — рекурсивно по всьому обʼєкту замовлення.
+     Було: brав тільки o.driver.fullName — після оновлення Uklon воно
+     стало порожнім, і кожна поїздка ставала «водієм без імені». */
+  const pickName = src => {
+    if (!src || typeof src !== 'object') return '';
+    const direct = src.fullName || src.full_name || src.name
+      || src.driverName || src.driver_name || src.displayName;
+    if (direct && String(direct).trim()) return String(direct).trim();
+    const fn = src.firstName || src.first_name || '';
+    const ln = src.lastName || src.last_name || '';
+    const joined = (fn + ' ' + ln).trim();
+    return joined;
+  };
+  const deepFind = (obj, keys, depth) => {
+    if (!obj || typeof obj !== 'object' || (depth || 0) > 4) return '';
+    for (const k of Object.keys(obj)) {
+      const kl = k.toLowerCase();
+      if (keys.some(x => kl === x) && obj[k] && typeof obj[k] !== 'object') {
+        const v = String(obj[k]).trim();
+        if (v) return v;
+      }
+    }
+    for (const k of Object.keys(obj)) {
+      const v = obj[k];
+      if (v && typeof v === 'object') {
+        const got = deepFind(v, keys, (depth || 0) + 1);
+        if (got) return got;
+      }
+    }
+    return '';
+  };
   return (items || []).map(o => {
     const pay = o.payment || {}, drv = o.driver || {}, veh = o.vehicle || {};
+    let _name = pickName(drv) || pickName(o.driverInfo) || pickName(o.executor) || pickName(o);
+    if (!_name) _name = deepFind(o, ['fullname','full_name','drivername','driver_name'], 0);
+    let _plate = veh.licencePlate || veh.licensePlate || veh.licence_plate
+      || veh.license_plate || veh.plate || veh.number || '';
+    if (!_plate) _plate = deepFind(o, ['licenceplate','licenseplate','licence_plate','license_plate','plate'], 0);
     // Доїзд до клієнта у хвилинах: acceptedAt -> pickupTime (беремо лише правдоподібні значення 0..60 хв)
     let deadheadMin = '';
     if (o.acceptedAt && o.pickupTime) {
@@ -135,8 +173,8 @@ function ordersToTrips(items) {
       if (dm >= 0 && dm <= 60) deadheadMin = String(dm);
     }
     return {
-      'Водій': drv.fullName || '',
-      'Держ номер авто': veh.licencePlate || '',
+      'Водій': _name || '',
+      'Держ номер авто': _plate || '',
       'Подача': o.pickupTime ? fmtDate(o.pickupTime) : '',
       'Статус': stMap(o.status),
       'Тип продукту': PROD[(veh.productType || '').toLowerCase()] || veh.productType || '',
@@ -222,6 +260,20 @@ export default async function handler(req, res) {
       res.status(200).send(JSON.stringify({
         ok: true, date: dateStr, count_orders: ordItemsD.length,
         _sample_keys: sample ? Object.keys(sample) : [],
+        /* Як саме Uklon зараз називає поля водія й авто — щоб при
+           наступній зміні API було видно одразу, без здогадів. */
+        _driver_fields: sample && sample.driver ? Object.keys(sample.driver) : [],
+        _vehicle_fields: sample && sample.vehicle ? Object.keys(sample.vehicle) : [],
+        _name_found: sample ? (function(){
+          try{ return pickName(sample.driver||{}) || deepFind(sample,['fullname','full_name','drivername','driver_name'],0) || '(не знайдено)'; }
+          catch(e){ return '(помилка: '+e.message+')'; }
+        })() : '',
+        _plate_found: sample ? (function(){
+          try{
+            const v=sample.vehicle||{};
+            return v.licencePlate||v.licensePlate||v.plate||deepFind(sample,['licenceplate','licenseplate','plate'],0)||'(не знайдено)';
+          }catch(e){ return '(помилка)'; }
+        })() : '',
         _sample_order: sample,
       }, null, 2));
       return;
