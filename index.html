@@ -4493,7 +4493,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=102;
+var APP_BUILD_N=103;
 var APP_BUILD='збірка 21.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
@@ -4756,10 +4756,21 @@ function saveCarNote(pl,o){const n=carNotes();n[pl]=o;try{localStorage.setItem('
    закріпити за авто. */
 function driverList(){var s={},out=[];
   function add(n){
+    if(!n||typeof n!=='string')return;
+    n=n.trim();
     if(!n)return;
+    /* Ключі «Імен у звітах» — це ТОКЕНИ («березюк|максим»), а не імена.
+       Раніше вони потрапляли в список і показувались порожніми рядками. */
+    if(n.indexOf('|')>=0)return;
+    /* імʼя має складатися хоча б з двох літер */
+    if(!/[А-Яа-яЇїІіЄєҐґA-Za-z]{2}/.test(n))return;
     try{if(isDeleted(n)||firedFrom(n))return;}catch(e){}
     var k=nkey(n);
     if(!k||s[k])return;
+    /* те, що покажемо у списку, теж має бути непорожнім */
+    var disp='';
+    try{disp=(typeof nameFor==='function')?String(nameFor(n)||'').trim():n;}catch(e){disp=n;}
+    if(!disp)return;
     s[k]=1;out.push(n);
   }
   try{if(typeof A!=='undefined'&&A)A.forEach(function(o){if(o&&o.name)add(o.name);});}catch(e){}
@@ -4768,7 +4779,9 @@ function driverList(){var s={},out=[];
     var nm=(typeof drvNames==='function')?drvNames():{};
     Object.keys(nm).forEach(function(k){
       var v=nm[k];
-      add((typeof v==='string'&&v.trim())?v:k);
+      /* беремо ТІЛЬКИ читабельне значення; порожнє — пропускаємо,
+         бо ключ це токен, а не імʼя */
+      if(typeof v==='string'&&v.trim())add(v);
     });
   }catch(e){}
   /* водії з минулих днів — щоб той, хто сьогодні на вихідному, теж був */
