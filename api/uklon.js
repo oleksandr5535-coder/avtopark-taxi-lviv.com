@@ -15,6 +15,39 @@ async function auth(id, secret) {
   return j.access_token;
 }
 
+/* Пошук імені водія й номера авто. Винесено на верхній рівень, щоб
+   ними могла користуватись і діагностика: Uklon міняє назви полів
+   між версіями (fullName → first_name/last_name, licencePlate →
+   license_plate), тому перевіряємо всі відомі варіанти. */
+const pickName = src => {
+  if (!src || typeof src !== 'object') return '';
+  const direct = src.fullName || src.full_name || src.name
+    || src.driverName || src.driver_name || src.displayName;
+  if (direct && String(direct).trim()) return String(direct).trim();
+  const fn = src.firstName || src.first_name || '';
+  const ln = src.lastName || src.last_name || '';
+  const joined = (fn + ' ' + ln).trim();
+  return joined;
+};
+const deepFind = (obj, keys, depth) => {
+  if (!obj || typeof obj !== 'object' || (depth || 0) > 4) return '';
+  for (const k of Object.keys(obj)) {
+    const kl = k.toLowerCase();
+    if (keys.some(x => kl === x) && obj[k] && typeof obj[k] !== 'object') {
+      const v = String(obj[k]).trim();
+      if (v) return v;
+    }
+  }
+  for (const k of Object.keys(obj)) {
+    const v = obj[k];
+    if (v && typeof v === 'object') {
+      const got = deepFind(v, keys, (depth || 0) + 1);
+      if (got) return got;
+    }
+  }
+  return '';
+};
+
 function kyivOffsetSec(date) {
   const dtf = new Intl.DateTimeFormat('en-US', { timeZone:'Europe/Kyiv', hour12:false,
     year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit' });
@@ -131,34 +164,6 @@ function ordersToTrips(items) {
      не знайдено — рекурсивно по всьому обʼєкту замовлення.
      Було: brав тільки o.driver.fullName — після оновлення Uklon воно
      стало порожнім, і кожна поїздка ставала «водієм без імені». */
-  const pickName = src => {
-    if (!src || typeof src !== 'object') return '';
-    const direct = src.fullName || src.full_name || src.name
-      || src.driverName || src.driver_name || src.displayName;
-    if (direct && String(direct).trim()) return String(direct).trim();
-    const fn = src.firstName || src.first_name || '';
-    const ln = src.lastName || src.last_name || '';
-    const joined = (fn + ' ' + ln).trim();
-    return joined;
-  };
-  const deepFind = (obj, keys, depth) => {
-    if (!obj || typeof obj !== 'object' || (depth || 0) > 4) return '';
-    for (const k of Object.keys(obj)) {
-      const kl = k.toLowerCase();
-      if (keys.some(x => kl === x) && obj[k] && typeof obj[k] !== 'object') {
-        const v = String(obj[k]).trim();
-        if (v) return v;
-      }
-    }
-    for (const k of Object.keys(obj)) {
-      const v = obj[k];
-      if (v && typeof v === 'object') {
-        const got = deepFind(v, keys, (depth || 0) + 1);
-        if (got) return got;
-      }
-    }
-    return '';
-  };
   return (items || []).map(o => {
     const pay = o.payment || {}, drv = o.driver || {}, veh = o.vehicle || {};
     let _name = pickName(drv) || pickName(o.driverInfo) || pickName(o.executor) || pickName(o);
