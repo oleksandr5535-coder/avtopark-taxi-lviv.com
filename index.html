@@ -2640,7 +2640,10 @@ function buildData(parts,dayCut){dayCut=(typeof dayCut==='number'&&dayCut>=0)?da
     const r={name,_tok:tk,plats:new Set(),plate:'',car:'',u_online:null,u_work:null,u_orders:0,u_gross:0,u_net:0,u_tips:0,
       b_gross:0,b_net:0,b_revph:0,b_tips:0,b_comp:0,b_cancel:0,b_noans:0,b_offer:0,b_min:0,times:[],hourly:new Array(24).fill(0),trips:[],tier:{econ:0,std:0,premium:0,deliv:0},cats:{},pwSum:0,pwN:0,dmSum:0,dmN:0,meth:{}};
     D.set(name+Math.random(),r);return r;}
-  (parts.uklon_agg||[]).forEach(r=>{const d=rec(r['Водій']);d.plats.add('Uklon');
+  (parts.uklon_agg||[]).forEach(r=>{
+    const _an=String(r['Водій']||'').trim();
+    if(!_an)return;                 /* рядок без імені — не водій */
+    const d=rec(_an);d.plats.add('Uklon');
     d.u_online=HRS(r['Час онлайн, год']);d.u_work=HRS(r['Тривалість замовлень, год']);
     d.u_orders=Math.round(F(r['Кількість замовлень']));d.u_gross=F(r['Вартість (Вся), грн']);d.u_net=F(r['Разом, грн']);d.u_tips=F(r['Чайові, грн']);d.u_cash=F(r['Вартість готівкою, грн']||0);d.u_km=F(r['Пробіг (під замовленням), км']||0);});
   (parts.bolt_income||[]).forEach(r=>{const d=rec(r['Водій']);d.plats.add('Bolt');
@@ -2662,7 +2665,20 @@ function buildData(parts,dayCut){dayCut=(typeof dayCut==='number'&&dayCut>=0)?da
       d.trips.push({t:t||'',plat:'Bolt',km:dk,fare:F(r[fk]),st:'ok',pay:payClass(r['Спосіб оплати']),tier:ti,cat:(r['Категорія']||'').trim()});}
     else if(s==='Водій відмінив'){d.b_cancel++;if(t)d.trips.push({t,plat:'Bolt',km:0,fare:0,st:'cancel',cat:(r['Категорія']||'').trim()});}
     else if(s==='Водій не відповів'){d.b_noans++;}});
-  (parts.uklon_trips||[]).forEach(r=>{const d=rec(r['Водій']);d.plats.add('Uklon');
+  /* Uklon перестав віддавати імʼя водія в поїздках (поле «Водій» порожнє).
+     Раніше кожна така поїздка створювала НОВОГО водія — 93 поїздки давали
+     93 фантоми, і лічильник показував «102 водії» замість реальних 12.
+     Поїздку без імені враховуємо в загальній статистиці дня, але водія
+     з неї не робимо. */
+  (parts.uklon_trips||[]).forEach(r=>{
+    const _nm=String(r['Водій']||'').trim();
+    if(!_nm){
+      /* лише загальний облік: дати, час, попит — без створення водія */
+      const p0=r['Подача'];
+      if(p0&&p0.length>=10){const dd0=p0.slice(0,10);dateCount[dd0]=(dateCount[dd0]||0)+1;}
+      return;
+    }
+    const d=rec(_nm);d.plats.add('Uklon');
     if(!d.plate&&r['Держ номер авто'])d.plate=r['Держ номер авто'];
     const p=r['Подача'],t=p&&p.length>=16?p.slice(11,16):null;const mn=t?tmin(t):null;const s=r['Статус'];if(p&&p.length>=10){const dd=p.slice(0,10);dateCount[dd]=(dateCount[dd]||0)+1;}
     if(mn!=null)d.times.push(mn);const done=(s==='Виконано'||s==='Виконується');
@@ -3562,9 +3578,38 @@ function renderWeekDriver(name){var el=document.getElementById('week');if(!el)re
 function showView(v){view=v;try{localStorage.setItem('lastView',v);}catch(e){}document.getElementById('overview').classList.toggle('hide',v!=='overview');document.getElementById('owner').classList.toggle('hide',v!=='owner');document.getElementById('cars').classList.toggle('hide',v!=='cars');document.getElementById('settings').classList.toggle('hide',v!=='settings');document.getElementById('morning').classList.toggle('hide',v!=='morning');document.getElementById('drivers').classList.toggle('hide',v!=='drivers');document.getElementById('report').classList.toggle('hide',v!=='report');document.getElementById('week').classList.toggle('hide',v!=='week');document.getElementById('standing').classList.toggle('hide',v!=='standing');document.getElementById('history').classList.toggle('hide',v!=='history');document.getElementById('branding').classList.toggle('hide',v!=='branding');document.getElementById('coverage').classList.toggle('hide',v!=='coverage');document.getElementById('status').classList.toggle('hide',v!=='status');document.getElementById('tracker').classList.toggle('hide',v!=='tracker');var _rv=document.getElementById('rent');if(_rv)_rv.classList.toggle('hide',v!=='rent');var _tv=document.getElementById('trent');if(_tv)_tv.classList.toggle('hide',v!=='trent');var _hv=document.getElementById('help');if(_hv)_hv.classList.toggle('hide',v!=='help');var _dv=document.getElementById('dyn');if(_dv)_dv.classList.toggle('hide',v!=='dyn');if(v!=='status'&&window._statusTimer){clearTimeout(window._statusTimer);window._statusTimer=null;}document.getElementById('detail').classList.add('hide');if(v==='rent'&&typeof renderRent==='function')renderRent();if(v==='trent'&&typeof renderTaxiRent==='function')renderTaxiRent();if(v==='help'&&typeof renderHelp==='function')renderHelp();if(v==='dyn'&&typeof renderDyn==='function')renderDyn();if(v==='cars')renderCars();if(v==='settings'){renderSettings();renderDriverNames();}if(v==='morning')renderMorning();if(v==='drivers')renderDrivers();if(v==='report')renderReport();if(v==='week')renderWeek();if(v==='standing')renderStanding();if(v==='history')renderHistory();if(v==='branding')renderBranding();if(v==='coverage')renderCoverage();if(v==='status')renderStatus();if(v==='tracker')renderTracker();if(v==='overview')renderStandingMini();(function(){var _nav=document.getElementById('topnav');if(!_nav)return;[..._nav.querySelectorAll('button[data-v]')].forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v));[..._nav.querySelectorAll('.ncat')].forEach(function(c){var has=[...c.querySelectorAll('button[data-v]')].some(b=>b.dataset.v===v);c.classList.toggle('active',has);c.classList.remove('open');});})();if(v==='owner')renderOwner();window.scrollTo(0,0);}
 function daybar(){const S=shown();const pv=S.map(o=>o.pace_net).filter(x=>x!=null).sort((a,b)=>a-b);const np=pv.length?Math.round(pv[Math.floor(pv.length/2)]):null;const ok=np!=null&&np>=HOURLY;const col=np==null?'var(--amber)':(ok?'var(--good)':'var(--bad)');
 document.getElementById('daybar').innerHTML=`<span class="dot" style="background:${col}"></span><div>Середній темп по парку — <b>${np==null?'—':np+' ₴/год чистими'}</b> (норма ${HOURLY} ₴/год). `+(ok?'Парк тримає норму — гарний день, тисніть.':'Темп нижче норми — варто підганяти водіїв.')+`</div>`;}
-function shown(){if(typeof A==='undefined'||!Array.isArray(A))return [];var base=A.filter(o=>inScope(o)&&!isHidden(o.name));return selDrivers.size?base.filter(o=>selDrivers.has(o.name)):base;}
+/* ===== ЧИ ПРАЦЮВАВ ВОДІЙ У ЦЕЙ ДЕНЬ =====
+   Uklon віддає звіт по ВСЬОМУ парку — включно з тими, хто сьогодні
+   не виїжджав, і навіть тими, хто давно пішов. Усі вони потрапляли
+   в день як водії: лічильник показував «102 усього, 98 працюють»
+   при 26 авто, а недобір до плану роздувався на людей, які й не
+   мали виїжджати.
+   Водієм дня вважаємо того, хто справді щось робив: має поїздки,
+   заробіток або час на лінії. Решта зі звіту Uklon — довідка, а не
+   працівники дня. */
+function workedToday(o){
+  if(!o)return false;
+  if((o.orders||0)>0)return true;
+  if((o.net||0)>0||(o.gross||0)>0)return true;
+  if((o.online||0)>0||(o.work||0)>0)return true;
+  if((o.b_comp||0)>0||(o.u_orders||0)>0)return true;
+  /* GPS: авто рухалось — значить зміна була, навіть без замовлень */
+  if((o.gps_km||0)>=3)return true;
+  return false;
+}
+function shown(){
+  if(typeof A==='undefined'||!Array.isArray(A))return [];
+  var base=A.filter(function(o){return inScope(o)&&!isHidden(o.name)&&workedToday(o);});
+  return selDrivers.size?base.filter(function(o){return selDrivers.has(o.name);}):base;
+}
 function lastDriverByPlate(){var map={};try{var ks=Object.keys(DAYS||{}).sort();ks.forEach(function(k){var d=DAYS[k];var drv=(d&&d.drivers)||[];drv.forEach(function(o){if(o&&o.plate_norm&&o.name)map[o.plate_norm]=o.name;});});}catch(e){}(A||[]).forEach(function(o){if(o&&o.plate_norm&&o.name)map[o.plate_norm]=o.name;});return map;}
-function renderDrvSum(){var el=document.getElementById('drvSum');if(!el)return;if(!DATA){el.innerHTML='';return;}var base=(A||[]).filter(function(o){return (typeof isTaxi==='function')?isTaxi(o):true;});var total=base.length,work=base.filter(function(o){return o.start_h!=null;}).length,notout=total-work;var done=base.filter(function(o){return statusOf(o)==='done';}).length;el.innerHTML='<div class="mn-sum drvsum-grid">'+'<div class="mn-st"><div class="mn-stn">'+total+'</div><div class="mn-stl">усього</div></div>'+'<div class="mn-st good"><div class="mn-stn">'+work+'</div><div class="mn-stl">працюють</div></div>'+'<div class="mn-st bad"><div class="mn-stn">'+notout+'</div><div class="mn-stl">не виїхали</div></div>'+'<div class="mn-st amber"><div class="mn-stn">'+done+'</div><div class="mn-stl">виконали план</div></div>'+'</div>';}function renderDrivers(){renderDrvSum();if(typeof renderList==='function')renderList();}
+function renderDrvSum(){var el=document.getElementById('drvSum');if(!el)return;if(!DATA){el.innerHTML='';return;}/* Лічильник з того самого фільтра, що й список: інакше «усього»
+   показувало весь архів Uklon, а не тих, хто працював. */
+    var base=(A||[]).filter(function(o){
+      if(typeof workedToday==='function'&&!workedToday(o))return false;
+      return (typeof isTaxi==='function')?isTaxi(o):true;
+    });
+    var total=base.length,work=base.filter(function(o){return o.start_h!=null;}).length,notout=total-work;var done=base.filter(function(o){return statusOf(o)==='done';}).length;el.innerHTML='<div class="mn-sum drvsum-grid">'+'<div class="mn-st"><div class="mn-stn">'+total+'</div><div class="mn-stl">усього</div></div>'+'<div class="mn-st good"><div class="mn-stn">'+work+'</div><div class="mn-stl">працюють</div></div>'+'<div class="mn-st bad"><div class="mn-stn">'+notout+'</div><div class="mn-stl">не виїхали</div></div>'+'<div class="mn-st amber"><div class="mn-stn">'+done+'</div><div class="mn-stl">виконали план</div></div>'+'</div>';}function renderDrivers(){renderDrvSum();if(typeof renderList==='function')renderList();}
 function renderMorning(){var el=document.getElementById('mornBody');if(el){el.innerHTML=morningPanel();el.querySelectorAll('.mn-add').forEach(function(b){b.onclick=function(){addToRoster(b.getAttribute('data-plate'));};});el.querySelectorAll('.mn-reason').forEach(function(sl){sl.onchange=function(){var pl=sl.getAttribute('data-pl');var cur=(typeof carNotes==='function'?carNotes()[pl]:null)||{};saveCarNote(pl,Object.assign({},cur,{reason:sl.value}));if(typeof renderMorning==='function')renderMorning();if(typeof kpis==='function')kpis();if(typeof renderStandingMini==='function')renderStandingMini();if(typeof renderFleetMini==='function')renderFleetMini();};});}}
 function dayDashboard(){
   if(!DATA)return '';var S=(typeof shown==='function')?shown():[];if(!S.length)return '';
@@ -4558,7 +4603,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=107;
+var APP_BUILD_N=109;
 var APP_BUILD='збірка 21.08 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
