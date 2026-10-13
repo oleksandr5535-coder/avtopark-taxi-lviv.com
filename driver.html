@@ -180,6 +180,7 @@ function setAuthMode(reg){
   $('#authHint').textContent = reg ? 'Заповніть дані — менеджер підтвердить доступ' : 'Кабінет водія AVTO PARK';
   $('#authBtn').textContent = reg ? 'Надіслати заявку' : 'Увійти';
   $('#fPass').autocomplete = reg ? 'new-password' : 'current-password';
+  $('#authToggle').classList.toggle('hidden', EMBED);
   $('#authToggle').innerHTML = reg ? 'Вже є акаунт? <a id="tg">Увійти</a>' : 'Вперше? <a id="tg">Зареєструватися як водій</a>';
   $('#tg').onclick = () => { $('#authMsg').innerHTML=''; setAuthMode(!regMode); };
 }
@@ -217,9 +218,14 @@ async function boot(){
   me = p;
   if (p.status === 'pending') { $('#pendTitle').textContent='Заявку надіслано'; $('#pendText').textContent='Менеджер перевірить дані й підтвердить доступ. Зайдіть пізніше.'; showOnly('pending'); return; }
   if (p.status === 'rejected') { $('#pendTitle').textContent='Доступ не надано'; $('#pendText').textContent='Зверніться до менеджера парку.'; showOnly('pending'); return; }
+  const staff = p.role === 'owner' || p.role === 'manager';
+  if (EMBED && !staff) {
+    $('#pendTitle').textContent = 'Тут увійшов водій: ' + (p.full_name || session.user.email);
+    $('#pendText').textContent = 'У цьому браузері відкрита сесія водія, тому панель менеджера прихована. Натисніть «Вийти» і увійдіть своєю поштою менеджера. Водія перевіряйте у вікні інкогніто.';
+    showOnly('pending'); return;
+  }
   $('#whoName').textContent = p.full_name || session.user.email;
   showOnly('app');
-  const staff = p.role === 'owner' || p.role === 'manager';
   S.staff = staff; $('#dashLink').classList.toggle('hidden', !staff); S.week = 0; S.tab = staff ? 'm_over' : 'd_week';
   S.repDate = todayStr();
   $('#view').className = staff ? 'wide' : '';

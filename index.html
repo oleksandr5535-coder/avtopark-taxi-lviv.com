@@ -3553,11 +3553,13 @@ async function publishWeek(){
     if(typeof supa==='undefined'||!supa){say('Немає зв’язку з базою.',1);return;}
     if(!weekMon){say('Спочатку оберіть тиждень.',1);return;}
     say('Публікую…');
+    var _CY={'А':'A','В':'B','Е':'E','І':'I','Ї':'I','Є':'E','Ґ':'G','К':'K','М':'M','Н':'H','О':'O','Р':'P','С':'C','Т':'T','У':'U','Х':'X'};
+    var NPL2=function(p){return String(p||'').replace(/\s|-/g,'').toUpperCase().replace(/[А-ЯІЇЄҐ]/g,function(c){return _CY[c]||c;});};
     var cr=await supa.from('cars').select('plate,driver_id');
     var dr=await supa.from('drivers').select('id,full_name,dash_name,status');
     if(cr.error||dr.error){say('Помилка: '+((cr.error||dr.error).message||'')+'. Чи запущено api_days.sql та схему кабінету?',1);return;}
     var byPlate={},byName={};
-    (cr.data||[]).forEach(function(c){if(c.driver_id&&c.plate)byPlate[NPL(c.plate)]=c.driver_id;});
+    (cr.data||[]).forEach(function(c){if(c.driver_id&&c.plate)byPlate[NPL2(c.plate)]=c.driver_id;});
     (dr.data||[]).forEach(function(d){[d.dash_name,d.full_name].forEach(function(n){if(n&&n.trim())byName[rpt_toks(n).join('|')]=d.id;});});
     var acc={},unm={},keys=weekKeys(weekMon);
     keys.forEach(function(k){
@@ -3568,7 +3570,7 @@ async function publishWeek(){
         if(!isTaxi(o)||isHiddenOn(o.name,k))return;
         var bn=+o.b_net||0,un=+o.u_net||0;
         if(!(bn+un>0||(o.orders||0)>0))return;
-        var did=(o.plate_norm&&byPlate[o.plate_norm])||byName[rpt_toks(o.name).join('|')];
+        var did=(o.plate_norm&&byPlate[NPL2(o.plate_norm)])||byName[rpt_toks(o.name).join('|')];
         if(!did){unm[nameFor(o.name)]=1;return;}
         var key=did+'|'+k,r=acc[key]||(acc[key]={driver_id:did,day:k,bolt_net:0,uklon_net:0,orders:0,km:0,plate:o.plate||null});
         r.bolt_net+=bn;r.uklon_net+=un;r.orders+=(o.orders||0);r.km+=(o.km_total||0);
