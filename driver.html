@@ -105,6 +105,8 @@ a.lnk{color:var(--amber-tx);font-weight:700;cursor:pointer;text-decoration:none}
  #app.staff main{margin-left:224px;max-width:none;padding:26px 34px 70px}
  html.embed #app.staff nav.tabs{top:0}
 }
+nav.tabs button.exitdash{background:var(--soft);color:var(--ink);font-weight:700;border:1px solid var(--line)}
+ #app.staff nav.tabs button.exitdash{margin-bottom:8px}
 header.top{} .embed header.top{display:none}.embed nav.tabs{top:0}
 @media print{
  header.top,nav.tabs,.noprint{display:none!important}
@@ -330,7 +332,8 @@ function buildTabs(){
   const t = S.staff
     ? [['m_today','☀️ Сьогодні'],['m_pay','💳 Виплати'],['m_rep','📋 Звіти'],['m_drv','👥 Водії'],['m_cars','🚗 Парк'],['m_docs','📅 Документи'],['m_inc','⚠️ ДТП'],['m_set','⚙️ Умови']]
     : [['d_week','💰 Тиждень'],['d_rep','📝 Звіт'],['d_car','🚗 Авто'],['d_inc','⚠️ ДТП']];
-  $('#tabs').innerHTML = t.map(([k,l])=>`<button data-k="${k}">${l}</button>`).join('');
+  $('#tabs').innerHTML = (EMBED ? '<button class="exitdash" id="exitDash" title="Повернутись до дашборду парку">← До дашборду</button>' : '') + t.map(([k,l])=>`<button data-k="${k}">${l}</button>`).join('');
+  const ex = $('#exitDash'); if (ex) ex.onclick = () => { try { window.parent.postMessage({cabinetExit:true}, '*'); } catch(e){} };
   $('#tabs').onclick = e => { const k = e.target.dataset.k; if (k) { S.tab = k; if (k!=='d_rep') S.repFor = null; if (k==='m_drv') S.drvOpen = null; render(); window.scrollTo(0,0); } };
 }
 
