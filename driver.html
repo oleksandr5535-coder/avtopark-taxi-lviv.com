@@ -107,6 +107,8 @@ a.lnk{color:var(--amber-tx);font-weight:700;cursor:pointer;text-decoration:none}
 }
 nav.tabs button.exitdash{background:var(--soft);color:var(--ink);font-weight:700;border:1px solid var(--line)}
  #app.staff nav.tabs button.exitdash{margin-bottom:8px}
+input.mini,select.mini{margin:0;padding:6px 8px;font-size:13px;border-radius:10px;width:auto;min-width:100px}
+input.mini[type=date]{min-width:128px}
 header.top{} .embed header.top{display:none}.embed nav.tabs{top:0}
 @media print{
  header.top,nav.tabs,.noprint{display:none!important}
@@ -826,17 +828,37 @@ m_drv(el){
 
 // ---------- МЕНЕДЖЕР: ПАРК ----------
 m_cars(el){
-  el.innerHTML = `<div class="cols"><div class="card"><h2>Додати авто</h2><div id="cmsg"></div>
-   <label>Номер</label><input id="cPlate" placeholder="ВС0000АА"><label>Марка / модель</label><input id="cModel">
-   <label>Паливо</label><select id="cFuel"><option value="hybrid">Гібрид</option><option value="petrol">Бензин</option><option value="gas">Газ</option></select>
-   <label>Страховка до</label><input id="cIns" type="date"><label>Техогляд до</label><input id="cTech" type="date"><label>Ліцензія до</label><input id="cLic" type="date">
-   <button class="btn" id="cAdd">Додати</button>
-   <hr style="border:none;border-top:1px solid var(--line);margin:18px 0"><button class="btn sec" id="cImp">Імпортувати номери з дашборду</button><div class="muted" style="margin-top:6px">Додасть номери авто, яких ще немає. Модель, паливо й терміни документів вкажете потім.</div></div>
-   <div>${S.cars.map(c=>{const dr=S.drivers.find(d=>d.id===c.driver_id); return `<div class="card"><h2>${esc(c.plate)} <span class="muted">${esc(c.model||'')}</span></h2>
-    <div class="muted">${esc(c.fuel_type)} · водій: ${dr?esc(dr.full_name):'не призначено'} <a data-delcar="${c.id}" style="cursor:pointer;color:var(--danger);margin-left:8px">видалити авто</a></div>
-    <div class="two" style="margin-top:10px"><div><label>Страховка</label><input type="date" data-cf="insurance_until|${c.id}" value="${c.insurance_until||''}"></div>
-    <div><label>Техогляд</label><input type="date" data-cf="techpass_until|${c.id}" value="${c.techpass_until||''}"></div></div>
-    <label>Ліцензія</label><input type="date" data-cf="license_until|${c.id}" value="${c.license_until||''}"></div>`;}).join('')}</div></div>`;
+  const f = S.carFilter || 'all', q = (S.carQ||'').toLowerCase();
+  const soon = c => DOCS.some(([k]) => c[k] && daysLeft(c[k]) <= 30) ;
+  const drvOf = c => S.drivers.find(d=>d.id===c.driver_id);
+  const list = S.cars.filter(c => (f==='all' || (f==='drv'&&c.driver_id) || (f==='free'&&!c.driver_id) || (f==='docs'&&(soon(c)||DOCS.some(([k])=>!c[k])))) &&
+      (!q || [c.plate,c.model,drvOf(c)?.full_name].some(v=>String(v||'').toLowerCase().includes(q))));
+  const withDrv = S.cars.filter(c=>c.driver_id).length, nSoon = S.cars.filter(soon).length;
+  const activeDrivers = S.drivers.filter(d=>d.status!=='archived');
+  const dateCell = (c,k) => `<td><input type="date" class="mini" data-cf="${k}|${c.id}" value="${c[k]||''}"><div style="margin-top:3px">${docPill(c[k]?daysLeft(c[k]):null)}</div></td>`;
+  el.innerHTML = `<div id="cmsg"></div>
+   <div class="kpis"><div class="kpi"><div class="l">Авто в парку</div><div class="v">${S.cars.length}</div></div><div class="kpi"><div class="l">З водієм</div><div class="v">${withDrv}</div></div><div class="kpi"><div class="l">Вільні</div><div class="v">${S.cars.length-withDrv}</div></div><div class="kpi"><div class="l">Документи ≤ 30 днів</div><div class="v" style="${nSoon?'color:var(--bad)':''}">${nSoon}</div></div></div>
+   <div class="toolbar noprint" style="margin:14px 0"><input id="cq" placeholder="Пошук: номер, модель, водій" value="${esc(S.carQ||'')}" style="min-width:240px;margin:0">
+    ${[['all','Усі'],['drv','З водієм'],['free','Вільні'],['docs','Потрібні документи']].map(([k,l])=>`<span class="chip ${f===k?'on':''}" data-f="${k}">${l}</span>`).join('')}<span style="flex:1"></span>
+    <button class="btn sm sec" id="cImp">⬇ Імпорт номерів з дашборду</button><button class="btn sm" id="cToggle">＋ Додати авто</button></div>
+   <div class="card ${S.carAdd?'':'hidden'}" id="cAddBox"><h2>Нове авто</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
+     <div><label>Номер</label><input id="cPlate" placeholder="ВС0000АА"></div><div><label>Марка / модель</label><input id="cModel" placeholder="Toyota Camry"></div>
+     <div><label>Паливо</label><select id="cFuel"><option value="hybrid">Гібрид</option><option value="petrol">Бензин</option><option value="gas">Газ</option></select></div>
+     <div><label>Страховка до</label><input id="cIns" type="date"></div><div><label>Техогляд до</label><input id="cTech" type="date"></div><div><label>Ліцензія до</label><input id="cLic" type="date"></div></div>
+    <div style="margin-top:14px"><button class="btn sm" id="cAdd">Додати</button></div></div>
+   <div class="card" style="padding:0"><div style="overflow-x:auto"><table class="tbl" style="min-width:900px"><thead><tr><th>Номер</th><th>Модель</th><th>Паливо</th><th>Водій</th><th>Страховка</th><th>Техогляд</th><th>Ліцензія</th><th></th></tr></thead><tbody>
+   ${list.map(c=>`<tr><td><b>${esc(c.plate)}</b></td>
+     <td><input class="mini" data-cm="model|${c.id}" value="${esc(c.model||'')}" placeholder="модель" style="min-width:110px;width:130px"></td>
+     <td><select class="mini" data-cm="fuel_type|${c.id}">${[['hybrid','Гібрид'],['petrol','Бензин'],['gas','Газ']].map(([v,l])=>`<option value="${v}" ${c.fuel_type===v?'selected':''}>${l}</option>`).join('')}</select></td>
+     <td><select class="mini" data-cd="${c.id}" style="min-width:140px;max-width:180px"><option value="">— вільне —</option>${activeDrivers.map(d=>{const other=S.cars.find(x=>x.driver_id===d.id&&x.id!==c.id);return `<option value="${d.id}" ${c.driver_id===d.id?'selected':''}>${esc(d.full_name)}${other?' (має '+esc(other.plate)+')':''}</option>`;}).join('')}</select></td>
+     ${dateCell(c,'insurance_until')}${dateCell(c,'techpass_until')}${dateCell(c,'license_until')}
+     <td><a data-delcar="${c.id}" title="Видалити авто" style="cursor:pointer;color:var(--bad)">✕</a></td></tr>`).join('') || '<tr><td colspan="8" class="muted" style="padding:20px">Нічого не знайдено</td></tr>'}
+   </tbody></table></div></div>
+   <div class="muted" style="margin-top:8px">Усі зміни зберігаються одразу. Водія призначайте тут або в його картці. Один водій — одне авто.</div>`;
+  const say = (t,ok) => $('#cmsg').innerHTML = `<div class="${ok?'ok':'err'}" style="margin-bottom:10px">${esc(t)}</div>`;
+  $('#cq').oninput = e => { S.carQ = e.target.value; clearTimeout(window._cqT); window._cqT = setTimeout(()=>{ render(); const i=$('#cq'); if(i){i.focus(); i.setSelectionRange(i.value.length,i.value.length);} },250); };
+  $('#cToggle').onclick = () => { S.carAdd = !S.carAdd; $('#cAddBox').classList.toggle('hidden', !S.carAdd); };
   $('#cImp').onclick = async () => {
     $('#cImp').disabled = true;
     try {
@@ -846,18 +868,25 @@ m_cars(el){
       const add = plates.filter(p => ok(p) && !have.has(p)), bad = plates.filter(p => !ok(p));
       if (add.length) { const r = await db.from('cars').insert(add.map(plate => ({plate}))); if (r.error) throw r.error; }
       await load(); render();
-      $('#cmsg').innerHTML = `<div class="ok">Додано авто: ${add.length}${bad.length?`. Пропущено (незвичний формат): ${esc(bad.join(', '))}`:''}${!plates.length?'. У дашборді не знайшов номерів — додайте вручну':''}</div>`;
-    } catch (e) { $('#cmsg').innerHTML = `<div class="err">${esc(e.message)}</div>`; }
+      say(`Додано авто: ${add.length}${bad.length?`. Пропущено (незвичний формат): ${bad.join(', ')}`:''}${!plates.length?'. У дашборді не знайшов номерів — додайте вручну':''}`, true);
+    } catch (e) { say(e.message); }
     $('#cImp').disabled = false;
   };
-  $('#cAdd').onclick = async () => { const plate = $('#cPlate').value.trim().toUpperCase().replace(/\s+/g,''); if (!plate) return;
+  $('#cAdd').onclick = async () => { const plate = $('#cPlate').value.trim().toUpperCase().replace(/\s+/g,''); if (!plate) return say('Вкажіть номер');
     const r = await db.from('cars').insert({plate, model:$('#cModel').value.trim()||null, fuel_type:$('#cFuel').value,
       insurance_until:$('#cIns').value||null, techpass_until:$('#cTech').value||null, license_until:$('#cLic').value||null});
-    if (r.error) return $('#cmsg').innerHTML = `<div class="err">${esc(r.error.message)}</div>`; await load(); render(); };
-  el.onclick = async e => { const id = e.target.dataset.delcar; if (!id) return; const c = S.cars.find(x=>x.id===id);
+    if (r.error) return say(r.error.message); S.carAdd = false; await load(); render(); };
+  el.onclick = async e => {
+    if (e.target.dataset.f) { S.carFilter = e.target.dataset.f; return render(); }
+    const id = e.target.dataset.delcar; if (!id) return; const c = S.cars.find(x=>x.id===id);
     if (!confirm(`Видалити авто ${c.plate}?`)) return; const r = await db.from('cars').delete().eq('id',id); if (r.error) return alert(r.error.message); await load(); render(); };
-  el.onchange = async e => { const v = e.target.dataset.cf; if (!v) return; const [f,id] = v.split('|');
-    const r = await db.from('cars').update({[f]: e.target.value||null}).eq('id',id); if (r.error) alert(r.error.message); else await load(); };
+  el.onchange = async e => {
+    const t = e.target;
+    if (t.dataset.cd !== undefined) { const r = await db.from('cars').update({driver_id: t.value||null}).eq('id',t.dataset.cd);
+      if (r.error) { say(r.error.message.includes('cars_one_driver') ? 'У цього водія вже є інше авто. Спочатку зніміть його там.' : r.error.message); } await load(); return render(); }
+    const v = t.dataset.cf || t.dataset.cm; if (!v) return; const [fld,id] = v.split('|');
+    const r = await db.from('cars').update({[fld]: t.value||null}).eq('id',id); if (r.error) return say(r.error.message);
+    await load(); if (t.dataset.cf) render(); };
 },
 
 // ---------- МЕНЕДЖЕР: ДТП ----------
