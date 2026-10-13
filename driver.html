@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0F1B2D">
+<title>AVTO PARK — кабінет водія</title>
+<script>
+  const SUPABASE_URL      = "https://lriixtvefevxindyiuck.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_NydeHBpAcKE5M6y8G8hwSg_qkEn7XwC";
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0F1B2D;--surface:#fff;--bg:#F5F7FB;--text:#16202E;--muted:#6A7686;--line:#E6EBF2;--lamp:#FFB100;--lamp-deep:#E89E00;--money:#13986A;--danger:#D6453B;--radius:16px;--shadow:0 1px 2px rgba(16,27,45,.04),0 8px 24px rgba(16,27,45,.06)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,sans-serif;color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;min-height:100dvh}
+.num{font-family:"Space Grotesk",sans-serif;font-feature-settings:"tnum" 1}
+.hidden{display:none!important}
+button{font-family:inherit;cursor:pointer;border:none}
+label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:0 0 6px 2px}
+input,select,textarea{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:12px;font-size:16px;font-family:inherit;background:#FBFCFE;margin-bottom:14px;outline:none;min-width:0}
+textarea{resize:vertical;min-height:70px}
+input:focus,select:focus,textarea:focus{border-color:var(--lamp);box-shadow:0 0 0 3px rgba(255,177,0,.16)}
+.btn{width:100%;padding:14px;border-radius:12px;font-weight:600;font-size:15px;background:var(--lamp);color:#1a1304}
+.btn:disabled{opacity:.6}
+.btn.sec{background:#fff;border:1px solid var(--line);color:var(--text)}
+.btn.sm{width:auto;padding:8px 14px;font-size:13px}
+.btn.red{background:var(--danger);color:#fff}
+.btn.grn{background:var(--money);color:#fff}
+.err{background:#FDECEA;color:#9d2a22;padding:10px 12px;border-radius:10px;font-size:13px;margin-bottom:14px}
+.ok{background:#E6F6EF;color:#0b6b4a;padding:10px 12px;border-radius:10px;font-size:13px;margin-bottom:14px}
+#auth{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(130% 90% at 50% -20%,#20365a 0,transparent 55%),var(--ink)}
+.card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:14px}
+.auth-card{width:100%;max-width:380px;border-radius:22px;padding:30px 26px}
+.auth-card h1{font-family:"Space Grotesk";font-size:21px;margin-bottom:4px}
+.hint{color:var(--muted);font-size:13px;margin-bottom:18px}
+.toggle{margin-top:16px;text-align:center;font-size:13px;color:var(--muted)}
+.toggle a{color:var(--lamp-deep);font-weight:600;cursor:pointer}
+.brand{font-family:"Space Grotesk";font-weight:700;font-size:20px;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--lamp);box-shadow:0 0 0 3px rgba(255,177,0,.22)}
+header.top{background:var(--ink);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:5}
+header.top .who{margin-left:auto;font-size:13px;opacity:.85;text-align:right}
+header.top button{background:rgba(255,255,255,.12);color:#fff;border-radius:8px;padding:6px 10px;font-size:12px}
+nav.tabs{display:flex;gap:4px;background:#fff;border-bottom:1px solid var(--line);padding:0 8px;overflow-x:auto;position:sticky;top:50px;z-index:4}
+nav.tabs button{background:none;padding:13px 12px;font-size:14px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap}
+nav.tabs button.on{color:var(--text);border-color:var(--lamp)}
+main{max-width:560px;margin:0 auto;padding:16px 14px 80px}
+h2{font-family:"Space Grotesk";font-size:17px;margin:0 0 10px}
+.big{font-family:"Space Grotesk";font-size:34px;font-weight:700;color:var(--money)}
+.row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);gap:10px;font-size:14px}
+.row:last-child{border:none}
+.muted{color:var(--muted);font-size:12px}
+.pill{display:inline-block;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600;background:#EEF2F8}
+.pill.g{background:#E6F6EF;color:#0b6b4a}.pill.r{background:#FDECEA;color:#9d2a22}.pill.y{background:#FFF3D6;color:#8a5a00}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.wk{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.wk button{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 14px;font-size:16px}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;color:var(--muted);font-weight:600;padding:8px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:9px 6px;border-bottom:1px solid var(--line)}
+.tblwrap{overflow-x:auto}.tbl .num{white-space:nowrap}
+.seg{display:flex;gap:8px;margin-bottom:14px}
+.seg button{flex:1;padding:12px;border-radius:12px;background:#fff;border:1px solid var(--line);font-weight:600;font-size:14px}
+.seg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+@media(min-width:900px){
+ main.wide{max-width:1180px}
+ .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+}
+header.top{} .embed header.top{display:none}.embed nav.tabs{top:0}
+</style>
+</head>
+<body>
+
+<!-- ВХІД / РЕЄСТРАЦІЯ -->
+<div id="auth" class="hidden">
+ <div class="card auth-card">
+  <div class="brand"><span class="dot"></span>Fleet XLV</div>
+  <h1 id="authTitle">Вхід</h1>
+  <p class="hint" id="authHint">Кабінет водія AVTO PARK</p>
+  <div id="authMsg"></div>
+  <form id="authForm" autocomplete="on">
+   <div id="regFields" class="hidden">
+    <label>Прізвище та ім'я</label><input id="fName" autocomplete="name" placeholder="Іван Петренко">
+    <label>Телефон</label><input id="fPhone" type="tel" autocomplete="tel" placeholder="+380...">
+   </div>
+   <label>Email</label><input id="fEmail" type="email" autocomplete="email" required>
+   <label>Пароль</label><input id="fPass" type="password" autocomplete="current-password" required minlength="6" placeholder="мінімум 6 символів">
+   <button class="btn" id="authBtn" type="submit">Увійти</button>
+  </form>
+  <div class="toggle" id="authToggle"></div>
+ </div>
+</div>
+
+<!-- ОЧІКУВАННЯ -->
+<div id="pending" class="hidden">
+ <div style="display:flex;min-height:100dvh;align-items:center;justify-content:center;padding:24px;background:var(--ink)">
+  <div class="card auth-card" style="text-align:center">
+   <div class="brand" style="justify-content:center"><span class="dot"></span>Fleet XLV</div>
+   <h1 id="pendTitle">Заявку надіслано</h1>
+   <p class="hint" id="pendText" style="margin-top:10px">Менеджер перевірить дані й підтвердить доступ. Зайдіть пізніше.</p>
+   <button class="btn sec" id="pendRefresh" style="margin-bottom:10px">Перевірити ще раз</button>
+   <button class="btn sec" id="pendOut">Вийти</button>
+  </div>
+ </div>
+</div>
+
+<!-- ЗАСТОСУНОК -->
+<div id="app" class="hidden">
+ <header class="top"><span class="dot"></span><b>Fleet XLV</b>
+  <span class="who"><a id="dashLink" href="/" class="hidden" style="color:#fff;font-size:12px;margin-right:8px">Дашборд парку</a><span id="whoName"></span> <button id="outBtn">Вийти</button></span></header>
+ <nav class="tabs" id="tabs"></nav>
+ <main id="view"></main>
+</div>
+
+<script>
+// ====================== ДОПОМІЖНЕ ======================
+const $ = s => document.querySelector(s);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = n => Math.round(Number(n)||0).toLocaleString('uk-UA').replace(/ /g,' ') + ' ₴';
+const DAYS = ['Нд','Пн','Вт','Ср','Чт','Пт','Сб'];
+const pad = n => String(n).padStart(2,'0');
+const ymd = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const parse = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); };
+const addDays = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const dm = s => { const d = parse(s); return pad(d.getDate())+'.'+pad(d.getMonth()+1); };
+function mondayOf(d){ const x = new Date(d.getFullYear(),d.getMonth(),d.getDate()); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x; }
+function weekDays(off){ const m = addDays(mondayOf(new Date()), off*7); return Array.from({length:7},(_,i)=>ymd(addDays(m,i))); }
+const dayName = s => DAYS[parse(s).getDay()];
+const todayStr = () => ymd(new Date());
+
+const EMBED = (function(){try{return window.self !== window.top;}catch(e){return true;}})();
+if (EMBED) document.documentElement.classList.add('embed');
+let db, me = null, S = {};   // S = стан застосунку
+const defaultSettings = {pct_base:55,pct_high:60,high_threshold:30000,wash_week:300};
+
+// ====================== РОЗРАХУНОК ======================
+// Умови від 12.10.2026: усі гібриди 55%; тиждень ≥ 30 000 → 60%; мийка — повернення раз на тиждень;
+// паливо на водієві; страховку не утримуємо.
+function repGross(r){ return (+r.bolt||0)+(+r.uklon||0)+(+r.other||0); }
+function weekCalc(reps, st){
+  st = Object.assign({}, defaultSettings, st||{});
+  const gross = reps.reduce((a,r)=>a+repGross(r),0);
+  const pct = gross >= st.high_threshold ? st.pct_high : st.pct_base;
+  const washSpent = reps.reduce((a,r)=>a+(+r.wash||0),0);
+  const washBack = Math.min(washSpent, st.wash_week);
+  const share = gross*pct/100;
+  return {gross, pct, share, washBack, total: share+washBack, days: reps.length,
+          bolt: reps.reduce((a,r)=>a+(+r.bolt||0),0), uklon: reps.reduce((a,r)=>a+(+r.uklon||0),0),
+          other: reps.reduce((a,r)=>a+(+r.other||0),0)};
+}
+const debtBalance = list => (list||[]).reduce((a,d)=>a+(d.kind==='charge'?+d.amount:-d.amount),0);
+
+// ====================== ВХІД ======================
+let regMode = false;
+function showOnly(id){ for (const x of ['auth','pending','app']) $('#'+x).classList.toggle('hidden', x!==id); }
+function setAuthMode(reg){
+  regMode = reg;
+  $('#regFields').classList.toggle('hidden', !reg);
+  $('#fName').required = reg; $('#fPhone').required = reg;
+  $('#authTitle').textContent = reg ? 'Реєстрація водія' : 'Вхід';
+  $('#authHint').textContent = reg ? 'Заповніть дані — менеджер підтвердить доступ' : 'Кабінет водія AVTO PARK';
+  $('#authBtn').textContent = reg ? 'Надіслати заявку' : 'Увійти';
+  $('#fPass').autocomplete = reg ? 'new-password' : 'current-password';
+  $('#authToggle').innerHTML = reg ? 'Вже є акаунт? <a id="tg">Увійти</a>' : 'Вперше? <a id="tg">Зареєструватися як водій</a>';
+  $('#tg').onclick = () => { $('#authMsg').innerHTML=''; setAuthMode(!regMode); };
+}
+const authMsg = (t,ok) => $('#authMsg').innerHTML = t ? `<div class="${ok?'ok':'err'}">${esc(t)}</div>` : '';
+const niceErr = m => ({ 'Invalid login credentials':'Невірний email або пароль',
+  'User already registered':'Цей email уже зареєстровано — натисніть «Увійти»',
+  'Email not confirmed':'Email не підтверджено — перевірте пошту' }[m] || m);
+
+$('#authForm').addEventListener('submit', async e => {
+  e.preventDefault(); authMsg(''); $('#authBtn').disabled = true;
+  const email = $('#fEmail').value.trim(), password = $('#fPass').value;
+  try {
+    if (regMode) {
+      const full_name = $('#fName').value.trim(), phone = $('#fPhone').value.trim();
+      const {data, error} = await db.auth.signUp({email, password, options:{data:{full_name, phone}}});
+      if (error) throw error;
+      if (!data.session) { authMsg('Лист підтвердження надіслано на пошту. Підтвердіть email і увійдіть.', true); setAuthMode(false); }
+      else await boot();
+    } else {
+      const {error} = await db.auth.signInWithPassword({email, password});
+      if (error) throw error;
+      await boot();
+    }
+  } catch (err) { authMsg(niceErr(err.message)); }
+  $('#authBtn').disabled = false;
+});
+async function logout(){ await db.auth.signOut(); me = null; S = {}; showOnly('auth'); setAuthMode(false); }
+$('#outBtn').onclick = logout; $('#pendOut').onclick = logout; $('#pendRefresh').onclick = () => boot();
+
+async function boot(){
+  const {data:{session}} = await db.auth.getSession();
+  if (!session) { showOnly('auth'); setAuthMode(false); return; }
+  const {data:p, error} = await db.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
+  if (error || !p) { showOnly('auth'); authMsg('Профіль не знайдено. Зверніться до менеджера.'); return; }
+  me = p;
+  if (p.status === 'pending') { $('#pendTitle').textContent='Заявку надіслано'; $('#pendText').textContent='Менеджер перевірить дані й підтвердить доступ. Зайдіть пізніше.'; showOnly('pending'); return; }
+  if (p.status === 'rejected') { $('#pendTitle').textContent='Доступ не надано'; $('#pendText').textContent='Зверніться до менеджера парку.'; showOnly('pending'); return; }
+  $('#whoName').textContent = p.full_name || session.user.email;
+  showOnly('app');
+  const staff = p.role === 'owner' || p.role === 'manager';
+  S.staff = staff; $('#dashLink').classList.toggle('hidden', !staff); S.week = 0; S.tab = staff ? 'm_over' : 'd_week';
+  S.repDate = todayStr();
+  $('#view').className = staff ? 'wide' : '';
+  buildTabs(); await load(); render();
+}
+function buildTabs(){
+  const t = S.staff
+    ? [['m_over','Огляд'],['m_rep','Звіти'],['m_drv','Водії'],['m_cars','Парк'],['m_inc','ДТП'],['m_set','Умови']]
+    : [['d_week','Тиждень'],['d_rep','Звіт'],['d_car','Авто'],['d_inc','ДТП']];
+  $('#tabs').innerHTML = t.map(([k,l])=>`<button data-k="${k}">${l}</button>`).join('');
+  $('#tabs').onclick = e => { const k = e.target.dataset.k; if (k) { S.tab = k; if (k!=='d_rep') S.repFor = null; render(); window.scrollTo(0,0); } };
+}
+
+// ====================== ЗАВАНТАЖЕННЯ ======================
+async function load(){
+  const q = (p) => p.then(r => { if (r.error) throw r.error; return r.data || []; });
+  const since = ymd(addDays(new Date(), -120));
+  const [settings, reports, incidents, cars, debts] = await Promise.all([
+    q(db.from('settings').select('*')),
+    q(db.from('reports').select('*').gte('report_date', since).order('report_date',{ascending:false}).limit(5000)),
+    q(db.from('incidents').select('*').order('created_at',{ascending:false}).limit(500)),
+    q(db.from('cars').select('*').order('plate')),
+    q(db.from('debts').select('*').order('created_at',{ascending:false}).limit(2000))
+  ]);
+  S.settings = Object.assign({}, defaultSettings, Object.fromEntries(settings.map(s=>[s.key,+s.value])));
+  S.reports = reports; S.incidents = incidents; S.cars = cars; S.debts = debts;
+  if (S.staff) {
+    const [drivers, profiles] = await Promise.all([
+      q(db.from('drivers').select('*').order('full_name')),
+      q(db.from('profiles').select('*').order('created_at',{ascending:false}))
+    ]);
+    S.drivers = drivers; S.profiles = profiles;
+    try { S.dashNames = await loadDashNames(); } catch(e) { S.dashNames = []; }
+  }
+}
+
+// Імена водіїв з дашборду (останній день у app_data) — для вибору при підтвердженні
+async function loadDashNames(){
+  const k = await db.from('app_data').select('key').like('key','day:%').order('key',{ascending:false}).limit(1);
+  if (k.error || !k.data || !k.data.length) return [];
+  const r = await db.from('app_data').select('value').eq('key', k.data[0].key).maybeSingle();
+  const parts = r.data && r.data.value && r.data.value._parts; if (!parts) return [];
+  const names = new Set();
+  Object.values(parts).forEach(arr => Array.isArray(arr) && arr.forEach(row => { const n = row && row['Водій']; if (n) names.add(String(n).trim()); }));
+  return [...names].sort();
+}
+
+// Імпорт авто з дашборду: kv:fleet (текст, номер на рядок) або номери з останнього дня
+const LAT2CYR = {A:'А',B:'В',C:'С',E:'Е',H:'Н',K:'К',M:'М',O:'О',P:'Р',T:'Т',X:'Х',I:'І'};
+const normPlate = v => String(v||'').toUpperCase().replace(/[\s\-]/g,'').replace(/[A-Z]/g, c => LAT2CYR[c] || c);
+async function dashPlates(){
+  const out = new Set();
+  const f = await db.from('app_data').select('value').eq('key','kv:fleet').maybeSingle();
+  const v = f.data && f.data.value;
+  if (typeof v === 'string') v.split(/[\n,;]+/).forEach(x => x.trim() && out.add(normPlate(x)));
+  else if (Array.isArray(v)) v.forEach(x => out.add(normPlate(x)));
+  if (!out.size) {
+    const k = await db.from('app_data').select('key').like('key','day:%').order('key',{ascending:false}).limit(1);
+    if (k.data && k.data.length) {
+      const r = await db.from('app_data').select('value').eq('key',k.data[0].key).maybeSingle();
+      const parts = r.data && r.data.value && r.data.value._parts || {};
+      Object.values(parts).forEach(arr => Array.isArray(arr) && arr.forEach(row => { if (!row) return;
+        ['Номерний знак','Держ номер авто'].forEach(c => row[c] && out.add(normPlate(row[c]))); }));
+    }
+  }
+  return [...out];
+}
+// ====================== РЕНДЕР ======================
+function render(){
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.k === S.tab));
+  const fn = VIEWS[S.tab]; $('#view').innerHTML = ''; $('#view').onclick = null; $('#view').onchange = null; fn($('#view'));
+}
+function weekNav(el, cb){
+  const days = weekDays(S.week);
+  const box = document.createElement('div'); box.className='wk';
+  box.innerHTML = `<button data-d="-1">‹</button><b class="num">${dm(days[0])} – ${dm(days[6])}${S.week===0?' · цей тиждень':''}</b><button data-d="1" ${S.week>=0?'disabled':''}>›</button>`;
+  box.onclick = e => { const d = e.target.dataset.d; if (d) { S.week += +d; cb(); } };
+  el.appendChild(box); return days;
+}
+const RD = () => S.repFor || me.driver_id;
+const myReports = () => S.reports.filter(r => r.driver_id === RD());
+
+const VIEWS = {
+// ---------- ВОДІЙ: ТИЖДЕНЬ ----------
+d_week(el){
+  const days = weekNav(el, render);
+  const by = Object.fromEntries(myReports().map(r=>[r.report_date,r]));
+  const reps = days.map(d=>by[d]).filter(Boolean);
+  const w = weekCalc(reps, S.settings);
+  el.insertAdjacentHTML('beforeend', `
+   <div class="card"><div class="muted">Ваш заробіток за тиждень</div>
+    <div class="big">${money(w.total)}</div>
+    <div class="muted">${w.days ? `Оборот ${money(w.gross)} · ваш відсоток <b>${w.pct}%</b> = ${money(w.share)}${w.washBack?` · мийка +${money(w.washBack)}`:''}` : 'Звітів за цей тиждень ще немає'}</div>
+    ${w.gross>0 && w.gross<S.settings.high_threshold ? `<div class="muted" style="margin-top:6px">До ${S.settings.pct_high}%: ще ${money(S.settings.high_threshold-w.gross)} обороту</div>`:''}
+   </div>
+   <div class="card"><h2>Дні тижня</h2>${days.map(d=>{
+     const r = by[d]; const isFuture = d>todayStr();
+     return `<div class="row"><div><b>${dayName(d)} ${dm(d)}</b>${r?`<div class="muted">Bolt ${money(r.bolt)} · Uklon ${money(r.uklon)}${+r.other?` · Інше ${money(r.other)}`:''}</div>`:''}</div>
+      <div style="text-align:right">${r?`<b class="num">${money(repGross(r)*w.pct/100)}</b><div class="muted">${w.pct}% від ${money(repGross(r))}</div>`:
+        (isFuture?'<span class="muted">—</span>':`<a class="pill y" style="cursor:pointer" data-fill="${d}">+ подати звіт</a>`)}</div></div>`;}).join('')}
+   </div>`);
+  el.onclick = e => { const d = e.target.dataset.fill; if (d) { S.repDate = d; S.tab='d_rep'; render(); } };
+},
+
+// ---------- ВОДІЙ: ЗВІТ ----------
+d_rep(el){
+  const opts = Array.from({length:S.repFor?35:8},(_,i)=>ymd(addDays(new Date(),-i)));
+  const cur = S.repDate; if (!opts.includes(cur)) opts.push(cur);
+  const r = myReports().find(x=>x.report_date===cur) || {};
+  const forDr = S.repFor ? S.drivers.find(d=>d.id===S.repFor) : null;
+  el.innerHTML = `<div class="card"><h2>${forDr?`Звіт за водія: ${esc(forDr.full_name)}`:'Звіт за зміну'}</h2>
+   <div id="repMsg"></div>
+   <label>Дата зміни</label><select id="rDate">${opts.map(d=>`<option value="${d}" ${d===cur?'selected':''}>${dayName(d)} ${dm(d)}${d===todayStr()?' (сьогодні)':''}</option>`).join('')}</select>
+   ${r.id?'<div class="ok">За цей день звіт уже є — можна виправити.</div>':''}
+   <div class="two"><div><label>Bolt, ₴</label><input id="rBolt" inputmode="decimal" placeholder="0" value="${r.bolt??''}"></div>
+   <div><label>Uklon, ₴</label><input id="rUklon" inputmode="decimal" placeholder="0" value="${r.uklon??''}"></div></div>
+   <label>Бордюри та інше, ₴</label><input id="rOther" inputmode="decimal" placeholder="0" value="${r.other??''}">
+   <div id="curbBox" class="hidden"><label>Скільки км проїхали по бордюрах</label><input id="rCurb" inputmode="decimal" value="${r.curb_km??''}"></div>
+   <div class="two"><div><label>Кілометраж за зміну</label><input id="rKm" inputmode="decimal" value="${r.km??''}"></div>
+   <div><label>Кількість поїздок</label><input id="rTrips" inputmode="numeric" value="${r.trips??''}"></div></div>
+   <label>Витрати на мийку, ₴ (якщо були)</label><input id="rWash" inputmode="decimal" placeholder="0" value="${r.wash||''}">
+   <label>План на 12 годин виконано?</label>
+   <div class="seg" id="pSeg"><button type="button" data-v="1" class="${r.plan12===true?'on':''}">Так</button><button type="button" data-v="0" class="${r.plan12===false?'on':''}">Ні</button></div>
+   <div id="pcBox" class="${r.plan12===false?'':'hidden'}"><label>Чому не виконано? (обов'язково)</label><textarea id="rPC">${esc(r.plan_comment||'')}</textarea></div>
+   <label>Вихідний (дата або «без змін»)</label><input id="rOff" value="${esc(r.dayoff_note||'')}" placeholder="напр. п'ятниця">
+   <label>Час виходу на лінію завтра</label><input id="rNext" type="time" value="${esc(r.next_start||'')}">
+   <label>Технічний стан авто (1–5)</label>
+   <select id="rTech"><option value="">—</option>${[1,2,3,4,5].map(n=>`<option ${r.tech_score===n?'selected':''}>${n}</option>`).join('')}</select>
+   <div id="tnBox" class="${r.tech_score&&r.tech_score<=3?'':'hidden'}"><label>Що саме сталось? (обов'язково при оцінці ≤3)</label><textarea id="rTN">${esc(r.tech_note||'')}</textarea></div>
+   <button class="btn" id="rSave">Надіслати звіт</button></div>`;
+  let plan = r.plan12 ?? null;
+  const upd = () => { $('#curbBox').classList.toggle('hidden', !(parseFloat($('#rOther').value)>0)); };
+  $('#rOther').oninput = upd; upd();
+  $('#pSeg').onclick = e => { const v = e.target.dataset.v; if (v===undefined) return; plan = v==='1';
+    document.querySelectorAll('#pSeg button').forEach(b=>b.classList.toggle('on', b.dataset.v===v)); $('#pcBox').classList.toggle('hidden', plan); };
+  $('#rTech').onchange = () => $('#tnBox').classList.toggle('hidden', !($('#rTech').value && +$('#rTech').value<=3));
+  $('#rDate').onchange = () => { S.repDate = $('#rDate').value; render(); };
+  $('#rSave').onclick = async () => {
+    const n = id => { const v = $(id).value.replace(',','.').trim(); return v===''?null:parseFloat(v); };
+    const msg = (t,ok) => { $('#repMsg').innerHTML = `<div class="${ok?'ok':'err'}">${esc(t)}</div>`; window.scrollTo(0,0); };
+    const rec = { driver_id: RD(), report_date: $('#rDate').value, bolt: n('#rBolt')||0, uklon: n('#rUklon')||0, other: n('#rOther')||0,
+      curb_km: n('#rCurb'), km: n('#rKm'), trips: n('#rTrips')===null?null:Math.round(n('#rTrips')), wash: n('#rWash')||0, plan12: plan,
+      plan_comment: $('#rPC').value.trim()||null, dayoff_note: $('#rOff').value.trim()||null, next_start: $('#rNext').value||null,
+      tech_score: $('#rTech').value?+$('#rTech').value:null, tech_note: $('#rTN').value.trim()||null };
+    if ([rec.bolt,rec.uklon,rec.other,rec.wash].some(x=>x<0||isNaN(x))) return msg('Суми мають бути числами від 0');
+    if (rec.other>0 && !rec.curb_km) return msg('Вкажіть, скільки км проїхали по бордюрах');
+    if (rec.km===null) return msg('Вкажіть кілометраж за зміну');
+    if (plan===null) return msg('Позначте, чи виконано план на 12 годин');
+    if (plan===false && !rec.plan_comment) return msg('Поясніть, чому план не виконано');
+    if (rec.tech_score && rec.tech_score<=3 && !rec.tech_note) return msg('Опишіть, що саме сталось з авто');
+    $('#rSave').disabled = true;
+    const {error} = await db.from('reports').upsert(rec, {onConflict:'driver_id,report_date'});
+    $('#rSave').disabled = false;
+    if (error) return msg('Не вдалося зберегти: '+error.message);
+    await load(); if (S.repFor) { S.repFor = null; S.tab='m_rep'; } else { S.tab='d_week'; S.week = 0; } render();
+  };
+},
+
+// ---------- ВОДІЙ: АВТО ----------
+d_car(el){
+  const car = S.cars[0]; const bal = debtBalance(S.debts.filter(d=>d.driver_id===me.driver_id));
+  const dt = (s) => { if(!s) return '<span class="muted">не вказано</span>'; const left = Math.round((parse(s)-new Date())/864e5);
+    return `${dm(s)}.${parse(s).getFullYear()} <span class="pill ${left<0?'r':left<30?'y':'g'}">${left<0?'прострочено':left+' дн.'}</span>`; };
+  el.innerHTML = car ? `<div class="card"><h2>${esc(car.plate)}</h2><div class="muted" style="margin-bottom:8px">${esc(car.model||'')}</div>
+    <div class="row"><span>Страховка до</span><span>${dt(car.insurance_until)}</span></div>
+    <div class="row"><span>Техогляд до</span><span>${dt(car.techpass_until)}</span></div>
+    <div class="row"><span>Ліцензія на авто до</span><span>${dt(car.license_until)}</span></div></div>`
+   : `<div class="card"><h2>Авто</h2><div class="muted">Менеджер ще не закріпив за вами авто.</div></div>`;
+  const mine = S.debts.filter(d=>d.driver_id===me.driver_id);
+  el.insertAdjacentHTML('beforeend', `<div class="card"><h2>Борг за авто / пошкодження</h2>
+    <div class="big" style="color:${bal>0?'var(--danger)':'var(--money)'}">${money(bal)}</div>
+    ${mine.slice(0,15).map(d=>`<div class="row"><span>${dm(d.created_at.slice(0,10))} · ${d.kind==='charge'?'нараховано':'сплачено'}${d.note?` · ${esc(d.note)}`:''}</span><b>${d.kind==='charge'?'+':'−'}${money(d.amount)}</b></div>`).join('') || '<div class="muted">Боргів немає</div>'}</div>`);
+},
+
+// ---------- ВОДІЙ: ДТП ----------
+d_inc(el){ incidentForm(el, me.driver_id, S.incidents.filter(i=>i.driver_id===me.driver_id)); },
+
+// ---------- МЕНЕДЖЕР: ОГЛЯД ----------
+m_over(el){
+  const pend = S.profiles.filter(p=>p.role==='driver' && p.status==='pending');
+  const t = todayStr(), y = ymd(addDays(new Date(),-1));
+  const act = S.drivers.filter(d=>d.status==='active');
+  const missing = act.filter(d=>!S.reports.some(r=>r.driver_id===d.id && r.report_date===y));
+  const days = weekDays(0);
+  const wk = act.map(d=>({d, w: weekCalc(S.reports.filter(r=>r.driver_id===d.id && days.includes(r.report_date)), S.settings)}));
+  const total = wk.reduce((a,x)=>a+x.w.gross,0);
+  el.innerHTML = `<div class="cols"><div>
+   <datalist id="dnames">${(S.dashNames||[]).map(n=>`<option value="${esc(n)}">`).join('')}</datalist><div class="card"><h2>Нові заявки водіїв ${pend.length?`<span class="pill y">${pend.length}</span>`:''}</h2>
+    ${pend.map(p=>`<div class="row"><div><b>${esc(p.full_name||'—')}</b><div class="muted">${esc(p.phone||'')}</div></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><select data-link="${p.id}" style="width:150px;margin:0;padding:8px 10px;font-size:13px"><option value="">нова картка</option>${S.drivers.filter(d=>!S.profiles.some(x=>x.driver_id===d.id)).map(d=>`<option value="${d.id}">${esc(d.full_name)}</option>`).join('')}</select><input list="dnames" data-dn="${p.id}" placeholder="Ім'я в дашборді" style="width:150px;margin:0;padding:8px 10px;font-size:13px"><button class="btn sm grn" data-ap="${p.id}">Підтвердити</button><button class="btn sm sec" data-rj="${p.id}">Відхилити</button></div></div>`).join('') || '<div class="muted">Нових заявок немає</div>'}</div>
+   <div class="card"><h2>Не подали звіт за вчора (${dm(y)})</h2>
+    ${missing.map(d=>`<div class="row"><span>${esc(d.full_name)}</span><span class="pill r">немає звіту</span></div>`).join('') || '<div class="muted">Усі подали 👍</div>'}</div>
+   </div><div>
+   <div class="card"><div class="muted">Оборот парку за цей тиждень</div><div class="big">${money(total)}</div><div class="muted">${act.length} активних водіїв</div></div>
+   <div class="card"><h2>Водії за тиждень</h2>${wk.sort((a,b)=>b.w.gross-a.w.gross).map(x=>`<div class="row"><span>${esc(x.d.full_name)}<div class="muted">${x.w.days} зв.</div></span><span style="text-align:right"><b class="num">${money(x.w.gross)}</b><div class="muted">${x.w.pct}%</div></span></div>`).join('') || '<div class="muted">Поки порожньо</div>'}</div>
+   </div></div>`;
+  el.onclick = async e => {
+    const a = e.target.dataset.ap, r = e.target.dataset.rj;
+    if (a) { e.target.disabled=true; const dn = (document.querySelector(`[data-dn="${a}"]`)||{}).value||null; const lk = (document.querySelector(`[data-link="${a}"]`)||{}).value||null; const {error} = await db.rpc('approve_driver',{p_profile:a,p_dash_name:dn&&dn.trim()||null,p_driver_id:lk}); if (error) return alert(error.message); await load(); render(); }
+    if (r) { if(!confirm('Відхилити заявку?')) return; const {error} = await db.from('profiles').update({status:'rejected'}).eq('id',r); if (error) return alert(error.message); await load(); render(); }
+  };
+},
+
+// ---------- МЕНЕДЖЕР: ЗВІТИ ----------
+m_rep(el){
+  const days = weekNav(el, render);
+  const act = S.drivers.filter(d=>d.status==='active');
+  el.insertAdjacentHTML('beforeend', `<div class="card tblwrap"><table class="tbl"><thead><tr><th>Водій</th>${days.map(d=>`<th>${dayName(d)} ${dm(d)}</th>`).join('')}<th>Тиждень</th><th>Водію</th></tr></thead><tbody>
+   ${act.map(dr=>{ const reps = S.reports.filter(r=>r.driver_id===dr.id && days.includes(r.report_date)); const w = weekCalc(reps,S.settings);
+     return `<tr><td><b>${esc(dr.full_name)}</b><div class="muted">${esc(carOf(dr.id)?.plate||'без авто')} · ${esc(dr.plan_letter)}</div></td>
+      ${days.map(d=>{const r=reps.find(x=>x.report_date===d); return `<td>${r?`<a data-rid="${r.id}" style="cursor:pointer"><b class="num">${money(repGross(r))}</b>${r.plan12===false?' <span class="pill r">план</span>':''}</a>`:(d<=todayStr()?`<a data-addrep="${dr.id}|${d}" style="cursor:pointer;color:var(--muted)">＋</a>`:'')}</td>`}).join('')}
+      <td><b class="num">${money(w.gross)}</b></td><td><b class="num">${money(w.total)}</b><div class="muted">${w.pct}%</div></td></tr>`;}).join('')}</tbody></table></div><div id="repDetail"></div>`);
+  el.onclick = async e => {
+    const ar = e.target.closest('[data-addrep]');
+    if (ar) { const [did,dt] = ar.dataset.addrep.split('|'); S.repFor = did; S.repDate = dt; S.tab = 'd_rep'; render(); window.scrollTo(0,0); return; }
+    const dl = e.target.closest('[data-delrep]');
+    if (dl) { if (!confirm('Видалити цей звіт? Це не можна скасувати.')) return; const r = await db.from('reports').delete().eq('id', dl.dataset.delrep); if (r.error) return alert(r.error.message); await load(); render(); return; }
+    const a = e.target.closest('[data-rid]'); if (!a) return; const r = S.reports.find(x=>x.id===a.dataset.rid); const dr = S.drivers.find(d=>d.id===r.driver_id);
+    $('#repDetail').innerHTML = `<div class="card"><h2>${esc(dr.full_name)} · ${dayName(r.report_date)} ${dm(r.report_date)}</h2>
+      <div class="row"><span>Bolt / Uklon / Інше</span><b>${money(r.bolt)} / ${money(r.uklon)} / ${money(r.other)}</b></div>
+      <div class="row"><span>Км (по бордюрах)</span><b>${r.km??'—'} (${r.curb_km??'—'})</b></div>
+      <div class="row"><span>Поїздок</span><b>${r.trips??'—'}</b></div>
+      <div class="row"><span>Мийка</span><b>${money(r.wash)}</b></div>
+      <div class="row"><span>План 12 год</span><b>${r.plan12?'так':'ні'}</b></div>${r.plan_comment?`<div class="muted">Пояснення: ${esc(r.plan_comment)}</div>`:''}
+      <div class="row"><span>Вихідний / вихід завтра</span><b>${esc(r.dayoff_note||'—')} / ${esc(r.next_start||'—')}</b></div>
+      <div class="row"><span>Техстан</span><b>${r.tech_score??'—'}</b></div>${r.tech_note?`<div class="muted">${esc(r.tech_note)}</div>`:''}
+      <div style="display:flex;gap:8px;margin-top:12px"><button class="btn sm sec" data-addrep="${r.driver_id}|${r.report_date}">Редагувати</button><button class="btn sm red" data-delrep="${r.id}">Видалити звіт</button></div></div>`;
+    $('#repDetail').scrollIntoView({behavior:'smooth'}); };
+},
+
+// ---------- МЕНЕДЖЕР: ВОДІЇ ----------
+m_drv(el){
+  const list = S.drivers.slice().sort((a,b)=>(a.status==='archived')-(b.status==='archived') || a.full_name.localeCompare(b.full_name));
+  const hasAcc = id => S.profiles.find(x=>x.driver_id===id);
+  el.innerHTML = `<div id="dmsg"></div>
+   <div class="card"><h2>Додати водія в базу</h2>
+    <div class="two"><div><label>Прізвище та ім'я</label><input id="nName"></div><div><label>Телефон</label><input id="nPhone" type="tel"></div></div>
+    <div class="two"><div><label>Ім'я в дашборді</label><input id="nDash" list="dnames"></div><div><label>Літера</label><select id="nLet"><option>Б</option><option selected>Г</option><option>Н</option></select></div></div>
+    <datalist id="dnames">${(S.dashNames||[]).map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
+    <button class="btn" id="nAdd">Додати водія</button>
+    <div class="muted" style="margin-top:6px">Картка створюється одразу. Коли водій сам зареєструється, у «Огляді» вкажіть цю картку у списку «нова картка» і підтвердьте: акаунт прив'яжеться до неї.</div></div>
+   ${S.cars.length?'':'<div class="err">Спершу додайте авто у вкладці «Парк» (є кнопка імпорту з дашборду).</div>'}<div class="cols">` + list.map(dr=>{
+    const car = carOf(dr.id); const ds = S.debts.filter(d=>d.driver_id===dr.id); const bal = debtBalance(ds);
+    const free = S.cars.filter(c=>!c.driver_id || c.driver_id===dr.id); const acc = hasAcc(dr.id); const arch = dr.status==='archived';
+    return `<div class="card" style="${arch?'opacity:.6':''}"><h2>${esc(dr.full_name)} <span class="pill ${arch?'':'g'}">${arch?'архів':'активний'}</span> <span class="pill ${acc?'g':'y'}">${acc?'є акаунт':'без акаунта'}</span></h2>
+     <div class="muted" style="margin-bottom:10px">${esc(dr.phone||'')}${dr.dash_name?` · у дашборді: ${esc(dr.dash_name)}`:''}</div>
+     <label>Авто</label><select data-car="${dr.id}"><option value="">— без авто —</option>${free.map(c=>`<option value="${c.id}" ${car?.id===c.id?'selected':''}>${esc(c.plate)} ${esc(c.model||'')}</option>`).join('')}</select>
+     <label>Літера розрахунку (Б/Г/Н)</label><select data-letter="${dr.id}">${['Б','Г','Н'].map(l=>`<option ${dr.plan_letter===l?'selected':''}>${l}</option>`).join('')}</select>
+     <div class="row"><span>Борг</span><b style="color:${bal>0?'var(--danger)':'var(--money)'}">${money(bal)}</b></div>
+     ${ds.slice(0,4).map(d=>`<div class="row" style="font-size:12px"><span>${dm(d.created_at.slice(0,10))} ${d.kind==='charge'?'+':'−'}${money(d.amount)}${d.note?` · ${esc(d.note)}`:''}</span><a data-deldebt="${d.id}" style="cursor:pointer;color:var(--danger)">✕</a></div>`).join('')}
+     <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><button class="btn sm sec" data-debt="${dr.id}|charge">+ Нарахувати</button><button class="btn sm sec" data-debt="${dr.id}|payment">+ Оплата</button></div>
+     <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:12px"><button class="btn sm sec" data-edit="${dr.id}">Змінити дані</button><button class="btn sm sec" data-arch="${dr.id}">${arch?'Відновити':'В архів'}</button><button class="btn sm red" data-deldr="${dr.id}">Видалити</button></div></div>`;
+  }).join('') + (list.length?'':'<div class="card muted">Водіїв ще немає. Додайте вище або підтвердьте заявку в «Огляді».</div>') + `</div>`;
+  const msg = (t,ok) => { $('#dmsg').innerHTML = `<div class="${ok?'ok':'err'}">${esc(t)}</div>`; window.scrollTo(0,0); };
+  $('#nAdd').onclick = async () => {
+    const full_name = $('#nName').value.trim(); if (!full_name) return msg("Вкажіть прізвище та ім'я");
+    const r = await db.from('drivers').insert({full_name, phone:$('#nPhone').value.trim()||null, dash_name:$('#nDash').value.trim()||null, plan_letter:$('#nLet').value});
+    if (r.error) return msg(r.error.message); await load(); render();
+  };
+  el.onchange = async e => {
+    const t = e.target;
+    if (t.dataset.car !== undefined) {
+      const did = t.dataset.car;
+      let r = await db.from('cars').update({driver_id:null}).eq('driver_id', did); if (r.error) return msg(r.error.message);
+      if (t.value) { r = await db.from('cars').update({driver_id:did}).eq('id', t.value); if (r.error) return msg(r.error.message); }
+      await load(); render();
+    }
+    if (t.dataset.letter) { const r = await db.from('drivers').update({plan_letter:t.value}).eq('id',t.dataset.letter); if (r.error) return msg(r.error.message); await load(); }
+  };
+  el.onclick = async e => {
+    const b = e.target;
+    if (b.dataset.debt) { const [id,kind] = b.dataset.debt.split('|');
+      const a = parseFloat((prompt(kind==='charge'?'Сума боргу, ₴':'Сума оплати, ₴')||'').replace(',','.')); if (!(a>0)) return;
+      const note = prompt('Коментар (за що)')||null;
+      const r = await db.from('debts').insert({driver_id:id,kind,amount:a,note}); if (r.error) return msg(r.error.message); await load(); render(); }
+    if (b.dataset.deldebt) { if (!confirm('Видалити цей запис боргу?')) return; const r = await db.from('debts').delete().eq('id', b.dataset.deldebt); if (r.error) return msg(r.error.message); await load(); render(); }
+    if (b.dataset.edit) { const dr = S.drivers.find(d=>d.id===b.dataset.edit);
+      const n = prompt("Прізвище та ім'я", dr.full_name); if (n===null) return; const ph = prompt('Телефон', dr.phone||''); if (ph===null) return; const dn = prompt("Ім'я в дашборді", dr.dash_name||''); if (dn===null) return;
+      const r = await db.from('drivers').update({full_name:n.trim()||dr.full_name, phone:ph.trim()||null, dash_name:dn.trim()||null}).eq('id',dr.id); if (r.error) return msg(r.error.message); await load(); render(); }
+    if (b.dataset.arch) { const dr = S.drivers.find(d=>d.id===b.dataset.arch); const to = dr.status==='archived'?'active':'archived';
+      if (to==='archived' && !confirm('Перенести в архів? Водій втратить доступ до кабінету, а звіти збережуться.')) return;
+      let r = await db.from('drivers').update({status:to}).eq('id',dr.id); if (r.error) return msg(r.error.message);
+      r = await db.from('profiles').update({status: to==='archived'?'rejected':'active'}).eq('driver_id',dr.id); if (r.error) return msg(r.error.message);
+      if (to==='archived') { r = await db.from('cars').update({driver_id:null}).eq('driver_id',dr.id); if (r.error) return msg(r.error.message); }
+      await load(); render(); }
+    if (b.dataset.deldr) { const dr = S.drivers.find(d=>d.id===b.dataset.deldr);
+      if (!confirm(`Видалити водія «${dr.full_name}» НАЗАВЖДИ разом з усіма його звітами, боргами й ДТП?\nЦе не можна скасувати. Якщо сумніваєтесь, оберіть «В архів».`)) return;
+      let r = await db.from('profiles').update({status:'rejected'}).eq('driver_id',dr.id); if (r.error) return msg(r.error.message);
+      r = await db.from('drivers').delete().eq('id',dr.id); if (r.error) return msg(r.error.message); await load(); render(); }
+  };
+},
+
+// ---------- МЕНЕДЖЕР: ПАРК ----------
+m_cars(el){
+  el.innerHTML = `<div class="cols"><div class="card"><h2>Додати авто</h2><div id="cmsg"></div>
+   <label>Номер</label><input id="cPlate" placeholder="ВС0000АА"><label>Марка / модель</label><input id="cModel">
+   <label>Паливо</label><select id="cFuel"><option value="hybrid">Гібрид</option><option value="petrol">Бензин</option><option value="gas">Газ</option></select>
+   <label>Страховка до</label><input id="cIns" type="date"><label>Техогляд до</label><input id="cTech" type="date"><label>Ліцензія до</label><input id="cLic" type="date">
+   <button class="btn" id="cAdd">Додати</button>
+   <hr style="border:none;border-top:1px solid var(--line);margin:18px 0"><button class="btn sec" id="cImp">Імпортувати номери з дашборду</button><div class="muted" style="margin-top:6px">Додасть номери авто, яких ще немає. Модель, паливо й терміни документів вкажете потім.</div></div>
+   <div>${S.cars.map(c=>{const dr=S.drivers.find(d=>d.id===c.driver_id); return `<div class="card"><h2>${esc(c.plate)} <span class="muted">${esc(c.model||'')}</span></h2>
+    <div class="muted">${esc(c.fuel_type)} · водій: ${dr?esc(dr.full_name):'не призначено'} <a data-delcar="${c.id}" style="cursor:pointer;color:var(--danger);margin-left:8px">видалити авто</a></div>
+    <div class="two" style="margin-top:10px"><div><label>Страховка</label><input type="date" data-cf="insurance_until|${c.id}" value="${c.insurance_until||''}"></div>
+    <div><label>Техогляд</label><input type="date" data-cf="techpass_until|${c.id}" value="${c.techpass_until||''}"></div></div>
+    <label>Ліцензія</label><input type="date" data-cf="license_until|${c.id}" value="${c.license_until||''}"></div>`;}).join('')}</div></div>`;
+  $('#cImp').onclick = async () => {
+    $('#cImp').disabled = true;
+    try {
+      const plates = await dashPlates();
+      const ok = p => /^[А-ЯІЇЄ]{2}\d{4}[А-ЯІЇЄ]{2}$/.test(p);
+      const have = new Set(S.cars.map(c => normPlate(c.plate)));
+      const add = plates.filter(p => ok(p) && !have.has(p)), bad = plates.filter(p => !ok(p));
+      if (add.length) { const r = await db.from('cars').insert(add.map(plate => ({plate}))); if (r.error) throw r.error; }
+      await load(); render();
+      $('#cmsg').innerHTML = `<div class="ok">Додано авто: ${add.length}${bad.length?`. Пропущено (незвичний формат): ${esc(bad.join(', '))}`:''}${!plates.length?'. У дашборді не знайшов номерів — додайте вручну':''}</div>`;
+    } catch (e) { $('#cmsg').innerHTML = `<div class="err">${esc(e.message)}</div>`; }
+    $('#cImp').disabled = false;
+  };
+  $('#cAdd').onclick = async () => { const plate = $('#cPlate').value.trim().toUpperCase().replace(/\s+/g,''); if (!plate) return;
+    const r = await db.from('cars').insert({plate, model:$('#cModel').value.trim()||null, fuel_type:$('#cFuel').value,
+      insurance_until:$('#cIns').value||null, techpass_until:$('#cTech').value||null, license_until:$('#cLic').value||null});
+    if (r.error) return $('#cmsg').innerHTML = `<div class="err">${esc(r.error.message)}</div>`; await load(); render(); };
+  el.onclick = async e => { const id = e.target.dataset.delcar; if (!id) return; const c = S.cars.find(x=>x.id===id);
+    if (!confirm(`Видалити авто ${c.plate}?`)) return; const r = await db.from('cars').delete().eq('id',id); if (r.error) return alert(r.error.message); await load(); render(); };
+  el.onchange = async e => { const v = e.target.dataset.cf; if (!v) return; const [f,id] = v.split('|');
+    const r = await db.from('cars').update({[f]: e.target.value||null}).eq('id',id); if (r.error) alert(r.error.message); else await load(); };
+},
+
+// ---------- МЕНЕДЖЕР: ДТП ----------
+m_inc(el){
+  el.innerHTML = `<div class="card"><h2>Звернення водіїв</h2>${S.incidents.map(i=>{const dr=S.drivers.find(d=>d.id===i.driver_id);
+    return `<div class="row" style="align-items:flex-start"><div><b>${esc(dr?.full_name||'—')}</b> <span class="pill">${i.kind==='self_damage'?'самост. пошкодження':'ДТП'}</span>
+    <div class="muted">${i.created_at.slice(0,10)} · ${esc(i.location||'')}</div><div style="font-size:13px;margin-top:4px">${esc(i.description||'')}</div></div>
+    <a data-delinc="${i.id}" style="cursor:pointer;color:var(--danger);margin-right:8px">✕</a><select data-is="${i.id}" style="width:auto;margin:0">${['new','review','resolved','rejected'].map(s=>`<option ${i.status===s?'selected':''}>${s}</option>`).join('')}</select></div>`;}).join('') || '<div class="muted">Звернень немає</div>'}</div>`;
+  el.onclick = async e => { const id = e.target.dataset.delinc; if (!id) return; if (!confirm('Видалити це звернення разом з фото?')) return;
+    const r = await db.from('incidents').delete().eq('id',id); if (r.error) return alert(r.error.message); await load(); render(); };
+  el.onchange = async e => { const id = e.target.dataset.is; if (!id) return; const r = await db.from('incidents').update({status:e.target.value}).eq('id',id); if (r.error) alert(r.error.message); else await load(); };
+},
+
+// ---------- МЕНЕДЖЕР: УМОВИ ----------
+m_set(el){
+  const s = S.settings; const f = [['pct_base','% водія (гібриди)'],['pct_high','% водія при високому тижні'],['high_threshold','Поріг за тиждень, ₴'],['wash_week','Повернення за мийку на тиждень, ₴']];
+  el.innerHTML = `<div class="card"><h2>Умови виплат</h2><div id="smsg"></div>${f.map(([k,l])=>`<label>${l}</label><input inputmode="decimal" data-sk="${k}" value="${s[k]}">`).join('')}
+   <button class="btn" id="sSave">Зберегти</button><div class="muted" style="margin-top:10px">Зміни застосовуються до розрахунків одразу, для всіх тижнів.</div></div>`;
+  $('#sSave').onclick = async () => { const rows = [...el.querySelectorAll('[data-sk]')].map(i=>({key:i.dataset.sk, value: parseFloat(i.value.replace(',','.'))}));
+    if (rows.some(r=>isNaN(r.value)||r.value<0)) return $('#smsg').innerHTML='<div class="err">Лише числа від 0</div>';
+    const r = await db.from('settings').upsert(rows,{onConflict:'key'}); if (r.error) return $('#smsg').innerHTML=`<div class="err">${esc(r.error.message)}</div>`;
+    await load(); $('#smsg').innerHTML='<div class="ok">Збережено</div>'; };
+}
+};
+const carOf = did => S.cars.find(c=>c.driver_id===did);
+
+// ---------- ДТП: форма + список (водій) ----------
+function incidentForm(el, driverId, list){
+  el.innerHTML = `<div class="card"><h2>Повідомити про подію</h2><div id="imsg"></div>
+   <div class="seg" id="iKind"><button type="button" data-v="dtp" class="on">ДТП</button><button type="button" data-v="self_damage">Самостійне пошкодження</button></div>
+   <label>Де сталось</label><input id="iLoc"><label>Що сталось</label><textarea id="iDesc"></textarea>
+   <label>Фото / відео</label><input id="iFiles" type="file" accept="image/*,video/*" multiple capture="environment">
+   <button class="btn" id="iSend">Надіслати</button></div>
+   <div class="card"><h2>Мої звернення</h2>${list.map(i=>`<div class="row"><div><b>${i.kind==='self_damage'?'Самост. пошкодження':'ДТП'}</b><div class="muted">${i.created_at.slice(0,10)} · ${esc(i.location||'')}</div></div><span class="pill">${esc(i.status)}</span></div>`).join('') || '<div class="muted">Звернень немає</div>'}</div>`;
+  let kind = 'dtp';
+  $('#iKind').onclick = e => { const v = e.target.dataset.v; if (!v) return; kind = v; document.querySelectorAll('#iKind button').forEach(b=>b.classList.toggle('on', b.dataset.v===v)); };
+  $('#iSend').onclick = async () => {
+    const m = (t,ok) => $('#imsg').innerHTML = `<div class="${ok?'ok':'err'}">${esc(t)}</div>`;
+    const desc = $('#iDesc').value.trim(); if (!desc) return m('Опишіть, що сталось');
+    $('#iSend').disabled = true;
+    const {data:inc, error} = await db.from('incidents').insert({driver_id:driverId, kind, location:$('#iLoc').value.trim()||null, description:desc, occurred_at:new Date().toISOString()}).select().single();
+    if (error) { $('#iSend').disabled=false; return m('Помилка: '+error.message); }
+    let fail = 0;
+    for (const f of $('#iFiles').files) {
+      const path = `${driverId}/${inc.id}/${Date.now()}_${f.name.replace(/[^\w.\-]/g,'_')}`;
+      const up = await db.storage.from('incident-media').upload(path, f);
+      if (up.error) { fail++; continue; }
+      await db.from('incident_media').insert({incident_id:inc.id, driver_id:driverId, storage_path:path, kind:f.type.startsWith('video')?'video':'photo'});
+    }
+    await load(); render(); $('#imsg').innerHTML = `<div class="${fail?'err':'ok'}">${fail?`Звернення надіслано, але ${fail} файл(ів) не завантажилось`:'Звернення надіслано менеджеру'}</div>`;
+  };
+}
+
+// ====================== СТАРТ ======================
+(function init(){
+  if (!window.supabase) { document.body.innerHTML = '<p style="padding:24px">Не вдалося завантажити додаток. Перевірте інтернет і оновіть сторінку.</p>'; return; }
+  db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  setAuthMode(false);
+  db.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') { showOnly('auth'); } });
+  boot().catch(e => { showOnly('auth'); authMsg('Помилка: '+e.message); });
+})();
+</script>
+</body>
+</html>
