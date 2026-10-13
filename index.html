@@ -3547,22 +3547,19 @@ function weekAnalyticsHtml(){
 
 
 /* ===== Кабінет водіїв: публікація тижня (api_days) ===== */
-async function publishWeek(){
-  var st=document.getElementById('pubStatus');
-  function say(t,bad){if(st){st.style.color=bad?'var(--bad,#c0392b)':'var(--muted)';st.innerHTML=t;}}
+async function publishWeekCore(mon){
+  if(typeof supa==='undefined'||!supa)return {err:'Немає зв’язку з базою.'};
+  if(!mon)return {err:'Спочатку оберіть тиждень.'};
   try{
-    if(typeof supa==='undefined'||!supa){say('Немає зв’язку з базою.',1);return;}
-    if(!weekMon){say('Спочатку оберіть тиждень.',1);return;}
-    say('Публікую…');
     var _CY={'А':'A','В':'B','Е':'E','І':'I','Ї':'I','Є':'E','Ґ':'G','К':'K','М':'M','Н':'H','О':'O','Р':'P','С':'C','Т':'T','У':'U','Х':'X'};
     var NPL2=function(p){return String(p||'').replace(/\s|-/g,'').toUpperCase().replace(/[А-ЯІЇЄҐ]/g,function(c){return _CY[c]||c;});};
     var cr=await supa.from('cars').select('plate,driver_id');
     var dr=await supa.from('drivers').select('id,full_name,dash_name,status');
-    if(cr.error||dr.error){say('Помилка: '+((cr.error||dr.error).message||'')+'. Чи запущено api_days.sql та схему кабінету?',1);return;}
+    if(cr.error||dr.error){return {err:'Помилка: '+((cr.error||dr.error).message||'')+'. Чи запущено api_days.sql та схему кабінету?'};}
     var byPlate={},byName={};
     (cr.data||[]).forEach(function(c){if(c.driver_id&&c.plate)byPlate[NPL2(c.plate)]=c.driver_id;});
     (dr.data||[]).forEach(function(d){[d.dash_name,d.full_name].forEach(function(n){if(n&&n.trim())byName[rpt_toks(n).join('|')]=d.id;});});
-    var acc={},unm={},keys=weekKeys(weekMon);
+    var acc={},unm={},keys=weekKeys(mon);
     keys.forEach(function(k){
       if(!DAYS||!DAYS[k])return;
       var H=(typeof rptHy==='function')?rptHy(k):DAYS[k];var drv=(H&&H.drivers)||[];
@@ -3580,13 +3577,32 @@ async function publishWeek(){
     var rows=Object.keys(acc).map(function(x){var r=acc[x];r.bolt_net=Math.round(r.bolt_net*100)/100;r.uklon_net=Math.round(r.uklon_net*100)/100;r.km=Math.round(r.km*10)/10;return r;});
     for(var i=0;i<rows.length;i+=200){
       var up=await supa.from('api_days').upsert(rows.slice(i,i+200),{onConflict:'driver_id,day'});
-      if(up.error){say('Помилка запису: '+up.error.message,1);return;}
+      if(up.error){return {err:'Помилка запису: '+up.error.message};}
     }
-    var um=Object.keys(unm);
+    return {n:rows.length,unm:Object.keys(unm)};
+  }catch(e){return {err:'Помилка: '+(e&&e.message||e)};}
+}
+async function publishWeek(){
+  var st=document.getElementById('pubStatus');
+  function say(t,bad){if(st){st.style.color=bad?'var(--bad,#c0392b)':'var(--muted)';st.innerHTML=t;}}
+  say('Публікую…');
+  var R=await publishWeekCore(weekMon);
+  if(R.err){say(R.err,1);return;}
+  var um=R.unm,rows={length:R.n};
     var msg='✅ Опубліковано записів: <b>'+rows.length+'</b> (водій × день).';
     if(um.length)msg+='<br>⚠ Не знайдено у кабінеті: <b>'+um.map(rpt_esc).join(', ')+'</b>.<br>Щоб вони з’явились: у Кабінеті водіїв → Водії → закріпіть авто за водієм (або впишіть «Ім’я в дашборді»), потім натисніть кнопку ще раз.';
     say(msg,0);
-  }catch(e){say('Помилка: '+(e&&e.message||e),1);}
+}
+/* Автопублікація: після кожного завантаження дня водії бачать нові цифри самі */
+var _autoPubT=null,_autoPubWeeks={};
+function autoPublish(dateOrMon){
+  try{if(!dateOrMon)return;var m=weekStartOf(String(dateOrMon).slice(0,10));_autoPubWeeks[m]=1;
+  clearTimeout(_autoPubT);_autoPubT=setTimeout(async function(){
+    var ws=Object.keys(_autoPubWeeks);_autoPubWeeks={};
+    var unm={},err=null;
+    for(var i=0;i<ws.length;i++){var R=await publishWeekCore(ws[i]);if(R&&R.err){err=R.err;console.warn('autoPublish',R.err);}else if(R){R.unm.forEach(function(n){unm[n]=1;});}}
+    var st=document.getElementById('pubStatus');if(st&&ws.length){var u=Object.keys(unm);st.style.color=err?'var(--bad,#c0392b)':'var(--muted)';st.innerHTML=err?('⚠ Водіям не оновилось: '+err):('🔄 Водіям оновлюється автоматично'+(u.length?'<br>⚠ Не знайдено в кабінеті: <b>'+u.map(rpt_esc).join(', ')+'</b> — закріпіть за ними авто в «Кабінет водіїв → Водії/Парк»':''));}
+  },2500);}catch(e){console.warn(e);}
 }
 function renderWeek(){var el=document.getElementById('week');if(!el)return;
  if(!DAYS||!Object.keys(DAYS).length){el.innerHTML='<h1>Аналіз за <span class="accent">тиждень</span></h1><p class="sub">Ще нема даних.</p>';return;}
@@ -3598,7 +3614,7 @@ function renderWeek(){var el=document.getElementById('week');if(!el)return;
   +'<div class="wk-nav"><button class="wk-arrow" onclick="weekStep(-1)">\u2039</button>'
   +'<div class="wk-range">'+_wkLab(mon)+' \u2013 '+_wkLab(sun)+'<span class="wk-sub">Пн\u2013Нд \u00b7 '+A.present.length+' дн. з даними</span></div>'
   +'<button class="wk-arrow" onclick="weekStep(1)">\u203a</button></div>'
-  +'<div style="text-align:center;margin:10px 0"><button class="wk-arrow" style="width:auto;border-radius:20px;padding:0 16px;font-size:14px;font-weight:700" onclick="publishWeek()">\ud83d\udce4 Опублікувати тиждень водіям</button><div id="pubStatus" style="font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5"></div></div>';
+  +'<div style="text-align:center;margin:10px 0"><div id="pubStatus" style="font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5"></div></div>';
  if(!A.present.length){el.innerHTML=head+'<p class="sub">За цей тиждень нема даних. Гортай \u2039 \u203a до тижня з даними.</p>';return;}
  var T=A.list.reduce(function(a,m){a.net+=m.net;a.gross+=m.gross;a.orders+=m.orders;a.online+=m.online;return a;},{net:0,gross:0,orders:0,online:0});
  function strip(m){return '<div class="wk-strip">'+A.keys.map(function(k,i){var pd=m.perDay[k];var cls=pd?(pd.done?'d':'u'):'n';var ti=DL[i]+' '+_wkLab(k)+(pd?(': '+Math.round(pd.net)+' \u20b4'):' \u2014');return '<span class="wk-cell '+cls+'" title="'+ti+'">'+DL[i].slice(0,1)+'</span>';}).join('')+'</div>';}
@@ -3672,7 +3688,7 @@ function renderWeekDriver(name){var el=document.getElementById('week');if(!el)re
  try{window.scrollTo(0,0);}catch(e){}}
 
 window.addEventListener('message',function(e){if(e.data&&e.data.cabinetExit&&e.origin===location.origin){try{showView('overview');window.scrollTo(0,0);}catch(x){}}});
-function showView(v){view=v;try{localStorage.setItem('lastView',v);}catch(e){}document.getElementById('overview').classList.toggle('hide',v!=='overview');document.getElementById('owner').classList.toggle('hide',v!=='owner');document.getElementById('cars').classList.toggle('hide',v!=='cars');document.getElementById('settings').classList.toggle('hide',v!=='settings');document.getElementById('morning').classList.toggle('hide',v!=='morning');document.getElementById('drivers').classList.toggle('hide',v!=='drivers');document.getElementById('report').classList.toggle('hide',v!=='report');document.getElementById('week').classList.toggle('hide',v!=='week');document.getElementById('standing').classList.toggle('hide',v!=='standing');document.getElementById('history').classList.toggle('hide',v!=='history');document.getElementById('branding').classList.toggle('hide',v!=='branding');document.getElementById('coverage').classList.toggle('hide',v!=='coverage');document.getElementById('status').classList.toggle('hide',v!=='status');document.getElementById('tracker').classList.toggle('hide',v!=='tracker');var _rv=document.getElementById('rent');if(_rv)_rv.classList.toggle('hide',v!=='rent');var _tv=document.getElementById('trent');if(_tv)_tv.classList.toggle('hide',v!=='trent');var _hv=document.getElementById('help');if(_hv)_hv.classList.toggle('hide',v!=='help');var _dv=document.getElementById('dyn');if(_dv)_dv.classList.toggle('hide',v!=='dyn');var _cv=document.getElementById('cabinet');if(_cv)_cv.classList.toggle('hide',v!=='cabinet');if(v==='cabinet'){var _cf=document.getElementById('cabFrame');if(_cf&&!_cf.getAttribute('src'))_cf.setAttribute('src','/driver.html');}if(v!=='status'&&window._statusTimer){clearTimeout(window._statusTimer);window._statusTimer=null;}document.getElementById('detail').classList.add('hide');if(v==='rent'&&typeof renderRent==='function')renderRent();if(v==='trent'&&typeof renderTaxiRent==='function')renderTaxiRent();if(v==='help'&&typeof renderHelp==='function')renderHelp();if(v==='dyn'&&typeof renderDyn==='function')renderDyn();if(v==='cars')renderCars();if(v==='settings'){renderSettings();renderDriverNames();}if(v==='morning')renderMorning();if(v==='drivers')renderDrivers();if(v==='report')renderReport();if(v==='week')renderWeek();if(v==='standing')renderStanding();if(v==='history')renderHistory();if(v==='branding')renderBranding();if(v==='coverage')renderCoverage();if(v==='status')renderStatus();if(v==='tracker')renderTracker();if(v==='overview')renderStandingMini();(function(){var _nav=document.getElementById('topnav');if(!_nav)return;[..._nav.querySelectorAll('button[data-v]')].forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v));[..._nav.querySelectorAll('.ncat')].forEach(function(c){var has=[...c.querySelectorAll('button[data-v]')].some(b=>b.dataset.v===v);c.classList.toggle('active',has);c.classList.remove('open');});})();if(v==='owner')renderOwner();window.scrollTo(0,0);}
+function showView(v){view=v;try{localStorage.setItem('lastView',v);}catch(e){}document.getElementById('overview').classList.toggle('hide',v!=='overview');document.getElementById('owner').classList.toggle('hide',v!=='owner');document.getElementById('cars').classList.toggle('hide',v!=='cars');document.getElementById('settings').classList.toggle('hide',v!=='settings');document.getElementById('morning').classList.toggle('hide',v!=='morning');document.getElementById('drivers').classList.toggle('hide',v!=='drivers');document.getElementById('report').classList.toggle('hide',v!=='report');document.getElementById('week').classList.toggle('hide',v!=='week');document.getElementById('standing').classList.toggle('hide',v!=='standing');document.getElementById('history').classList.toggle('hide',v!=='history');document.getElementById('branding').classList.toggle('hide',v!=='branding');document.getElementById('coverage').classList.toggle('hide',v!=='coverage');document.getElementById('status').classList.toggle('hide',v!=='status');document.getElementById('tracker').classList.toggle('hide',v!=='tracker');var _rv=document.getElementById('rent');if(_rv)_rv.classList.toggle('hide',v!=='rent');var _tv=document.getElementById('trent');if(_tv)_tv.classList.toggle('hide',v!=='trent');var _hv=document.getElementById('help');if(_hv)_hv.classList.toggle('hide',v!=='help');var _dv=document.getElementById('dyn');if(_dv)_dv.classList.toggle('hide',v!=='dyn');var _cv=document.getElementById('cabinet');if(_cv)_cv.classList.toggle('hide',v!=='cabinet');if(v==='cabinet'){var _cf=document.getElementById('cabFrame');if(_cf&&!_cf.getAttribute('src'))_cf.setAttribute('src','/driver.html');try{var _t=new Date(),_p=new Date(_t.getTime()-7*864e5),_f=function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};autoPublish(_f(_t));autoPublish(_f(_p));}catch(e){}}if(v!=='status'&&window._statusTimer){clearTimeout(window._statusTimer);window._statusTimer=null;}document.getElementById('detail').classList.add('hide');if(v==='rent'&&typeof renderRent==='function')renderRent();if(v==='trent'&&typeof renderTaxiRent==='function')renderTaxiRent();if(v==='help'&&typeof renderHelp==='function')renderHelp();if(v==='dyn'&&typeof renderDyn==='function')renderDyn();if(v==='cars')renderCars();if(v==='settings'){renderSettings();renderDriverNames();}if(v==='morning')renderMorning();if(v==='drivers')renderDrivers();if(v==='report')renderReport();if(v==='week')renderWeek();if(v==='standing')renderStanding();if(v==='history')renderHistory();if(v==='branding')renderBranding();if(v==='coverage')renderCoverage();if(v==='status')renderStatus();if(v==='tracker')renderTracker();if(v==='overview')renderStandingMini();(function(){var _nav=document.getElementById('topnav');if(!_nav)return;[..._nav.querySelectorAll('button[data-v]')].forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v));[..._nav.querySelectorAll('.ncat')].forEach(function(c){var has=[...c.querySelectorAll('button[data-v]')].some(b=>b.dataset.v===v);c.classList.toggle('active',has);c.classList.remove('open');});})();if(v==='owner')renderOwner();window.scrollTo(0,0);}
 function daybar(){const S=shown();const pv=S.map(o=>o.pace_net).filter(x=>x!=null).sort((a,b)=>a-b);const np=pv.length?Math.round(pv[Math.floor(pv.length/2)]):null;const ok=np!=null&&np>=HOURLY;const col=np==null?'var(--amber)':(ok?'var(--good)':'var(--bad)');
 document.getElementById('daybar').innerHTML=`<span class="dot" style="background:${col}"></span><div>Середній темп по парку — <b>${np==null?'—':np+' ₴/год чистими'}</b> (норма ${HOURLY} ₴/год). `+(ok?'Парк тримає норму — гарний день, тисніть.':'Темп нижче норми — варто підганяти водіїв.')+`</div>`;}
 /* ===== ЧИ ПРАЦЮВАВ ВОДІЙ У ЦЕЙ ДЕНЬ =====
@@ -5930,7 +5946,7 @@ async function cloudLoadDay(ymd){
   }catch(e){console.error(e);}
   return null;
 }
-async function cloudSaveDay(d){if(!supa||!d||!d.date)return;try{await supa.from("app_data").upsert({key:"day:"+d.date,value:d});}catch(e){console.error(e);}}
+async function cloudSaveDay(d){if(!supa||!d||!d.date)return;try{await supa.from("app_data").upsert({key:"day:"+d.date,value:d});autoPublish(d.date);}catch(e){console.error(e);}}
 async function cloudDeleteAllDays(){if(!supa)return;try{await supa.from("app_data").delete().like("key","day:%");}catch(e){console.error(e);}}
 async function cloudSaveKV(k,v){if(!supa)return;try{await supa.from("app_data").upsert({key:"kv:"+k,value:v});}catch(e){console.error(e);}}
 async function cloudLoadKV(){if(!supa)return;try{const r=await supa.from("app_data").select("key,value").in("key",["kv:fleet","kv:notes","kv:drvpass","kv:planfuel","kv:bordur","kv:plannames","kv:planorder","kv:drv_names","kv:drvdeleted","kv:promo","kv:boltbrand","kv:boltearn","kv:uklonbrand","kv:brand_fix","kv:brandsplit","kv:pct_cuts","kv:drv_cat","kv:rent","kv:dhcfg"]);if(r.error){console.error(r.error);return;}(r.data||[]).forEach(x=>{if(x.key==="kv:rent"&&x.value&&typeof rentCloudMerge==="function"){try{rentCloudMerge(x.value);}catch(e){}}
