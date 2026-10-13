@@ -338,7 +338,7 @@ function buildTabs(){
 async function load(){
   const q = (p) => p.then(r => { if (r.error) throw r.error; return r.data || []; });
   const since = ymd(addDays(new Date(), -120));
-  const [settings, reports, incidents, cars, debts, apiRows, plansRows, payRows] = await Promise.all([
+  const [settings, reports, incidents, cars, debts, apiRows, plansRows, payRows, mediaRows] = await Promise.all([
     q(db.from('settings').select('*')),
     q(db.from('reports').select('*').gte('report_date', since).order('report_date',{ascending:false}).limit(5000)),
     q(db.from('incidents').select('*').order('created_at',{ascending:false}).limit(500)),
@@ -346,8 +346,10 @@ async function load(){
     q(db.from('debts').select('*').order('created_at',{ascending:false}).limit(2000)),
     q(db.from('api_days').select('*').gte('day', since).limit(20000)).catch(() => []),
     q(db.from('pay_plans').select('*').order('code')).catch(() => null),
-    q(db.from('payouts').select('*').limit(5000)).catch(() => null)
+    q(db.from('payouts').select('*').limit(5000)).catch(() => null),
+    q(db.from('incident_media').select('*').order('created_at').limit(3000)).catch(() => [])
   ]);
+  S.media = {}; (mediaRows||[]).forEach(m => (S.media[m.incident_id] = S.media[m.incident_id] || []).push(m));
   S.payMissing = payRows === null;
   S.payouts = Object.fromEntries((payRows||[]).map(p => [p.driver_id+'|'+String(p.week_start).slice(0,10), p]));
   S.plansMissing = plansRows === null;
@@ -460,7 +462,7 @@ function drvCard(el, dr){
     <div class="card tblwrap"><h2>Історія тижнів</h2><table class="tbl"><thead><tr><th>Тиждень</th><th class="r">Оборот</th><th class="r">%</th><th class="r">Нараховано</th><th>Виплата</th></tr></thead><tbody>
      ${hist.map(h=>`<tr class="${h.w.days?'':'muted'}"><td>${dm(h.days[0])} – ${dm(h.days[6])}</td><td class="r num">${money(h.w.gross)}</td><td class="r num">${h.w.pct}%</td><td class="r num"><b>${money(h.w.total)}</b></td><td>${h.po?`<span class="pill g">✓ ${money(h.po.amount)}</span>`:(h.w.total>0?'<span class="pill y">не виплачено</span>':'—')}</td></tr>`).join('')}</tbody></table></div>
     <div class="card"><h2>Останні 14 днів</h2>${recent.map(e=>`<div class="row"><span><b>${dayName(e.report_date)} ${dm(e.report_date)}</b><div class="muted">Bolt ${money(e.bolt)} · Uklon ${money(e.uklon)}${e.other?` · Інше ${money(e.other)}`:''}</div></span><span style="text-align:right"><b class="num">${money(repGross(e))}</b><div>${srcPill(e)}</div></span></div>`).join('') || '<div class="muted">Даних ще немає</div>'}</div>
-    <div class="card"><h2>ДТП і пошкодження</h2>${incs.map(i=>`<div class="row"><div><b>${i.kind==='self_damage'?'Самост. пошкодження':'ДТП'}</b><div class="muted">${i.created_at.slice(0,10)} · ${esc(i.location||'')}</div></div><span class="pill ${i.status==='new'?'r':i.status==='review'?'y':'g'}">${esc(i.status)}</span></div>`).join('') || '<div class="muted">Звернень немає</div>'}</div>
+    <div class="card"><h2>ДТП і пошкодження</h2>${incs.map(i=>`<div class="row"><div><b>${i.kind==='self_damage'?'Самост. пошкодження':'ДТП'}</b><div class="muted">${i.created_at.slice(0,10)} · ${esc(i.location||'')}</div></div><span class="pill ${i.status==='new'?'r':i.status==='review'?'y':'g'}">${esc(incSt(i.status))}</span></div>${i.description?`<div style="font-size:13px">${esc(i.description)}</div>`:''}${mediaBox(i.id)}`).join('') || '<div class="muted">Звернень немає</div>'}</div>
    </div><div>
     <div class="card"><h2>Дані водія</h2>
      <div class="two">${fld('fN',"Прізвище та ім'я",dr.full_name)}${fld('fP','Телефон',dr.phone,'tel')}</div>
@@ -857,13 +859,20 @@ m_cars(el){
 
 // ---------- МЕНЕДЖЕР: ДТП ----------
 m_inc(el){
-  el.innerHTML = `<div class="card"><h2>Звернення водіїв</h2>${S.incidents.map(i=>{const dr=S.drivers.find(d=>d.id===i.driver_id);
-    return `<div class="row" style="align-items:flex-start"><div><b>${esc(dr?.full_name||'—')}</b> <span class="pill">${i.kind==='self_damage'?'самост. пошкодження':'ДТП'}</span>
-    <div class="muted">${i.created_at.slice(0,10)} · ${esc(i.location||'')}</div><div style="font-size:13px;margin-top:4px">${esc(i.description||'')}</div></div>
-    <a data-delinc="${i.id}" style="cursor:pointer;color:var(--danger);margin-right:8px">✕</a><select data-is="${i.id}" style="width:auto;margin:0">${['new','review','resolved','rejected'].map(s=>`<option ${i.status===s?'selected':''}>${s}</option>`).join('')}</select></div>`;}).join('') || '<div class="muted">Звернень немає</div>'}</div>`;
-  el.onclick = async e => { const id = e.target.dataset.delinc; if (!id) return; if (!confirm('Видалити це звернення разом з фото?')) return;
+  const f = S.incFilter || 'open';
+  const list = S.incidents.filter(i => f==='all' || (f==='open') === (i.status==='new'||i.status==='review'));
+  el.innerHTML = `<div class="toolbar noprint" style="margin-bottom:12px">${[['open','Потребують рішення'],['done','Закриті'],['all','Усі']].map(([k,l])=>`<span class="chip ${f===k?'on':''}" data-f="${k}">${l}</span>`).join('')}</div>
+  <div class="card"><h2>Звернення водіїв</h2>${list.map(i=>{const dr=S.drivers.find(d=>d.id===i.driver_id);
+    return `<div style="padding:12px 0;border-top:1px solid var(--line)"><div class="row" style="align-items:flex-start;border:0;padding:0"><div><b>${esc(dr?.full_name||'—')}</b> <span class="pill">${i.kind==='self_damage'?'самост. пошкодження':'ДТП'}</span>
+    <div class="muted">${i.created_at.slice(0,10)} · ${esc(i.location||'місце не вказано')}</div><div style="font-size:13px;margin-top:4px">${esc(i.description||'')}</div></div>
+    <div class="toolbar"><select data-is="${i.id}" style="width:auto;margin:0">${Object.keys(INC_ST).map(s=>`<option value="${s}" ${i.status===s?'selected':''}>${INC_ST[s]}</option>`).join('')}</select><a data-delinc="${i.id}" title="Видалити" style="cursor:pointer;color:var(--bad)">✕</a></div></div>${mediaBox(i.id)}</div>`;}).join('') || '<div class="muted">Звернень немає</div>'}</div>`;
+  fillMedia(el);
+  el.onclick = async e => {
+    if (e.target.dataset.f) { S.incFilter = e.target.dataset.f; return render(); }
+    const id = e.target.dataset.delinc; if (!id) return; if (!confirm('Видалити це звернення разом з фото?')) return;
+    const paths = (S.media[id]||[]).map(m=>m.storage_path); if (paths.length) await db.storage.from('incident-media').remove(paths).catch(()=>{});
     const r = await db.from('incidents').delete().eq('id',id); if (r.error) return alert(r.error.message); await load(); render(); };
-  el.onchange = async e => { const id = e.target.dataset.is; if (!id) return; const r = await db.from('incidents').update({status:e.target.value}).eq('id',id); if (r.error) alert(r.error.message); else await load(); };
+  el.onchange = async e => { const id = e.target.dataset.is; if (!id) return; const r = await db.from('incidents').update({status:e.target.value}).eq('id',id); if (r.error) alert(r.error.message); else { await load(); render(); } };
 },
 
 // ---------- МЕНЕДЖЕР: УМОВИ ----------
@@ -927,13 +936,27 @@ m_set(el){
 const carOf = did => S.cars.find(c=>c.driver_id===did);
 
 // ---------- ДТП: форма + список (водій) ----------
+const INC_ST = {new:'🆕 Нове', review:'🔎 В роботі', resolved:'✅ Вирішено', rejected:'⛔ Відхилено'};
+const incSt = s => INC_ST[s] || s;
+const mediaBox = id => (S.media && S.media[id] && S.media[id].length) ? `<div class="media" data-media="${id}" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><span class="muted">Завантажую фото…</span></div>` : '';
+async function fillMedia(root){
+  for (const box of root.querySelectorAll('[data-media]')) {
+    const list = S.media[box.dataset.media] || [];
+    const r = await db.storage.from('incident-media').createSignedUrls(list.map(m=>m.storage_path), 3600);
+    if (r.error || !r.data) { box.innerHTML = '<span class="muted">Не вдалось відкрити фото: '+esc(r.error?.message||'')+'</span>'; continue; }
+    box.innerHTML = r.data.map((x,i) => !x.signedUrl ? '' : (list[i].kind==='video'
+      ? `<a href="${x.signedUrl}" target="_blank" class="pill">🎬 відео ${i+1}</a>`
+      : `<a href="${x.signedUrl}" target="_blank"><img src="${x.signedUrl}" style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid var(--line)"></a>`)).join('') || '<span class="muted">Файлів немає</span>';
+  }
+}
 function incidentForm(el, driverId, list){
   el.innerHTML = `<div class="card"><h2>Повідомити про подію</h2><div id="imsg"></div>
    <div class="seg" id="iKind"><button type="button" data-v="dtp" class="on">ДТП</button><button type="button" data-v="self_damage">Самостійне пошкодження</button></div>
    <label>Де сталось</label><input id="iLoc"><label>Що сталось</label><textarea id="iDesc"></textarea>
    <label>Фото / відео</label><input id="iFiles" type="file" accept="image/*,video/*" multiple capture="environment">
    <button class="btn" id="iSend">Надіслати</button></div>
-   <div class="card"><h2>Мої звернення</h2>${list.map(i=>`<div class="row"><div><b>${i.kind==='self_damage'?'Самост. пошкодження':'ДТП'}</b><div class="muted">${i.created_at.slice(0,10)} · ${esc(i.location||'')}</div></div><span class="pill">${esc(i.status)}</span></div>`).join('') || '<div class="muted">Звернень немає</div>'}</div>`;
+   <div class="card"><h2>Мої звернення</h2>${list.map(i=>`<div class="row"><div><b>${i.kind==='self_damage'?'Самост. пошкодження':'ДТП'}</b><div class="muted">${i.created_at.slice(0,10)} · ${esc(i.location||'')}</div></div><span class="pill">${esc(incSt(i.status))}</span></div>${mediaBox(i.id)}`).join('') || '<div class="muted">Звернень немає</div>'}</div>`;
+  fillMedia(el);
   let kind = 'dtp';
   $('#iKind').onclick = e => { const v = e.target.dataset.v; if (!v) return; kind = v; document.querySelectorAll('#iKind button').forEach(b=>b.classList.toggle('on', b.dataset.v===v)); };
   $('#iSend').onclick = async () => {
