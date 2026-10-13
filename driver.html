@@ -628,7 +628,10 @@ function incidentForm(el, driverId, list){
 // ====================== СТАРТ ======================
 (function init(){
   if (!window.supabase) { document.body.innerHTML = '<p style="padding:24px">Не вдалося завантажити додаток. Перевірте інтернет і оновіть сторінку.</p>'; return; }
-  db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // Всередині дашборда — спільна сесія з дашбордом (менеджер).
+  // Окрема сторінка driver.html (водії) — власне сховище, щоб вхід водія НЕ підміняв сесію менеджера.
+  db = EMBED ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+             : supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {auth:{storageKey:'sb-driver-cabinet-auth'}});
   setAuthMode(false);
   db.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') { showOnly('auth'); } });
   boot().catch(e => { showOnly('auth'); authMsg('Помилка: '+e.message); });
