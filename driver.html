@@ -134,42 +134,42 @@ const EMBED = (function(){try{return window.self !== window.top;}catch(e){return
 if (EMBED) document.documentElement.classList.add('embed');
 let db, me = null, S = {};   // S = стан застосунку
 const defaultSettings = {wash_week:300};
-// Шкали виплати за літерами (відсоток залежить від денного обороту водія). Менеджер міняє їх у вкладці «Умови».
-const PLAN_DEF = {
-  'Б':{lt1:1875,p1:50,lt2:2375,p2:55,p3:60},
-  'Г':{lt1:2850,p1:45,lt2:3300,p2:50,p3:55},
-  'Н':{lt1:2850,p1:40,lt2:3350,p2:45,p3:50}
-};
-const PLAN_NAMES = {'Б':'Бензин','Г':'Гібрид','Н':'Гібрид (нові умови)'};
+// Плани виплати (літера → шкала). Кожен план: період рахунку («за добу» або «за тиждень») і сходинки «від суми → %».
+// Сходинка діє, коли оборот ≥ її «від». Менеджер додає/міняє плани у вкладці «Умови» (таблиця pay_plans).
+const PLAN_DEFAULTS = [
+  {code:'Б', name:'Бензин',              period:'day', tiers:[{from:0,pct:50},{from:1875,pct:55},{from:2375,pct:60}]},
+  {code:'Г', name:'Гібрид',              period:'day', tiers:[{from:0,pct:45},{from:2850,pct:50},{from:3300,pct:55}]},
+  {code:'Н', name:'Гібрид (нові умови)', period:'day', tiers:[{from:0,pct:40},{from:2850,pct:45},{from:3350,pct:50}]}
+];
 const LAT2LET = {B:'Б',G:'Г',H:'Н'};
-function planOfLetter(letter, st){
-  const L = PLAN_DEF[letter] ? letter : (LAT2LET[String(letter).toUpperCase()] || 'Г');
-  const d = PLAN_DEF[L], o = {};
-  ['lt1','p1','lt2','p2','p3'].forEach(k => { const v = st && st['plan:'+L+':'+k]; o[k] = (v==null || isNaN(v)) ? d[k] : +v; });
-  return o;
+const plansList = () => (S.plans && S.plans.length) ? S.plans : PLAN_DEFAULTS;
+function planByCode(code){
+  const L = plansList();
+  return L.find(p=>p.code===code) || L.find(p=>p.code===LAT2LET[String(code).toUpperCase()]) || L.find(p=>p.code==='Г') || L[0];
 }
-// відсоток за добу: чим більший оборот дня, тим вищий відсоток
-function dayPct(letter, gross, st){
-  if (!(gross > 0)) return 0;
-  const p = planOfLetter(letter, st);
-  return gross < p.lt1 ? p.p1 : gross < p.lt2 ? p.p2 : p.p3;
+function tierPct(plan, base){
+  if (!(base > 0)) return 0;
+  const t = (plan.tiers||[]).slice().sort((x,y)=>x.from-y.from);
+  let pct = t.length ? t[0].pct : 0;
+  for (const x of t) if (base >= x.from) pct = x.pct;
+  return pct;
 }
-function nextTier(letter, gross, st){
-  const p = planOfLetter(letter, st);
-  if (gross < p.lt1) return {pct:p.p1, next:p.p2, need:p.lt1-gross};
-  if (gross < p.lt2) return {pct:p.p2, next:p.p3, need:p.lt2-gross};
-  return null;
+function tierNext(plan, base){
+  const t = (plan.tiers||[]).slice().sort((x,y)=>x.from-y.from);
+  const nx = t.find(x => x.from > base);
+  return nx ? {pct:nx.pct, need:nx.from-base} : null;
 }
+const dayPct = (code, gross) => tierPct(planByCode(code), gross);
 const letterOf = did => ((S.drivers||[]).find(d=>d.id===did)||{}).plan_letter || 'Г';
 
-// ====================== РОЗРАХУНОК ======================
-// Виплата = сума по днях (оборот дня × відсоток за шкалою літери водія) + повернення за мийку (до ліміту на тиждень).
-// Паливо на водієві; страховку не утримуємо.
 function repGross(r){ return (+r.bolt||0)+(+r.uklon||0)+(+r.other||0); }
 function weekCalc(reps, st, letter){
   st = Object.assign({}, defaultSettings, st||{});
+  const plan = planByCode(letter);
   const gross = reps.reduce((a,r)=>a+repGross(r),0);
-  const share = reps.reduce((a,r)=>a+repGross(r)*dayPct(letter, repGross(r), st)/100, 0);
+  const share = plan.period === 'week'
+    ? gross * tierPct(plan, gross) / 100
+    : reps.reduce((a,r)=>a+repGross(r)*tierPct(plan, repGross(r))/100, 0);
   const pct = gross > 0 ? Math.round(share/gross*1000)/10 : 0;   // середній відсоток за тиждень
   const washSpent = reps.reduce((a,r)=>a+(+r.wash||0),0);
   const washBack = Math.min(washSpent, st.wash_week);
@@ -286,14 +286,17 @@ function buildTabs(){
 async function load(){
   const q = (p) => p.then(r => { if (r.error) throw r.error; return r.data || []; });
   const since = ymd(addDays(new Date(), -120));
-  const [settings, reports, incidents, cars, debts, apiRows] = await Promise.all([
+  const [settings, reports, incidents, cars, debts, apiRows, plansRows] = await Promise.all([
     q(db.from('settings').select('*')),
     q(db.from('reports').select('*').gte('report_date', since).order('report_date',{ascending:false}).limit(5000)),
     q(db.from('incidents').select('*').order('created_at',{ascending:false}).limit(500)),
     q(db.from('cars').select('*').order('plate')),
     q(db.from('debts').select('*').order('created_at',{ascending:false}).limit(2000)),
-    q(db.from('api_days').select('*').gte('day', since).limit(20000)).catch(() => [])
+    q(db.from('api_days').select('*').gte('day', since).limit(20000)).catch(() => []),
+    q(db.from('pay_plans').select('*').order('code')).catch(() => null)
   ]);
+  S.plansMissing = plansRows === null;
+  S.plans = (plansRows||[]).map(p => ({code:p.code, name:p.name||'', period:p.period==='week'?'week':'day', tiers:(Array.isArray(p.tiers)?p.tiers:[]).map(t=>({from:+t.from||0,pct:+t.pct||0}))}));
   S.apiMap = Object.fromEntries(apiRows.map(a => [a.driver_id+'|'+a.day, a]));
   S.settings = Object.assign({}, defaultSettings, Object.fromEntries(settings.map(s=>[s.key,+s.value])));
   S.reports = reports; S.incidents = incidents; S.cars = cars; S.debts = debts;
@@ -359,19 +362,20 @@ d_week(el){
   const days = weekNav(el, render);
   const did = me.driver_id;
   const infos = days.map(d=>effDay(did,d));
-  const LET = letterOf(did);
+  const LET = letterOf(did); const PL = planByCode(LET);
   const w = weekCalc(infos.filter(Boolean), S.settings, LET);
   const lastI = infos.reduce((a,x,i)=>x&&repGross(x)>0?i:a, -1);
   const hasApi = infos.some(x=>x&&x.api);
   el.insertAdjacentHTML('beforeend', `
    <div class="card"><div class="muted">Ваш заробіток за тиждень</div>
     <div class="big">${money(w.total)}</div>
-    <div class="muted">${w.days ? `Оборот ${money(w.gross)} · виплата за відсотками <b>${money(w.share)}</b> (в середньому ${w.pct}%)${w.washBack?` · мийка +${money(w.washBack)}`:''}` : 'Даних за цей тиждень ще немає'}</div>
+    <div class="muted">${w.days ? `Оборот ${money(w.gross)} · виплата за відсотками <b>${money(w.share)}</b> (${PL.period==='week'?'відсоток тижня':'в середньому'} ${w.pct}%)${w.washBack?` · мийка +${money(w.washBack)}`:''}` : 'Даних за цей тиждень ще немає'}</div>
+    ${(PL.period==='week' && tierNext(PL,w.gross) && w.gross>0) ? `<div class="muted" style="margin-top:6px">До ${tierNext(PL,w.gross).pct}%: ще ${money(tierNext(PL,w.gross).need)} обороту за тиждень</div>`:''}
    </div>
    <div class="card"><h2>Дні тижня</h2>${days.map((d,i)=>{
      const e = infos[i]; const isFuture = d>todayStr(); const hasRep = e && e.rep;
      return `<div class="row" style="align-items:flex-start"><div><b>${dayName(d)} ${dm(d)}</b>${e?`<div class="muted">Bolt ${money(e.bolt)} · Uklon ${money(e.uklon)}${e.other?` · Інше ${money(e.other)}`:''}</div><div style="margin-top:3px">${srcPill(e)}</div>`:''}</div>
-      <div style="text-align:right">${e?`<b class="num">${money(repGross(e)*dayPct(LET,repGross(e),S.settings)/100)}</b><div class="muted">${dayPct(LET,repGross(e),S.settings)}% від ${money(repGross(e))}</div>${(i===lastI && nextTier(LET,repGross(e),S.settings))?`<div class="muted">до ${nextTier(LET,repGross(e),S.settings).next}%: ще ${money(nextTier(LET,repGross(e),S.settings).need)}</div>`:''}`:(isFuture?'<span class="muted">—</span>':'')}
+      <div style="text-align:right">${e?`<b class="num">${money(repGross(e)*(PL.period==='week'?w.pct:dayPct(LET,repGross(e)))/100)}</b><div class="muted">${PL.period==='week'?w.pct:dayPct(LET,repGross(e))}% від ${money(repGross(e))}</div>${(PL.period!=='week' && i===lastI && tierNext(PL,repGross(e)))?`<div class="muted">до ${tierNext(PL,repGross(e)).pct}%: ще ${money(tierNext(PL,repGross(e)).need)}</div>`:''}`:(isFuture?'<span class="muted">—</span>':'')}
        ${(!isFuture && !hasRep)?`<div><a class="pill y" style="cursor:pointer" data-fill="${d}">${e?'+ доповнити звіт':'+ подати звіт'}</a></div>`:''}</div></div>`;}).join('')}
    </div>
    <div class="muted" style="padding:0 4px">${hasApi?'«З системи» — дані Bolt і Uklon, які надійшли до парку. Якщо цифри не збігаються з вашими, подайте свій варіант у «Звіт»: менеджер перевірить.':'Дані з Bolt і Uklon з’являються тут після того, як парк їх завантажить. До того рахується за вашим звітом.'}</div>`);
@@ -527,7 +531,7 @@ m_drv(el){
   el.innerHTML = `<div id="dmsg"></div>
    <div class="card"><h2>Додати водія в базу</h2>
     <div class="two"><div><label>Прізвище та ім'я</label><input id="nName"></div><div><label>Телефон</label><input id="nPhone" type="tel"></div></div>
-    <div class="two"><div><label>Ім'я в дашборді</label><input id="nDash" list="dnames"></div><div><label>Літера</label><select id="nLet"><option>Б</option><option selected>Г</option><option>Н</option></select></div></div>
+    <div class="two"><div><label>Ім'я в дашборді</label><input id="nDash" list="dnames"></div><div><label>Літера</label><select id="nLet">${plansList().map(p=>`<option ${p.code==='Г'?'selected':''}>${esc(p.code)}</option>`).join('')}</select></div></div>
     <datalist id="dnames">${(S.dashNames||[]).map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
     <button class="btn" id="nAdd">Додати водія</button>
     <div class="muted" style="margin-top:6px">Картка створюється одразу. Коли водій сам зареєструється, у «Огляді» вкажіть цю картку у списку «нова картка» і підтвердьте: акаунт прив'яжеться до неї.</div></div>
@@ -537,7 +541,7 @@ m_drv(el){
     return `<div class="card" style="${arch?'opacity:.6':''}"><h2>${esc(dr.full_name)} <span class="pill ${arch?'':'g'}">${arch?'архів':'активний'}</span> <span class="pill ${acc?'g':'y'}">${acc?'є акаунт':'без акаунта'}</span></h2>
      <div class="muted" style="margin-bottom:10px">${esc(dr.phone||'')}${dr.dash_name?` · у дашборді: ${esc(dr.dash_name)}`:''}</div>
      <label>Авто</label><select data-car="${dr.id}"><option value="">— без авто —</option>${free.map(c=>`<option value="${c.id}" ${car?.id===c.id?'selected':''}>${esc(c.plate)} ${esc(c.model||'')}</option>`).join('')}</select>
-     <label>Літера розрахунку (Б/Г/Н)</label><select data-letter="${dr.id}">${['Б','Г','Н'].map(l=>`<option ${dr.plan_letter===l?'selected':''}>${l}</option>`).join('')}</select>
+     <label>План розрахунку (літера)</label><select data-letter="${dr.id}">${plansList().map(p=>`<option value="${esc(p.code)}" ${dr.plan_letter===p.code?'selected':''}>${esc(p.code)} · ${esc(p.name)}</option>`).join('')}</select>
      <div class="row"><span>Борг</span><b style="color:${bal>0?'var(--danger)':'var(--money)'}">${money(bal)}</b></div>
      ${ds.slice(0,4).map(d=>`<div class="row" style="font-size:12px"><span>${dm(d.created_at.slice(0,10))} ${d.kind==='charge'?'+':'−'}${money(d.amount)}${d.note?` · ${esc(d.note)}`:''}</span><a data-deldebt="${d.id}" style="cursor:pointer;color:var(--danger)">✕</a></div>`).join('')}
      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><button class="btn sm sec" data-debt="${dr.id}|charge">+ Нарахувати</button><button class="btn sm sec" data-debt="${dr.id}|payment">+ Оплата</button></div>
@@ -632,24 +636,59 @@ m_inc(el){
 // ---------- МЕНЕДЖЕР: УМОВИ ----------
 m_set(el){
   const s = S.settings;
-  const numIn = (k,v,w) => `<input inputmode="decimal" data-sk="${k}" value="${v}" style="width:${w||88}px;margin:0;display:inline-block;text-align:right">`;
-  const block = L => { const p = planOfLetter(L, s); return `<div style="border-top:1px solid var(--line);padding:12px 0">
-    <b>Літера ${L}</b> <span class="muted">· ${PLAN_NAMES[L]||''}</span>
-    <div class="row"><span>оборот за день до ${numIn('plan:'+L+':lt1',p.lt1)} ₴</span><span>${numIn('plan:'+L+':p1',p.p1,60)} %</span></div>
-    <div class="row"><span>від того до ${numIn('plan:'+L+':lt2',p.lt2)} ₴</span><span>${numIn('plan:'+L+':p2',p.p2,60)} %</span></div>
-    <div class="row"><span>далі, від другої суми</span><span>${numIn('plan:'+L+':p3',p.p3,60)} %</span></div></div>`; };
-  el.innerHTML = `<div class="card"><h2>Умови виплат</h2><div id="smsg"></div>
-   <div class="muted">Відсоток водія залежить від його літери (Б / Г / Н) і від обороту за день. Літеру водія ви ставите в його картці у «Водії». Зміни застосовуються одразу, для всіх тижнів.</div>
-   ${['Б','Г','Н'].map(block).join('')}
-   <div style="border-top:1px solid var(--line);padding:12px 0"><b>Мийка</b><div class="row"><span>повернення за мийку на тиждень, ₴</span><span>${numIn('wash_week',s.wash_week,88)}</span></div></div>
-   <button class="btn" id="sSave">Зберегти</button></div>`;
-  $('#sSave').onclick = async () => { const rows = [...el.querySelectorAll('[data-sk]')].map(i=>({key:i.dataset.sk, value: parseFloat(String(i.value).replace(',','.'))}));
-    if (rows.some(r=>isNaN(r.value)||r.value<0)) return $('#smsg').innerHTML='<div class="err">Лише числа від 0</div>';
-    for (const L of ['Б','Г','Н']) { const g = k => rows.find(r=>r.key==='plan:'+L+':'+k).value;
-      if (g('lt1') >= g('lt2')) return $('#smsg').innerHTML=`<div class="err">Літера ${L}: перша сума має бути меншою за другу</div>`;
-      if (g('p1') > 100 || g('p2') > 100 || g('p3') > 100) return $('#smsg').innerHTML=`<div class="err">Літера ${L}: відсоток не може бути більше 100</div>`; }
-    const r = await db.from('settings').upsert(rows,{onConflict:'key'}); if (r.error) return $('#smsg').innerHTML=`<div class="err">${esc(r.error.message)}</div>`;
-    await load(); $('#smsg').innerHTML='<div class="ok">Збережено</div>'; };
+  const plans = JSON.parse(JSON.stringify(plansList()));
+  const usedBy = code => S.drivers.filter(d=>d.plan_letter===code).length;
+  const tierRow = (pi, ti, t, first) => `<div class="row" style="gap:6px"><span>від <input inputmode="decimal" data-pf="${pi}|${ti}" value="${t.from}" ${first?'disabled':''} style="width:92px;margin:0;display:inline-block;text-align:right"> ₴</span>
+     <span><input inputmode="decimal" data-pp="${pi}|${ti}" value="${t.pct}" style="width:64px;margin:0;display:inline-block;text-align:right"> % ${first?'':`<a data-dt="${pi}|${ti}" style="cursor:pointer;color:var(--danger);margin-left:6px">✕</a>`}</span></div>`;
+  const planCard = (p, pi) => `<div style="border-top:1px solid var(--line);padding:12px 0">
+    <div class="row" style="gap:8px"><span><b>Літера ${esc(p.code)}</b></span><span class="muted">${usedBy(p.code)} водіїв</span></div>
+    <label>Назва</label><input data-pn="${pi}" value="${esc(p.name)}">
+    <label>Рахувати відсоток</label><select data-pper="${pi}"><option value="day" ${p.period==='day'?'selected':''}>за добу (кожен день окремо)</option><option value="week" ${p.period==='week'?'selected':''}>за тиждень (на весь тиждень)</option></select>
+    <div class="muted" style="margin-top:6px">${p.period==='week'?'Оборот за тиждень → відсоток на весь тиждень':'Оборот за день → відсоток за цей день'}</div>
+    ${p.tiers.map((t,ti)=>tierRow(pi,ti,t,ti===0)).join('')}
+    <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm sec" data-at="${pi}">＋ Сходинка</button>${usedBy(p.code)?'':`<button class="btn sm red" data-dp="${pi}">Видалити план</button>`}</div></div>`;
+  const draw = () => {
+    el.innerHTML = `<div class="card"><h2>Умови виплат</h2><div id="smsg"></div>
+     ${S.plansMissing?'<div class="err">Таблиці планів у базі ще немає: запустіть pay_plans.sql у Supabase (інструкція в чаті). Поки що працюють стандартні плани, а зберегти зміни не вийде.</div>':''}
+     <div class="muted">Тут задаються плани виплати. Кожен водій має свою літеру (картка водія → «Водії»). Сходинка «від 30000 → 60%» означає: якщо оборот ≥ 30 000, то 60%. «За добу» дивиться на оборот кожного дня, «за тиждень» дивиться на оборот усього тижня і рахує відсоток на весь тиждень.</div>
+     ${plans.map(planCard).join('')}
+     <div style="border-top:1px solid var(--line);padding:12px 0"><b>Новий план</b><div class="two"><div><label>Літера / код</label><input id="npCode" maxlength="3" placeholder="напр. Т"></div><div><label>Назва</label><input id="npName" placeholder="напр. Тижневий"></div></div><button class="btn sm sec" id="npAdd" style="margin-top:8px">＋ Додати план</button></div>
+     <div style="border-top:1px solid var(--line);padding:12px 0"><b>Мийка</b><div class="row"><span>повернення за мийку на тиждень, ₴</span><span><input inputmode="decimal" id="washIn" value="${s.wash_week}" style="width:88px;margin:0;display:inline-block;text-align:right"></span></div></div>
+     <button class="btn" id="sSave">Зберегти все</button></div>`;
+  };
+  const read = () => {   // зчитати поля в plans
+    el.querySelectorAll('[data-pn]').forEach(i=>{ plans[+i.dataset.pn].name = i.value.trim(); });
+    el.querySelectorAll('[data-pper]').forEach(i=>{ plans[+i.dataset.pper].period = i.value; });
+    el.querySelectorAll('[data-pf]').forEach(i=>{ const [a,b]=i.dataset.pf.split('|'); plans[+a].tiers[+b].from = parseFloat(String(i.value).replace(',','.')); });
+    el.querySelectorAll('[data-pp]').forEach(i=>{ const [a,b]=i.dataset.pp.split('|'); plans[+a].tiers[+b].pct = parseFloat(String(i.value).replace(',','.')); });
+  };
+  const err = t => { $('#smsg').innerHTML = `<div class="err">${esc(t)}</div>`; window.scrollTo(0,0); };
+  draw();
+  el.onchange = e => { if (e.target.dataset.pper !== undefined) { read(); draw(); } };
+  el.onclick = async e => {
+    const t = e.target;
+    if (t.dataset.at !== undefined) { read(); const p = plans[+t.dataset.at]; const last = p.tiers[p.tiers.length-1]; p.tiers.push({from:(last?last.from:0)+1000, pct:last?last.pct:50}); draw(); return; }
+    if (t.dataset.dt !== undefined) { read(); const [a,b]=t.dataset.dt.split('|'); plans[+a].tiers.splice(+b,1); draw(); return; }
+    if (t.dataset.dp !== undefined) { if (!confirm('Видалити цей план?')) return; read(); const p = plans[+t.dataset.dp];
+      const r = await db.from('pay_plans').delete().eq('code', p.code); if (r.error) return err(r.error.message);
+      plans.splice(+t.dataset.dp,1); await load(); VIEWS.m_set(el); return; }
+    if (t.id === 'npAdd') { read(); const code = $('#npCode').value.trim(), name = $('#npName').value.trim();
+      if (!code) return err('Впишіть літеру або код плану');
+      if (plans.some(p=>p.code.toLowerCase()===code.toLowerCase())) return err('План з такою літерою вже є');
+      plans.push({code, name: name||code, period:'day', tiers:[{from:0,pct:50},{from:3000,pct:55}]}); draw(); return; }
+    if (t.id === 'sSave') { read();
+      const wash = parseFloat(String($('#washIn').value).replace(',','.')); if (isNaN(wash)||wash<0) return err('Мийка: число від 0');
+      for (const p of plans) {
+        if (!p.tiers.length || p.tiers.some(x=>isNaN(x.from)||isNaN(x.pct))) return err(`План ${p.code}: заповніть усі суми й відсотки числами`);
+        if (p.tiers.some(x=>x.pct<0||x.pct>100||x.from<0)) return err(`План ${p.code}: відсоток від 0 до 100, суми не від'ємні`);
+        p.tiers[0].from = 0;
+        for (let i=1;i<p.tiers.length;i++) if (p.tiers[i].from <= p.tiers[i-1].from) return err(`План ${p.code}: суми мають зростати зверху вниз`);
+      }
+      const rows = plans.map((p,i)=>({code:p.code, name:p.name, period:p.period, tiers:p.tiers, sort:i}));
+      let r = await db.from('pay_plans').upsert(rows,{onConflict:'code'}); if (r.error) return err(r.error.message);
+      r = await db.from('settings').upsert([{key:'wash_week', value:wash}],{onConflict:'key'}); if (r.error) return err(r.error.message);
+      await load(); VIEWS.m_set(el); $('#smsg').innerHTML='<div class="ok">Збережено</div>'; }
+  };
 }
 };
 const carOf = did => S.cars.find(c=>c.driver_id===did);
