@@ -150,6 +150,23 @@ function weekCalc(reps, st){
           bolt: reps.reduce((a,r)=>a+(+r.bolt||0),0), uklon: reps.reduce((a,r)=>a+(+r.uklon||0),0),
           other: reps.reduce((a,r)=>a+(+r.other||0),0)};
 }
+
+// Ефективні цифри дня: система (API) має пріоритет; водій подає свій варіант, якщо не збігається;
+// менеджер може прийняти варіант водія. Якщо даних системи нема — беремо звіт водія.
+const DIFF = 50;
+function effDay(did, date){
+  const a = (S.apiMap||{})[did+'|'+date];
+  const r = S.reports.find(x => x.driver_id===did && x.report_date===date);
+  if (!a && !r) return null;
+  let bolt, uklon, src;
+  if (r && (!a || r.accepted)) { bolt = a && !(+r.bolt>0) ? (+a.bolt_net||0) : (+r.bolt||0); uklon = a && !(+r.uklon>0) ? (+a.uklon_net||0) : (+r.uklon||0); src = a ? 'accepted' : 'driver'; }
+  else { bolt = +a.bolt_net||0; uklon = +a.uklon_net||0; src = 'api'; }
+  const diff = !!(a && r && !r.accepted && (((+r.bolt||0)>0 && Math.abs((+r.bolt||0)-(+a.bolt_net||0))>DIFF) || ((+r.uklon||0)>0 && Math.abs((+r.uklon||0)-(+a.uklon_net||0))>DIFF)));
+  return { report_date:date, bolt, uklon, other: r?(+r.other||0):0, wash: r?(+r.wash||0):0, src, diff, api:a||null, rep:r||null };
+}
+const effReps = (did, days) => days.map(d => effDay(did,d)).filter(Boolean);
+const SRC = { api:['з системи','g'], driver:['ваші дані, чекають перевірки','y'], accepted:['прийнято менеджером','g'] };
+const srcPill = e => e.diff ? '<span class="pill r">розбіжність: враховано дані системи</span>' : `<span class="pill ${SRC[e.src][1]}">${SRC[e.src][0]}</span>`;
 const debtBalance = list => (list||[]).reduce((a,d)=>a+(d.kind==='charge'?+d.amount:-d.amount),0);
 
 // ====================== ВХІД ======================
@@ -220,13 +237,15 @@ function buildTabs(){
 async function load(){
   const q = (p) => p.then(r => { if (r.error) throw r.error; return r.data || []; });
   const since = ymd(addDays(new Date(), -120));
-  const [settings, reports, incidents, cars, debts] = await Promise.all([
+  const [settings, reports, incidents, cars, debts, apiRows] = await Promise.all([
     q(db.from('settings').select('*')),
     q(db.from('reports').select('*').gte('report_date', since).order('report_date',{ascending:false}).limit(5000)),
     q(db.from('incidents').select('*').order('created_at',{ascending:false}).limit(500)),
     q(db.from('cars').select('*').order('plate')),
-    q(db.from('debts').select('*').order('created_at',{ascending:false}).limit(2000))
+    q(db.from('debts').select('*').order('created_at',{ascending:false}).limit(2000)),
+    q(db.from('api_days').select('*').gte('day', since).limit(20000)).catch(() => [])
   ]);
+  S.apiMap = Object.fromEntries(apiRows.map(a => [a.driver_id+'|'+a.day, a]));
   S.settings = Object.assign({}, defaultSettings, Object.fromEntries(settings.map(s=>[s.key,+s.value])));
   S.reports = reports; S.incidents = incidents; S.cars = cars; S.debts = debts;
   if (S.staff) {
@@ -289,21 +308,23 @@ const VIEWS = {
 // ---------- ВОДІЙ: ТИЖДЕНЬ ----------
 d_week(el){
   const days = weekNav(el, render);
-  const by = Object.fromEntries(myReports().map(r=>[r.report_date,r]));
-  const reps = days.map(d=>by[d]).filter(Boolean);
-  const w = weekCalc(reps, S.settings);
+  const did = me.driver_id;
+  const infos = days.map(d=>effDay(did,d));
+  const w = weekCalc(infos.filter(Boolean), S.settings);
+  const hasApi = infos.some(x=>x&&x.api);
   el.insertAdjacentHTML('beforeend', `
    <div class="card"><div class="muted">Ваш заробіток за тиждень</div>
     <div class="big">${money(w.total)}</div>
-    <div class="muted">${w.days ? `Оборот ${money(w.gross)} · ваш відсоток <b>${w.pct}%</b> = ${money(w.share)}${w.washBack?` · мийка +${money(w.washBack)}`:''}` : 'Звітів за цей тиждень ще немає'}</div>
+    <div class="muted">${w.days ? `Оборот ${money(w.gross)} · ваш відсоток <b>${w.pct}%</b> = ${money(w.share)}${w.washBack?` · мийка +${money(w.washBack)}`:''}` : 'Даних за цей тиждень ще немає'}</div>
     ${w.gross>0 && w.gross<S.settings.high_threshold ? `<div class="muted" style="margin-top:6px">До ${S.settings.pct_high}%: ще ${money(S.settings.high_threshold-w.gross)} обороту</div>`:''}
    </div>
-   <div class="card"><h2>Дні тижня</h2>${days.map(d=>{
-     const r = by[d]; const isFuture = d>todayStr();
-     return `<div class="row"><div><b>${dayName(d)} ${dm(d)}</b>${r?`<div class="muted">Bolt ${money(r.bolt)} · Uklon ${money(r.uklon)}${+r.other?` · Інше ${money(r.other)}`:''}</div>`:''}</div>
-      <div style="text-align:right">${r?`<b class="num">${money(repGross(r)*w.pct/100)}</b><div class="muted">${w.pct}% від ${money(repGross(r))}</div>`:
-        (isFuture?'<span class="muted">—</span>':`<a class="pill y" style="cursor:pointer" data-fill="${d}">+ подати звіт</a>`)}</div></div>`;}).join('')}
-   </div>`);
+   <div class="card"><h2>Дні тижня</h2>${days.map((d,i)=>{
+     const e = infos[i]; const isFuture = d>todayStr(); const hasRep = e && e.rep;
+     return `<div class="row" style="align-items:flex-start"><div><b>${dayName(d)} ${dm(d)}</b>${e?`<div class="muted">Bolt ${money(e.bolt)} · Uklon ${money(e.uklon)}${e.other?` · Інше ${money(e.other)}`:''}</div><div style="margin-top:3px">${srcPill(e)}</div>`:''}</div>
+      <div style="text-align:right">${e?`<b class="num">${money(repGross(e)*w.pct/100)}</b><div class="muted">${w.pct}% від ${money(repGross(e))}</div>`:(isFuture?'<span class="muted">—</span>':'')}
+       ${(!isFuture && !hasRep)?`<div><a class="pill y" style="cursor:pointer" data-fill="${d}">${e?'+ доповнити звіт':'+ подати звіт'}</a></div>`:''}</div></div>`;}).join('')}
+   </div>
+   <div class="muted" style="padding:0 4px">${hasApi?'«З системи» — дані Bolt і Uklon, які надійшли до парку. Якщо цифри не збігаються з вашими, подайте свій варіант у «Звіт»: менеджер перевірить.':'Дані з Bolt і Uklon з’являються тут після того, як парк їх завантажить. До того рахується за вашим звітом.'}</div>`);
   el.onclick = e => { const d = e.target.dataset.fill; if (d) { S.repDate = d; S.tab='d_rep'; render(); } };
 },
 
@@ -313,12 +334,14 @@ d_rep(el){
   const cur = S.repDate; if (!opts.includes(cur)) opts.push(cur);
   const r = myReports().find(x=>x.report_date===cur) || {};
   const forDr = S.repFor ? S.drivers.find(d=>d.id===S.repFor) : null;
+  const apiRow = (S.apiMap||{})[RD()+'|'+cur];
   el.innerHTML = `<div class="card"><h2>${forDr?`Звіт за водія: ${esc(forDr.full_name)}`:'Звіт за зміну'}</h2>
    <div id="repMsg"></div>
    <label>Дата зміни</label><select id="rDate">${opts.map(d=>`<option value="${d}" ${d===cur?'selected':''}>${dayName(d)} ${dm(d)}${d===todayStr()?' (сьогодні)':''}</option>`).join('')}</select>
    ${r.id?'<div class="ok">За цей день звіт уже є — можна виправити.</div>':''}
-   <div class="two"><div><label>Bolt, ₴</label><input id="rBolt" inputmode="decimal" placeholder="0" value="${r.bolt??''}"></div>
-   <div><label>Uklon, ₴</label><input id="rUklon" inputmode="decimal" placeholder="0" value="${r.uklon??''}"></div></div>
+   ${apiRow?`<div class="card" style="background:#F2FBF7;box-shadow:none;border:1px solid #cfeedd"><b>Дані з системи за цей день</b><div class="row"><span>Bolt</span><b>${money(apiRow.bolt_net)}</b></div><div class="row"><span>Uklon</span><b>${money(apiRow.uklon_net)}</b></div><div class="muted">Якщо ваші цифри такі самі, поля нижче можна не заповнювати. Якщо інші — впишіть свої, менеджер перевірить.</div></div>`:''}
+   <div class="two"><div><label>Bolt, ₴ ${apiRow?'(якщо відрізняється)':''}</label><input id="rBolt" inputmode="decimal" placeholder="${apiRow?Math.round(apiRow.bolt_net):'0'}" value="${r.bolt||''}"></div>
+   <div><label>Uklon, ₴ ${apiRow?'(якщо відрізняється)':''}</label><input id="rUklon" inputmode="decimal" placeholder="${apiRow?Math.round(apiRow.uklon_net):'0'}" value="${r.uklon||''}"></div></div>
    <label>Бордюри та інше, ₴</label><input id="rOther" inputmode="decimal" placeholder="0" value="${r.other??''}">
    <div id="curbBox" class="hidden"><label>Скільки км проїхали по бордюрах</label><input id="rCurb" inputmode="decimal" value="${r.curb_km??''}"></div>
    <div class="two"><div><label>Кілометраж за зміну</label><input id="rKm" inputmode="decimal" value="${r.km??''}"></div>
@@ -387,9 +410,17 @@ m_over(el){
   const act = S.drivers.filter(d=>d.status==='active');
   const missing = act.filter(d=>!S.reports.some(r=>r.driver_id===d.id && r.report_date===y));
   const days = weekDays(0);
-  const wk = act.map(d=>({d, w: weekCalc(S.reports.filter(r=>r.driver_id===d.id && days.includes(r.report_date)), S.settings)}));
+  const wk = act.map(d=>({d, w: weekCalc(effReps(d.id, days), S.settings)}));
   const total = wk.reduce((a,x)=>a+x.w.gross,0);
+    const step = (ok,t,tab,hint) => `<div class="row" style="align-items:flex-start"><span><b>${ok?'✅':'⬜'} ${t}</b><div class="muted">${hint}</div></span><a data-go="${tab}" class="pill y" style="cursor:pointer;white-space:nowrap">відкрити</a></div>`;
+  const guide = `<div class="card"><h2>З чого почати</h2>
+   ${step(S.cars.length>0,`Авто в парку: ${S.cars.length}`,'m_cars','Вкладка «Парк»: додайте авто або імпортуйте номери з дашборду.')}
+   ${step(S.drivers.length>0,`Водії в базі: ${S.drivers.length}`,'m_drv','Вкладка «Водії»: додайте водія або підтвердіть заявку нижче, потім закріпіть за ним авто.')}
+   ${step(S.drivers.some(d=>carOf(d.id)),`Водіїв з авто: ${S.drivers.filter(d=>carOf(d.id)).length}`,'m_drv','У картці водія виберіть авто зі списку.')}
+   ${step(S.reports.length>0,`Звітів від водіїв: ${S.reports.length}`,'m_rep','Вкладка «Звіти»: тут з’являються звіти, які подають водії.')}
+   <div class="muted" style="margin-top:8px">Водіям надсилайте посилання на цю сторінку: вони самі реєструються, ви підтверджуєте.</div></div>`;
   el.innerHTML = `<div class="cols"><div>
+   ${guide}
    <datalist id="dnames">${(S.dashNames||[]).map(n=>`<option value="${esc(n)}">`).join('')}</datalist><div class="card"><h2>Нові заявки водіїв ${pend.length?`<span class="pill y">${pend.length}</span>`:''}</h2>
     ${pend.map(p=>`<div class="row"><div><b>${esc(p.full_name||'—')}</b><div class="muted">${esc(p.phone||'')}</div></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><select data-link="${p.id}" style="width:150px;margin:0;padding:8px 10px;font-size:13px"><option value="">нова картка</option>${S.drivers.filter(d=>!S.profiles.some(x=>x.driver_id===d.id)).map(d=>`<option value="${d.id}">${esc(d.full_name)}</option>`).join('')}</select><input list="dnames" data-dn="${p.id}" placeholder="Ім'я в дашборді" style="width:150px;margin:0;padding:8px 10px;font-size:13px"><button class="btn sm grn" data-ap="${p.id}">Підтвердити</button><button class="btn sm sec" data-rj="${p.id}">Відхилити</button></div></div>`).join('') || '<div class="muted">Нових заявок немає</div>'}</div>
@@ -400,6 +431,7 @@ m_over(el){
    <div class="card"><h2>Водії за тиждень</h2>${wk.sort((a,b)=>b.w.gross-a.w.gross).map(x=>`<div class="row"><span>${esc(x.d.full_name)}<div class="muted">${x.w.days} зв.</div></span><span style="text-align:right"><b class="num">${money(x.w.gross)}</b><div class="muted">${x.w.pct}%</div></span></div>`).join('') || '<div class="muted">Поки порожньо</div>'}</div>
    </div></div>`;
   el.onclick = async e => {
+    const go = e.target.dataset.go; if (go) { S.tab = go; render(); window.scrollTo(0,0); return; }
     const a = e.target.dataset.ap, r = e.target.dataset.rj;
     if (a) { e.target.disabled=true; const dn = (document.querySelector(`[data-dn="${a}"]`)||{}).value||null; const lk = (document.querySelector(`[data-link="${a}"]`)||{}).value||null; const {error} = await db.rpc('approve_driver',{p_profile:a,p_dash_name:dn&&dn.trim()||null,p_driver_id:lk}); if (error) return alert(error.message); await load(); render(); }
     if (r) { if(!confirm('Відхилити заявку?')) return; const {error} = await db.from('profiles').update({status:'rejected'}).eq('id',r); if (error) return alert(error.message); await load(); render(); }
@@ -411,25 +443,30 @@ m_rep(el){
   const days = weekNav(el, render);
   const act = S.drivers.filter(d=>d.status==='active');
   el.insertAdjacentHTML('beforeend', `<div class="card tblwrap"><table class="tbl"><thead><tr><th>Водій</th>${days.map(d=>`<th>${dayName(d)} ${dm(d)}</th>`).join('')}<th>Тиждень</th><th>Водію</th></tr></thead><tbody>
-   ${act.map(dr=>{ const reps = S.reports.filter(r=>r.driver_id===dr.id && days.includes(r.report_date)); const w = weekCalc(reps,S.settings);
+   ${act.map(dr=>{ const reps = effReps(dr.id, days); const w = weekCalc(reps,S.settings);
      return `<tr><td><b>${esc(dr.full_name)}</b><div class="muted">${esc(carOf(dr.id)?.plate||'без авто')} · ${esc(dr.plan_letter)}</div></td>
-      ${days.map(d=>{const r=reps.find(x=>x.report_date===d); return `<td>${r?`<a data-rid="${r.id}" style="cursor:pointer"><b class="num">${money(repGross(r))}</b>${r.plan12===false?' <span class="pill r">план</span>':''}</a>`:(d<=todayStr()?`<a data-addrep="${dr.id}|${d}" style="cursor:pointer;color:var(--muted)">＋</a>`:'')}</td>`}).join('')}
+      ${days.map(d=>{const r=reps.find(x=>x.report_date===d); return `<td>${r?`<a data-eff="${dr.id}|${d}" style="cursor:pointer"><b class="num">${money(repGross(r))}</b>${r.diff?' <span class="pill r">≠</span>':(r.src==='driver'?' <span class="pill y">в.</span>':'')}${r.rep&&r.rep.plan12===false?' <span class="pill r">план</span>':''}${!r.rep?' <span class="muted" title="звіт ще не подано">●</span>':''}</a>`:(d<=todayStr()?`<a data-addrep="${dr.id}|${d}" style="cursor:pointer;color:var(--muted)">＋</a>`:'')}</td>`}).join('')}
       <td><b class="num">${money(w.gross)}</b></td><td><b class="num">${money(w.total)}</b><div class="muted">${w.pct}%</div></td></tr>`;}).join('')}</tbody></table></div><div id="repDetail"></div>`);
   el.onclick = async e => {
     const ar = e.target.closest('[data-addrep]');
     if (ar) { const [did,dt] = ar.dataset.addrep.split('|'); S.repFor = did; S.repDate = dt; S.tab = 'd_rep'; render(); window.scrollTo(0,0); return; }
     const dl = e.target.closest('[data-delrep]');
     if (dl) { if (!confirm('Видалити цей звіт? Це не можна скасувати.')) return; const r = await db.from('reports').delete().eq('id', dl.dataset.delrep); if (r.error) return alert(r.error.message); await load(); render(); return; }
-    const a = e.target.closest('[data-rid]'); if (!a) return; const r = S.reports.find(x=>x.id===a.dataset.rid); const dr = S.drivers.find(d=>d.id===r.driver_id);
-    $('#repDetail').innerHTML = `<div class="card"><h2>${esc(dr.full_name)} · ${dayName(r.report_date)} ${dm(r.report_date)}</h2>
-      <div class="row"><span>Bolt / Uklon / Інше</span><b>${money(r.bolt)} / ${money(r.uklon)} / ${money(r.other)}</b></div>
-      <div class="row"><span>Км (по бордюрах)</span><b>${r.km??'—'} (${r.curb_km??'—'})</b></div>
+    const acc = e.target.closest('[data-acc]');
+    if (acc) { const [rid,val] = acc.dataset.acc.split('|'); const r = await db.from('reports').update({accepted: val==='1'}).eq('id',rid); if (r.error) return alert(r.error.message); await load(); render(); return; }
+    const a = e.target.closest('[data-eff]'); if (!a) return; const [edid, edate] = a.dataset.eff.split('|'); const ef = effDay(edid, edate); const r = ef.rep; const ap = ef.api; const dr = S.drivers.find(d=>d.id===edid);
+    $('#repDetail').innerHTML = `<div class="card"><h2>${esc(dr.full_name)} · ${dayName(edate)} ${dm(edate)} ${srcPill(ef)}</h2>
+      <div class="row"><span>З системи (Bolt / Uklon)</span><b>${ap?`${money(ap.bolt_net)} / ${money(ap.uklon_net)}`:'немає даних'}</b></div>
+      <div class="row"><span>Подав водій (Bolt / Uklon / Інше)</span><b>${r?`${money(r.bolt)} / ${money(r.uklon)} / ${money(r.other)}`:'звіт не подано'}</b></div>
+      ${ef.diff?`<div class="err" style="margin-top:8px">Суми водія не збігаються з системою. Зараз в розрахунку дані системи.</div><button class="btn sm grn" data-acc="${r.id}|1">Прийняти варіант водія</button>`:''}
+      ${r&&r.accepted?`<button class="btn sm sec" data-acc="${r.id}|0">Повернути на дані системи</button>`:''}
+      ${r?`<div class="row"><span>Км (по бордюрах)</span><b>${r.km??'—'} (${r.curb_km??'—'})</b></div>
       <div class="row"><span>Поїздок</span><b>${r.trips??'—'}</b></div>
       <div class="row"><span>Мийка</span><b>${money(r.wash)}</b></div>
       <div class="row"><span>План 12 год</span><b>${r.plan12?'так':'ні'}</b></div>${r.plan_comment?`<div class="muted">Пояснення: ${esc(r.plan_comment)}</div>`:''}
       <div class="row"><span>Вихідний / вихід завтра</span><b>${esc(r.dayoff_note||'—')} / ${esc(r.next_start||'—')}</b></div>
       <div class="row"><span>Техстан</span><b>${r.tech_score??'—'}</b></div>${r.tech_note?`<div class="muted">${esc(r.tech_note)}</div>`:''}
-      <div style="display:flex;gap:8px;margin-top:12px"><button class="btn sm sec" data-addrep="${r.driver_id}|${r.report_date}">Редагувати</button><button class="btn sm red" data-delrep="${r.id}">Видалити звіт</button></div></div>`;
+      <div style="display:flex;gap:8px;margin-top:12px"><button class="btn sm sec" data-addrep="${r.driver_id}|${r.report_date}">Редагувати</button><button class="btn sm red" data-delrep="${r.id}">Видалити звіт</button></div>`:`<div style="margin-top:10px"><button class="btn sm sec" data-addrep="${edid}|${edate}">Подати звіт за водія</button></div>`}</div>`;
     $('#repDetail').scrollIntoView({behavior:'smooth'}); };
 },
 

@@ -3544,6 +3544,47 @@ function weekAnalyticsHtml(){
   return H;
 }
 
+
+/* ===== Кабінет водіїв: публікація тижня (api_days) ===== */
+async function publishWeek(){
+  var st=document.getElementById('pubStatus');
+  function say(t,bad){if(st){st.style.color=bad?'var(--bad,#c0392b)':'var(--muted)';st.innerHTML=t;}}
+  try{
+    if(typeof supa==='undefined'||!supa){say('Немає зв’язку з базою.',1);return;}
+    if(!weekMon){say('Спочатку оберіть тиждень.',1);return;}
+    say('Публікую…');
+    var cr=await supa.from('cars').select('plate,driver_id');
+    var dr=await supa.from('drivers').select('id,full_name,dash_name,status');
+    if(cr.error||dr.error){say('Помилка: '+((cr.error||dr.error).message||'')+'. Чи запущено api_days.sql та схему кабінету?',1);return;}
+    var byPlate={},byName={};
+    (cr.data||[]).forEach(function(c){if(c.driver_id&&c.plate)byPlate[NPL(c.plate)]=c.driver_id;});
+    (dr.data||[]).forEach(function(d){[d.dash_name,d.full_name].forEach(function(n){if(n&&n.trim())byName[rpt_toks(n).join('|')]=d.id;});});
+    var acc={},unm={},keys=weekKeys(weekMon);
+    keys.forEach(function(k){
+      if(!DAYS||!DAYS[k])return;
+      var H=(typeof rptHy==='function')?rptHy(k):DAYS[k];var drv=(H&&H.drivers)||[];
+      drv.forEach(function(o){
+        if(!o||!o.name)return;
+        if(!isTaxi(o)||isHiddenOn(o.name,k))return;
+        var bn=+o.b_net||0,un=+o.u_net||0;
+        if(!(bn+un>0||(o.orders||0)>0))return;
+        var did=(o.plate_norm&&byPlate[o.plate_norm])||byName[rpt_toks(o.name).join('|')];
+        if(!did){unm[nameFor(o.name)]=1;return;}
+        var key=did+'|'+k,r=acc[key]||(acc[key]={driver_id:did,day:k,bolt_net:0,uklon_net:0,orders:0,km:0,plate:o.plate||null});
+        r.bolt_net+=bn;r.uklon_net+=un;r.orders+=(o.orders||0);r.km+=(o.km_total||0);
+      });
+    });
+    var rows=Object.keys(acc).map(function(x){var r=acc[x];r.bolt_net=Math.round(r.bolt_net*100)/100;r.uklon_net=Math.round(r.uklon_net*100)/100;r.km=Math.round(r.km*10)/10;return r;});
+    for(var i=0;i<rows.length;i+=200){
+      var up=await supa.from('api_days').upsert(rows.slice(i,i+200),{onConflict:'driver_id,day'});
+      if(up.error){say('Помилка запису: '+up.error.message,1);return;}
+    }
+    var um=Object.keys(unm);
+    var msg='✅ Опубліковано записів: <b>'+rows.length+'</b> (водій × день).';
+    if(um.length)msg+='<br>⚠ Не знайдено у кабінеті: <b>'+um.map(rpt_esc).join(', ')+'</b>.<br>Щоб вони з’явились: у Кабінеті водіїв → Водії → закріпіть авто за водієм (або впишіть «Ім’я в дашборді»), потім натисніть кнопку ще раз.';
+    say(msg,0);
+  }catch(e){say('Помилка: '+(e&&e.message||e),1);}
+}
 function renderWeek(){var el=document.getElementById('week');if(!el)return;
  if(!DAYS||!Object.keys(DAYS).length){el.innerHTML='<h1>Аналіз за <span class="accent">тиждень</span></h1><p class="sub">Ще нема даних.</p>';return;}
   if(weekMon&&!/^\d{4}-\d{2}-\d{2}$/.test(weekMon))weekMon=null;
@@ -3553,7 +3594,8 @@ function renderWeek(){var el=document.getElementById('week');if(!el)return;
  var head='<h1>Аналіз за <span class="accent">тиждень</span></h1>'
   +'<div class="wk-nav"><button class="wk-arrow" onclick="weekStep(-1)">\u2039</button>'
   +'<div class="wk-range">'+_wkLab(mon)+' \u2013 '+_wkLab(sun)+'<span class="wk-sub">Пн\u2013Нд \u00b7 '+A.present.length+' дн. з даними</span></div>'
-  +'<button class="wk-arrow" onclick="weekStep(1)">\u203a</button></div>';
+  +'<button class="wk-arrow" onclick="weekStep(1)">\u203a</button></div>'
+  +'<div style="text-align:center;margin:10px 0"><button class="wk-arrow" style="width:auto;border-radius:20px;padding:0 16px;font-size:14px;font-weight:700" onclick="publishWeek()">\ud83d\udce4 Опублікувати тиждень водіям</button><div id="pubStatus" style="font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5"></div></div>';
  if(!A.present.length){el.innerHTML=head+'<p class="sub">За цей тиждень нема даних. Гортай \u2039 \u203a до тижня з даними.</p>';return;}
  var T=A.list.reduce(function(a,m){a.net+=m.net;a.gross+=m.gross;a.orders+=m.orders;a.online+=m.online;return a;},{net:0,gross:0,orders:0,online:0});
  function strip(m){return '<div class="wk-strip">'+A.keys.map(function(k,i){var pd=m.perDay[k];var cls=pd?(pd.done?'d':'u'):'n';var ti=DL[i]+' '+_wkLab(k)+(pd?(': '+Math.round(pd.net)+' \u20b4'):' \u2014');return '<span class="wk-cell '+cls+'" title="'+ti+'">'+DL[i].slice(0,1)+'</span>';}).join('')+'</div>';}
