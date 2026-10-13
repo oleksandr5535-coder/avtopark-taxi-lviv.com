@@ -133,19 +133,46 @@ const todayStr = () => ymd(new Date());
 const EMBED = (function(){try{return window.self !== window.top;}catch(e){return true;}})();
 if (EMBED) document.documentElement.classList.add('embed');
 let db, me = null, S = {};   // S = стан застосунку
-const defaultSettings = {pct_base:55,pct_high:60,high_threshold:30000,wash_week:300};
+const defaultSettings = {wash_week:300};
+// Шкали виплати за літерами (відсоток залежить від денного обороту водія). Менеджер міняє їх у вкладці «Умови».
+const PLAN_DEF = {
+  'Б':{lt1:1875,p1:50,lt2:2375,p2:55,p3:60},
+  'Г':{lt1:2850,p1:45,lt2:3300,p2:50,p3:55},
+  'Н':{lt1:2850,p1:40,lt2:3350,p2:45,p3:50}
+};
+const PLAN_NAMES = {'Б':'Бензин','Г':'Гібрид','Н':'Гібрид (нові умови)'};
+const LAT2LET = {B:'Б',G:'Г',H:'Н'};
+function planOfLetter(letter, st){
+  const L = PLAN_DEF[letter] ? letter : (LAT2LET[String(letter).toUpperCase()] || 'Г');
+  const d = PLAN_DEF[L], o = {};
+  ['lt1','p1','lt2','p2','p3'].forEach(k => { const v = st && st['plan:'+L+':'+k]; o[k] = (v==null || isNaN(v)) ? d[k] : +v; });
+  return o;
+}
+// відсоток за добу: чим більший оборот дня, тим вищий відсоток
+function dayPct(letter, gross, st){
+  if (!(gross > 0)) return 0;
+  const p = planOfLetter(letter, st);
+  return gross < p.lt1 ? p.p1 : gross < p.lt2 ? p.p2 : p.p3;
+}
+function nextTier(letter, gross, st){
+  const p = planOfLetter(letter, st);
+  if (gross < p.lt1) return {pct:p.p1, next:p.p2, need:p.lt1-gross};
+  if (gross < p.lt2) return {pct:p.p2, next:p.p3, need:p.lt2-gross};
+  return null;
+}
+const letterOf = did => ((S.drivers||[]).find(d=>d.id===did)||{}).plan_letter || 'Г';
 
 // ====================== РОЗРАХУНОК ======================
-// Умови від 12.10.2026: усі гібриди 55%; тиждень ≥ 30 000 → 60%; мийка — повернення раз на тиждень;
-// паливо на водієві; страховку не утримуємо.
+// Виплата = сума по днях (оборот дня × відсоток за шкалою літери водія) + повернення за мийку (до ліміту на тиждень).
+// Паливо на водієві; страховку не утримуємо.
 function repGross(r){ return (+r.bolt||0)+(+r.uklon||0)+(+r.other||0); }
-function weekCalc(reps, st){
+function weekCalc(reps, st, letter){
   st = Object.assign({}, defaultSettings, st||{});
   const gross = reps.reduce((a,r)=>a+repGross(r),0);
-  const pct = gross >= st.high_threshold ? st.pct_high : st.pct_base;
+  const share = reps.reduce((a,r)=>a+repGross(r)*dayPct(letter, repGross(r), st)/100, 0);
+  const pct = gross > 0 ? Math.round(share/gross*1000)/10 : 0;   // середній відсоток за тиждень
   const washSpent = reps.reduce((a,r)=>a+(+r.wash||0),0);
   const washBack = Math.min(washSpent, st.wash_week);
-  const share = gross*pct/100;
   return {gross, pct, share, washBack, total: share+washBack, days: reps.length,
           bolt: reps.reduce((a,r)=>a+(+r.bolt||0),0), uklon: reps.reduce((a,r)=>a+(+r.uklon||0),0),
           other: reps.reduce((a,r)=>a+(+r.other||0),0)};
@@ -211,7 +238,23 @@ async function logout(){ await db.auth.signOut(); me = null; S = {}; showOnly('a
 $('#outBtn').onclick = logout; $('#pendOut').onclick = logout; $('#pendRefresh').onclick = () => boot();
 
 async function boot(){
+  // Усередині дашборда вхід один: беремо сесію дашборда (той самий сайт), окремого входу немає.
+  if (EMBED) {
+    try {
+      const ps = await window.parent.__dashSupa.auth.getSession();
+      const t = ps && ps.data && ps.data.session;
+      if (t) {
+        const cur = (await db.auth.getSession()).data.session;
+        if (!cur || cur.user.id !== t.user.id) await db.auth.setSession({access_token:t.access_token, refresh_token:t.refresh_token});
+      }
+    } catch (e) { /* дашборд недоступний — спробуємо власну сесію */ }
+  }
   const {data:{session}} = await db.auth.getSession();
+  if (!session && EMBED) {
+    $('#pendTitle').textContent = 'Потрібен вхід у дашборд';
+    $('#pendText').textContent = 'Увійдіть у дашборд своєю поштою менеджера, потім знову відкрийте цю вкладку.';
+    showOnly('pending'); return;
+  }
   if (!session) { showOnly('auth'); setAuthMode(false); return; }
   const {data:p, error} = await db.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
   if (error || !p) { showOnly('auth'); authMsg('Профіль не знайдено. Зверніться до менеджера.'); return; }
@@ -316,18 +359,19 @@ d_week(el){
   const days = weekNav(el, render);
   const did = me.driver_id;
   const infos = days.map(d=>effDay(did,d));
-  const w = weekCalc(infos.filter(Boolean), S.settings);
+  const LET = letterOf(did);
+  const w = weekCalc(infos.filter(Boolean), S.settings, LET);
+  const lastI = infos.reduce((a,x,i)=>x&&repGross(x)>0?i:a, -1);
   const hasApi = infos.some(x=>x&&x.api);
   el.insertAdjacentHTML('beforeend', `
    <div class="card"><div class="muted">Ваш заробіток за тиждень</div>
     <div class="big">${money(w.total)}</div>
-    <div class="muted">${w.days ? `Оборот ${money(w.gross)} · ваш відсоток <b>${w.pct}%</b> = ${money(w.share)}${w.washBack?` · мийка +${money(w.washBack)}`:''}` : 'Даних за цей тиждень ще немає'}</div>
-    ${w.gross>0 && w.gross<S.settings.high_threshold ? `<div class="muted" style="margin-top:6px">До ${S.settings.pct_high}%: ще ${money(S.settings.high_threshold-w.gross)} обороту</div>`:''}
+    <div class="muted">${w.days ? `Оборот ${money(w.gross)} · виплата за відсотками <b>${money(w.share)}</b> (в середньому ${w.pct}%)${w.washBack?` · мийка +${money(w.washBack)}`:''}` : 'Даних за цей тиждень ще немає'}</div>
    </div>
    <div class="card"><h2>Дні тижня</h2>${days.map((d,i)=>{
      const e = infos[i]; const isFuture = d>todayStr(); const hasRep = e && e.rep;
      return `<div class="row" style="align-items:flex-start"><div><b>${dayName(d)} ${dm(d)}</b>${e?`<div class="muted">Bolt ${money(e.bolt)} · Uklon ${money(e.uklon)}${e.other?` · Інше ${money(e.other)}`:''}</div><div style="margin-top:3px">${srcPill(e)}</div>`:''}</div>
-      <div style="text-align:right">${e?`<b class="num">${money(repGross(e)*w.pct/100)}</b><div class="muted">${w.pct}% від ${money(repGross(e))}</div>`:(isFuture?'<span class="muted">—</span>':'')}
+      <div style="text-align:right">${e?`<b class="num">${money(repGross(e)*dayPct(LET,repGross(e),S.settings)/100)}</b><div class="muted">${dayPct(LET,repGross(e),S.settings)}% від ${money(repGross(e))}</div>${(i===lastI && nextTier(LET,repGross(e),S.settings))?`<div class="muted">до ${nextTier(LET,repGross(e),S.settings).next}%: ще ${money(nextTier(LET,repGross(e),S.settings).need)}</div>`:''}`:(isFuture?'<span class="muted">—</span>':'')}
        ${(!isFuture && !hasRep)?`<div><a class="pill y" style="cursor:pointer" data-fill="${d}">${e?'+ доповнити звіт':'+ подати звіт'}</a></div>`:''}</div></div>`;}).join('')}
    </div>
    <div class="muted" style="padding:0 4px">${hasApi?'«З системи» — дані Bolt і Uklon, які надійшли до парку. Якщо цифри не збігаються з вашими, подайте свій варіант у «Звіт»: менеджер перевірить.':'Дані з Bolt і Uklon з’являються тут після того, як парк їх завантажить. До того рахується за вашим звітом.'}</div>`);
@@ -416,7 +460,7 @@ m_over(el){
   const act = S.drivers.filter(d=>d.status==='active');
   const missing = act.filter(d=>!S.reports.some(r=>r.driver_id===d.id && r.report_date===y));
   const days = weekDays(0);
-  const wk = act.map(d=>({d, w: weekCalc(effReps(d.id, days), S.settings)}));
+  const wk = act.map(d=>({d, w: weekCalc(effReps(d.id, days), S.settings, d.plan_letter)}));
   const total = wk.reduce((a,x)=>a+x.w.gross,0);
     const step = (ok,t,tab,hint) => `<div class="row" style="align-items:flex-start"><span><b>${ok?'✅':'⬜'} ${t}</b><div class="muted">${hint}</div></span><a data-go="${tab}" class="pill y" style="cursor:pointer;white-space:nowrap">відкрити</a></div>`;
   const guide = `<div class="card"><h2>З чого почати</h2>
@@ -449,7 +493,7 @@ m_rep(el){
   const days = weekNav(el, render);
   const act = S.drivers.filter(d=>d.status==='active');
   el.insertAdjacentHTML('beforeend', `<div class="card tblwrap"><table class="tbl"><thead><tr><th>Водій</th>${days.map(d=>`<th>${dayName(d)} ${dm(d)}</th>`).join('')}<th>Тиждень</th><th>Водію</th></tr></thead><tbody>
-   ${act.map(dr=>{ const reps = effReps(dr.id, days); const w = weekCalc(reps,S.settings);
+   ${act.map(dr=>{ const reps = effReps(dr.id, days); const w = weekCalc(reps,S.settings,dr.plan_letter);
      return `<tr><td><b>${esc(dr.full_name)}</b><div class="muted">${esc(carOf(dr.id)?.plate||'без авто')} · ${esc(dr.plan_letter)}</div></td>
       ${days.map(d=>{const r=reps.find(x=>x.report_date===d); return `<td>${r?`<a data-eff="${dr.id}|${d}" style="cursor:pointer"><b class="num">${money(repGross(r))}</b>${r.diff?' <span class="pill r">≠</span>':(r.src==='driver'?' <span class="pill y">в.</span>':'')}${r.rep&&r.rep.plan12===false?' <span class="pill r">план</span>':''}${!r.rep?' <span class="muted" title="звіт ще не подано">●</span>':''}</a>`:(d<=todayStr()?`<a data-addrep="${dr.id}|${d}" style="cursor:pointer;color:var(--muted)">＋</a>`:'')}</td>`}).join('')}
       <td><b class="num">${money(w.gross)}</b></td><td><b class="num">${money(w.total)}</b><div class="muted">${w.pct}%</div></td></tr>`;}).join('')}</tbody></table></div><div id="repDetail"></div>`);
@@ -587,11 +631,23 @@ m_inc(el){
 
 // ---------- МЕНЕДЖЕР: УМОВИ ----------
 m_set(el){
-  const s = S.settings; const f = [['pct_base','% водія (гібриди)'],['pct_high','% водія при високому тижні'],['high_threshold','Поріг за тиждень, ₴'],['wash_week','Повернення за мийку на тиждень, ₴']];
-  el.innerHTML = `<div class="card"><h2>Умови виплат</h2><div id="smsg"></div>${f.map(([k,l])=>`<label>${l}</label><input inputmode="decimal" data-sk="${k}" value="${s[k]}">`).join('')}
-   <button class="btn" id="sSave">Зберегти</button><div class="muted" style="margin-top:10px">Зміни застосовуються до розрахунків одразу, для всіх тижнів.</div></div>`;
-  $('#sSave').onclick = async () => { const rows = [...el.querySelectorAll('[data-sk]')].map(i=>({key:i.dataset.sk, value: parseFloat(i.value.replace(',','.'))}));
+  const s = S.settings;
+  const numIn = (k,v,w) => `<input inputmode="decimal" data-sk="${k}" value="${v}" style="width:${w||88}px;margin:0;display:inline-block;text-align:right">`;
+  const block = L => { const p = planOfLetter(L, s); return `<div style="border-top:1px solid var(--line);padding:12px 0">
+    <b>Літера ${L}</b> <span class="muted">· ${PLAN_NAMES[L]||''}</span>
+    <div class="row"><span>оборот за день до ${numIn('plan:'+L+':lt1',p.lt1)} ₴</span><span>${numIn('plan:'+L+':p1',p.p1,60)} %</span></div>
+    <div class="row"><span>від того до ${numIn('plan:'+L+':lt2',p.lt2)} ₴</span><span>${numIn('plan:'+L+':p2',p.p2,60)} %</span></div>
+    <div class="row"><span>далі, від другої суми</span><span>${numIn('plan:'+L+':p3',p.p3,60)} %</span></div></div>`; };
+  el.innerHTML = `<div class="card"><h2>Умови виплат</h2><div id="smsg"></div>
+   <div class="muted">Відсоток водія залежить від його літери (Б / Г / Н) і від обороту за день. Літеру водія ви ставите в його картці у «Водії». Зміни застосовуються одразу, для всіх тижнів.</div>
+   ${['Б','Г','Н'].map(block).join('')}
+   <div style="border-top:1px solid var(--line);padding:12px 0"><b>Мийка</b><div class="row"><span>повернення за мийку на тиждень, ₴</span><span>${numIn('wash_week',s.wash_week,88)}</span></div></div>
+   <button class="btn" id="sSave">Зберегти</button></div>`;
+  $('#sSave').onclick = async () => { const rows = [...el.querySelectorAll('[data-sk]')].map(i=>({key:i.dataset.sk, value: parseFloat(String(i.value).replace(',','.'))}));
     if (rows.some(r=>isNaN(r.value)||r.value<0)) return $('#smsg').innerHTML='<div class="err">Лише числа від 0</div>';
+    for (const L of ['Б','Г','Н']) { const g = k => rows.find(r=>r.key==='plan:'+L+':'+k).value;
+      if (g('lt1') >= g('lt2')) return $('#smsg').innerHTML=`<div class="err">Літера ${L}: перша сума має бути меншою за другу</div>`;
+      if (g('p1') > 100 || g('p2') > 100 || g('p3') > 100) return $('#smsg').innerHTML=`<div class="err">Літера ${L}: відсоток не може бути більше 100</div>`; }
     const r = await db.from('settings').upsert(rows,{onConflict:'key'}); if (r.error) return $('#smsg').innerHTML=`<div class="err">${esc(r.error.message)}</div>`;
     await load(); $('#smsg').innerHTML='<div class="ok">Збережено</div>'; };
 }

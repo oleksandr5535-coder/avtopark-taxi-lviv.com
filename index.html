@@ -5863,6 +5863,7 @@ const SUPA_URL="https://lriixtvefevxindyiuck.supabase.co";
 const SUPA_KEY="sb_publishable_NydeHBpAcKE5M6y8G8hwSg_qkEn7XwC";
 let supa=null;
 try{if(window.supabase&&window.supabase.createClient){supa=window.supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});}}catch(e){console.error("supa init",e);}
+try{window.__dashSupa=supa;}catch(e){}
 function showUploaderOnly(){var up=document.getElementById("uploader"),ap=document.getElementById("app");if(up)up.classList.remove("hide");if(ap)ap.classList.add("hide");showLogin(false);}
 /* Дні тягнемо ПОРЦІЯМИ і починаючи з найновіших.
    Раніше йшов один запит на всі дні — з ~100 записів база не встигала
