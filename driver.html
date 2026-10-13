@@ -4,71 +4,114 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#0F1B2D">
+<meta name="theme-color" content="#15171C">
 <title>AVTO PARK — кабінет водія</title>
 <script>
   const SUPABASE_URL      = "https://lriixtvefevxindyiuck.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_NydeHBpAcKE5M6y8G8hwSg_qkEn7XwC";
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--ink:#0F1B2D;--surface:#fff;--bg:#F5F7FB;--text:#16202E;--muted:#6A7686;--line:#E6EBF2;--lamp:#FFB100;--lamp-deep:#E89E00;--money:#13986A;--danger:#D6453B;--radius:16px;--shadow:0 1px 2px rgba(16,27,45,.04),0 8px 24px rgba(16,27,45,.06)}
+:root{--paper:#EFECE4;--panel:#FFFFFF;--ink:#15171C;--ink2:#565A63;--muted:#8B8F98;--line:#E3DFD5;--soft:#F7F5F0;--amber:#C8881A;--amber-tx:#A8700F;--good:#14875A;--good-bg:#E9F3EE;--warn-bg:#FBF6EA;--warn-line:#EBDCBB;--warn-tx:#8C5E0B;--bad:#C0392B;--bad-bg:#F9EBE9;--inkp:#15171C;--inkp-fg:#F4F2EC;--r-lg:20px;--r-md:14px;--r-sm:10px;--sh-card:0 1px 2px rgba(20,22,27,.03),0 18px 40px -34px rgba(20,22,27,.55);--mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+ /* старі назви, щоб нічого не зламати */
+ --bg:var(--paper);--surface:var(--panel);--text:var(--ink);--lamp:var(--amber);--lamp-deep:var(--amber-tx);--money:var(--good);--danger:var(--bad);--radius:var(--r-md);--shadow:var(--sh-card)}
+:root[data-theme=dark]{--paper:#101216;--panel:#1B1E24;--ink:#ECEEF2;--ink2:#AFB4BD;--muted:#7E848E;--line:#2E323A;--soft:#22252C;--amber:#E2A445;--amber-tx:#E2A445;--good:#3BC98C;--good-bg:#16311F;--warn-bg:#33271A;--warn-line:rgba(226,164,69,.32);--warn-tx:#E9B463;--bad:#E9705F;--bad-bg:#3A1E1B;--inkp:#22252C;--inkp-fg:#ECEEF2;--sh-card:0 1px 2px rgba(0,0,0,.22),0 18px 40px -30px rgba(0,0,0,.85)}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Inter,system-ui,sans-serif;color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;min-height:100dvh}
-.num{font-family:"Space Grotesk",sans-serif;font-feature-settings:"tnum" 1}
+body{font-family:Manrope,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased;min-height:100dvh}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .hidden{display:none!important}
 button{font-family:inherit;cursor:pointer;border:none}
-label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:0 0 6px 2px}
-input,select,textarea{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:12px;font-size:16px;font-family:inherit;background:#FBFCFE;margin-bottom:14px;outline:none;min-width:0}
+a{color:inherit}
+label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin:0 0 6px 2px}
+input,select,textarea{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-sm);font-size:16px;font-family:inherit;background:var(--panel);color:var(--ink);margin-bottom:14px;outline:none;min-width:0}
 textarea{resize:vertical;min-height:70px}
-input:focus,select:focus,textarea:focus{border-color:var(--lamp);box-shadow:0 0 0 3px rgba(255,177,0,.16)}
-.btn{width:100%;padding:14px;border-radius:12px;font-weight:600;font-size:15px;background:var(--lamp);color:#1a1304}
-.btn:disabled{opacity:.6}
-.btn.sec{background:#fff;border:1px solid var(--line);color:var(--text)}
+input:focus,select:focus,textarea:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(200,136,26,.18)}
+input:disabled{opacity:.55}
+.btn{width:100%;padding:13px;border-radius:12px;font-weight:700;font-size:15px;background:var(--inkp);color:var(--inkp-fg)}
+.btn:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.55}
+.btn.sec{background:var(--panel);border:1px solid var(--line);color:var(--ink)}
 .btn.sm{width:auto;padding:8px 14px;font-size:13px}
-.btn.red{background:var(--danger);color:#fff}
-.btn.grn{background:var(--money);color:#fff}
-.err{background:#FDECEA;color:#9d2a22;padding:10px 12px;border-radius:10px;font-size:13px;margin-bottom:14px}
-.ok{background:#E6F6EF;color:#0b6b4a;padding:10px 12px;border-radius:10px;font-size:13px;margin-bottom:14px}
-#auth{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(130% 90% at 50% -20%,#20365a 0,transparent 55%),var(--ink)}
-.card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:14px}
+.btn.red{background:var(--bad);color:#fff}
+.btn.grn{background:var(--good);color:#fff}
+.btn.amb{background:var(--amber);color:#1a1304}
+.err{background:var(--bad-bg);color:var(--bad);padding:10px 12px;border-radius:var(--r-sm);font-size:13px;margin-bottom:14px}
+.ok{background:var(--good-bg);color:var(--good);padding:10px 12px;border-radius:var(--r-sm);font-size:13px;margin-bottom:14px}
+#auth{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--inkp)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--sh-card);padding:18px;margin-bottom:14px}
 .auth-card{width:100%;max-width:380px;border-radius:22px;padding:30px 26px}
-.auth-card h1{font-family:"Space Grotesk";font-size:21px;margin-bottom:4px}
+.auth-card h1{font-size:21px;margin-bottom:4px}
 .hint{color:var(--muted);font-size:13px;margin-bottom:18px}
 .toggle{margin-top:16px;text-align:center;font-size:13px;color:var(--muted)}
-.toggle a{color:var(--lamp-deep);font-weight:600;cursor:pointer}
-.brand{font-family:"Space Grotesk";font-weight:700;font-size:20px;margin-bottom:20px;display:flex;align-items:center;gap:8px}
-.dot{width:9px;height:9px;border-radius:50%;background:var(--lamp);box-shadow:0 0 0 3px rgba(255,177,0,.22)}
-header.top{background:var(--ink);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:5}
-header.top .who{margin-left:auto;font-size:13px;opacity:.85;text-align:right}
-header.top button{background:rgba(255,255,255,.12);color:#fff;border-radius:8px;padding:6px 10px;font-size:12px}
-nav.tabs{display:flex;gap:4px;background:#fff;border-bottom:1px solid var(--line);padding:0 8px;overflow-x:auto;position:sticky;top:50px;z-index:4}
-nav.tabs button{background:none;padding:13px 12px;font-size:14px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap}
-nav.tabs button.on{color:var(--text);border-color:var(--lamp)}
+.toggle a{color:var(--amber-tx);font-weight:700;cursor:pointer}
+.brand{font-weight:800;font-size:20px;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 3px rgba(200,136,26,.25)}
+header.top{background:var(--inkp);color:var(--inkp-fg);padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:6;height:50px}
+header.top .who{margin-left:auto;font-size:13px;opacity:.9;text-align:right}
+header.top button{background:rgba(255,255,255,.14);color:inherit;border-radius:8px;padding:6px 10px;font-size:12px}
+nav.tabs{display:flex;gap:4px;background:var(--panel);border-bottom:1px solid var(--line);padding:0 8px;overflow-x:auto;position:sticky;top:50px;z-index:5;scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button{background:none;padding:13px 12px;font-size:14px;font-weight:700;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap}
+nav.tabs button.on{color:var(--ink);border-color:var(--amber)}
 main{max-width:560px;margin:0 auto;padding:16px 14px 80px}
-h2{font-family:"Space Grotesk";font-size:17px;margin:0 0 10px}
-.big{font-family:"Space Grotesk";font-size:34px;font-weight:700;color:var(--money)}
+h2{font-size:16px;font-weight:800;margin:0 0 10px;letter-spacing:-.01em}
+h1.pt{font-size:26px;font-weight:800;letter-spacing:-.015em}
+.big{font-family:var(--mono);font-size:34px;font-weight:700;color:var(--good);letter-spacing:-.02em}
 .row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);gap:10px;font-size:14px}
 .row:last-child{border:none}
 .muted{color:var(--muted);font-size:12px}
-.pill{display:inline-block;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600;background:#EEF2F8}
-.pill.g{background:#E6F6EF;color:#0b6b4a}.pill.r{background:#FDECEA;color:#9d2a22}.pill.y{background:#FFF3D6;color:#8a5a00}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:var(--soft);color:var(--ink2);white-space:nowrap}
+.pill.g{background:var(--good-bg);color:var(--good)}.pill.r{background:var(--bad-bg);color:var(--bad)}.pill.y{background:var(--warn-bg);color:var(--warn-tx)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .wk{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:12px}
-.wk button{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 14px;font-size:16px}
+.wk button{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:50%;width:40px;height:40px;font-size:20px;line-height:1}
+.wk button:disabled{opacity:.4}
 .tbl{width:100%;border-collapse:collapse;font-size:13px}
-.tbl th{text-align:left;color:var(--muted);font-weight:600;padding:8px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
-.tbl td{padding:9px 6px;border-bottom:1px solid var(--line)}
+.tbl th{text-align:left;color:var(--muted);font-weight:700;padding:8px 8px;border-bottom:1px solid var(--line);white-space:nowrap;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+.tbl td{padding:10px 8px;border-bottom:1px solid var(--line)}
+.tbl tr.clk{cursor:pointer}.tbl tr.clk:hover{background:var(--soft)}
+.tbl tfoot td{font-weight:800;border-top:2px solid var(--line);border-bottom:none}
+.tbl .r{text-align:right}
 .tblwrap{overflow-x:auto}.tbl .num{white-space:nowrap}
 .seg{display:flex;gap:8px;margin-bottom:14px}
-.seg button{flex:1;padding:12px;border-radius:12px;background:#fff;border:1px solid var(--line);font-weight:600;font-size:14px}
-.seg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.seg button{flex:1;padding:12px;border-radius:12px;background:var(--panel);color:var(--ink);border:1px solid var(--line);font-weight:700;font-size:14px}
+.seg button.on{background:var(--inkp);color:var(--inkp-fg);border-color:var(--inkp)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:14px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-md);padding:14px 16px;box-shadow:var(--sh-card)}
+.kpi .l{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.kpi .v{font-family:var(--mono);font-size:24px;font-weight:700;margin-top:6px;letter-spacing:-.02em}
+.kpi .s{font-size:12px;color:var(--muted);margin-top:3px}
+.kpi.bad .v{color:var(--bad)}.kpi.good .v{color:var(--good)}.kpi.warn .v{color:var(--amber-tx)}
+.pagehead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.pagehead .sub{color:var(--muted);font-size:13px;margin-top:2px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.toolbar input,.toolbar select{margin:0;width:auto;padding:9px 12px;font-size:14px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:99px;border:1px solid var(--line);background:var(--panel);font-size:13px;font-weight:700;color:var(--ink2);cursor:pointer}
+.chip.on{background:var(--inkp);color:var(--inkp-fg);border-color:var(--inkp)}
+.attn{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-radius:var(--r-sm);background:var(--soft);margin-bottom:8px;cursor:pointer}
+.attn.bad{background:var(--bad-bg)}.attn.warn{background:var(--warn-bg)}
+.attn .ic{font-size:20px;line-height:1.2}
+.attn b{display:block;font-size:14px}.attn span{font-size:12.5px;color:var(--ink2)}
+a.lnk{color:var(--amber-tx);font-weight:700;cursor:pointer;text-decoration:none}
 @media(min-width:900px){
- main.wide{max-width:1180px}
+ main.wide{max-width:none}
  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+ .cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start}
+ #app.staff nav.tabs{position:fixed;left:0;top:50px;bottom:0;width:224px;flex-direction:column;gap:2px;padding:14px 10px;border-right:1px solid var(--line);border-bottom:none;overflow-y:auto;z-index:5}
+ #app.staff nav.tabs button{text-align:left;border-bottom:none;border-radius:10px;padding:11px 14px;font-size:14px}
+ #app.staff nav.tabs button.on{background:var(--inkp);color:var(--inkp-fg)}
+ #app.staff nav.tabs button:not(.on):hover{background:var(--soft);color:var(--ink)}
+ #app.staff main{margin-left:224px;max-width:none;padding:26px 34px 70px}
+ html.embed #app.staff nav.tabs{top:0}
 }
 header.top{} .embed header.top{display:none}.embed nav.tabs{top:0}
+@media print{
+ header.top,nav.tabs,.noprint{display:none!important}
+ #app.staff main{margin:0;padding:0}
+ body{background:#fff;color:#000}
+ .card,.kpi{box-shadow:none;border-color:#bbb}
+}
 </style>
 </head>
 <body>
@@ -95,7 +138,7 @@ header.top{} .embed header.top{display:none}.embed nav.tabs{top:0}
 
 <!-- ОЧІКУВАННЯ -->
 <div id="pending" class="hidden">
- <div style="display:flex;min-height:100dvh;align-items:center;justify-content:center;padding:24px;background:var(--ink)">
+ <div style="display:flex;min-height:100dvh;align-items:center;justify-content:center;padding:24px;background:var(--inkp)">
   <div class="card auth-card" style="text-align:center">
    <div class="brand" style="justify-content:center"><span class="dot"></span>Fleet XLV</div>
    <h1 id="pendTitle">Заявку надіслано</h1>
@@ -111,7 +154,7 @@ header.top{} .embed header.top{display:none}.embed nav.tabs{top:0}
  <header class="top"><span class="dot"></span><b>Fleet XLV</b>
   <span class="who"><a id="dashLink" href="/" class="hidden" style="color:#fff;font-size:12px;margin-right:8px">Дашборд парку</a><span id="whoName"></span> <button id="outBtn">Вийти</button></span></header>
  <nav class="tabs" id="tabs"></nav>
- <main id="view"></main>
+ <main id="mainBox"><div id="pghead"></div><div id="view"></div></main>
 </div>
 
 <script>
@@ -132,6 +175,15 @@ const todayStr = () => ymd(new Date());
 
 const EMBED = (function(){try{return window.self !== window.top;}catch(e){return true;}})();
 if (EMBED) document.documentElement.classList.add('embed');
+// Тема як у дашборді (світла/темна). У вкладці дашборда стежимо за його темою, окремо — за збереженою.
+function applyTheme(t){ document.documentElement.setAttribute('data-theme', t==='dark' ? 'dark' : 'light'); }
+(function(){
+  let t = null;
+  try { t = EMBED ? window.parent.document.documentElement.getAttribute('data-theme') : null; } catch(e){}
+  if (!t) { try { t = localStorage.getItem('theme'); } catch(e){} }
+  applyTheme(t);
+  if (EMBED) { try { new MutationObserver(() => applyTheme(window.parent.document.documentElement.getAttribute('data-theme'))).observe(window.parent.document.documentElement,{attributes:true,attributeFilter:['data-theme']}); } catch(e){} }
+})();
 let db, me = null, S = {};   // S = стан застосунку
 const defaultSettings = {wash_week:300};
 // Плани виплати (літера → шкала). Кожен план: період рахунку («за добу» або «за тиждень») і сходинки «від суми → %».
@@ -269,32 +321,35 @@ async function boot(){
   }
   $('#whoName').textContent = p.full_name || session.user.email;
   showOnly('app');
-  S.staff = staff; $('#dashLink').classList.toggle('hidden', !staff); S.week = 0; S.tab = staff ? 'm_over' : 'd_week';
+  S.staff = staff; $('#dashLink').classList.toggle('hidden', !staff); S.week = 0; S.tab = staff ? 'm_today' : 'd_week'; $('#app').classList.toggle('staff', staff);
   S.repDate = todayStr();
-  $('#view').className = staff ? 'wide' : '';
+  $('#mainBox').className = staff ? 'wide' : '';
   buildTabs(); await load(); render();
 }
 function buildTabs(){
   const t = S.staff
-    ? [['m_over','Огляд'],['m_rep','Звіти'],['m_drv','Водії'],['m_cars','Парк'],['m_inc','ДТП'],['m_set','Умови']]
-    : [['d_week','Тиждень'],['d_rep','Звіт'],['d_car','Авто'],['d_inc','ДТП']];
+    ? [['m_today','☀️ Сьогодні'],['m_pay','💳 Виплати'],['m_rep','📋 Звіти'],['m_drv','👥 Водії'],['m_cars','🚗 Парк'],['m_docs','📅 Документи'],['m_inc','⚠️ ДТП'],['m_set','⚙️ Умови']]
+    : [['d_week','💰 Тиждень'],['d_rep','📝 Звіт'],['d_car','🚗 Авто'],['d_inc','⚠️ ДТП']];
   $('#tabs').innerHTML = t.map(([k,l])=>`<button data-k="${k}">${l}</button>`).join('');
-  $('#tabs').onclick = e => { const k = e.target.dataset.k; if (k) { S.tab = k; if (k!=='d_rep') S.repFor = null; render(); window.scrollTo(0,0); } };
+  $('#tabs').onclick = e => { const k = e.target.dataset.k; if (k) { S.tab = k; if (k!=='d_rep') S.repFor = null; if (k==='m_drv') S.drvOpen = null; render(); window.scrollTo(0,0); } };
 }
 
 // ====================== ЗАВАНТАЖЕННЯ ======================
 async function load(){
   const q = (p) => p.then(r => { if (r.error) throw r.error; return r.data || []; });
   const since = ymd(addDays(new Date(), -120));
-  const [settings, reports, incidents, cars, debts, apiRows, plansRows] = await Promise.all([
+  const [settings, reports, incidents, cars, debts, apiRows, plansRows, payRows] = await Promise.all([
     q(db.from('settings').select('*')),
     q(db.from('reports').select('*').gte('report_date', since).order('report_date',{ascending:false}).limit(5000)),
     q(db.from('incidents').select('*').order('created_at',{ascending:false}).limit(500)),
     q(db.from('cars').select('*').order('plate')),
     q(db.from('debts').select('*').order('created_at',{ascending:false}).limit(2000)),
     q(db.from('api_days').select('*').gte('day', since).limit(20000)).catch(() => []),
-    q(db.from('pay_plans').select('*').order('code')).catch(() => null)
+    q(db.from('pay_plans').select('*').order('code')).catch(() => null),
+    q(db.from('payouts').select('*').limit(5000)).catch(() => null)
   ]);
+  S.payMissing = payRows === null;
+  S.payouts = Object.fromEntries((payRows||[]).map(p => [p.driver_id+'|'+String(p.week_start).slice(0,10), p]));
   S.plansMissing = plansRows === null;
   S.plans = (plansRows||[]).map(p => ({code:p.code, name:p.name||'', period:p.period==='week'?'week':'day', tiers:(Array.isArray(p.tiers)?p.tiers:[]).map(t=>({from:+t.from||0,pct:+t.pct||0}))}));
   S.apiMap = Object.fromEntries(apiRows.map(a => [a.driver_id+'|'+a.day, a]));
@@ -342,8 +397,21 @@ async function dashPlates(){
   return [...out];
 }
 // ====================== РЕНДЕР ======================
+const TITLES = {
+  m_today:['Сьогодні', () => { const d = new Date(); return ['неділя','понеділок','вівторок','середа','четвер','пʼятниця','субота'][d.getDay()]+', '+d.getDate()+'.'+pad(d.getMonth()+1)+'.'+d.getFullYear()+' · що потребує уваги зараз'; }],
+  m_pay:['Виплати','Відомість за тиждень: кому скільки виплатити'],
+  m_rep:['Звіти','Що подали водії і що прийшло з Bolt і Uklon'],
+  m_drv:['Водії','База водіїв, картки, борги'],
+  m_cars:['Парк','Авто та їхні документи'],
+  m_docs:['Документи','Страховка, техогляд, ліцензія: що спливає'],
+  m_inc:['ДТП','Звернення водіїв з фото й відео'],
+  m_set:['Умови','Плани виплат і повернення за мийку'],
+  d_rep:['Звіт за водія','']
+};
 function render(){
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.k === S.tab));
+  const t = S.staff && TITLES[S.tab]; const hide = S.tab==='m_drv' && S.drvOpen;
+  $('#pghead').innerHTML = (t && !hide) ? `<div class="pagehead noprint"><div><h1 class="pt">${t[0]}</h1><div class="sub">${typeof t[1]==='function'?t[1]():t[1]}</div></div></div>` : '';
   const fn = VIEWS[S.tab]; $('#view').innerHTML = ''; $('#view').onclick = null; $('#view').onchange = null; fn($('#view'));
 }
 function weekNav(el, cb){
@@ -355,6 +423,94 @@ function weekNav(el, cb){
 }
 const RD = () => S.repFor || me.driver_id;
 const myReports = () => S.reports.filter(r => r.driver_id === RD());
+
+// ====================== ДОПОМІЖНЕ ДЛЯ МЕНЕДЖЕРА ======================
+const DOCS = [['insurance_until','Страховка'],['techpass_until','Техогляд'],['license_until','Ліцензія']];
+const daysLeft = d => Math.round((parse(d) - parse(todayStr())) / 86400000);
+function docItems(){ const out = []; S.cars.forEach(c => DOCS.forEach(([f,l]) => out.push({car:c, f, label:l, date:c[f]||null, left:c[f]?daysLeft(c[f]):null}))); return out; }
+const docPill = left => left==null ? '<span class="pill">не вказано</span>' : left<0 ? `<span class="pill r">прострочено ${-left} дн</span>` : left<=30 ? `<span class="pill y">лишилось ${left} дн</span>` : `<span class="pill g">${left} дн</span>`;
+const fmtDate = s => { const d = parse(String(s).slice(0,10)); return pad(d.getDate())+'.'+pad(d.getMonth()+1)+'.'+d.getFullYear(); };
+function weekRow(dr, days){ const reps = effReps(dr.id, days); return {reps, w: weekCalc(reps, S.settings, dr.plan_letter)}; }
+const planLabel = dr => { const p = planByCode(dr.plan_letter); return `${dr.plan_letter} · ${p.period==='week'?'тиждень':'доба'}`; };
+const payoutOf = (did, ws) => (S.payouts||{})[did+'|'+ws] || null;
+
+// Картка водія: усе про одного водія в одному місці
+function drvCard(el, dr){
+  const car = carOf(dr.id), ds = S.debts.filter(x=>x.driver_id===dr.id), bal = debtBalance(ds), acc = S.profiles.find(x=>x.driver_id===dr.id), arch = dr.status==='archived';
+  const dossier = 'tax_id' in dr;
+  const hist = Array.from({length:8},(_,i)=>{ const days = weekDays(-i); const r = weekRow(dr,days); return {days, w:r.w, po:payoutOf(dr.id,days[0])}; });
+  const cur = hist[0].w;
+  const last30 = effReps(dr.id, Array.from({length:30},(_,i)=>ymd(addDays(new Date(),-i))));
+  const avgDay = last30.length ? last30.reduce((a,r)=>a+repGross(r),0)/last30.length : 0;
+  const recent = Array.from({length:14},(_,i)=>effDay(dr.id, ymd(addDays(new Date(),-i)))).filter(Boolean);
+  const incs = S.incidents.filter(i=>i.driver_id===dr.id);
+  const free = S.cars.filter(c=>!c.driver_id || c.driver_id===dr.id);
+  const fld = (id,label,val,type) => `<div><label>${label}</label><input id="${id}" ${type?`type="${type}"`:''} value="${esc(val||'')}"></div>`;
+  el.innerHTML = `<div id="dmsg"></div>
+   <div class="pagehead"><div><a class="lnk" data-back="1">‹ Усі водії</a><h1 class="pt" style="margin-top:4px">${esc(dr.full_name)} <span class="pill ${arch?'':'g'}">${arch?'архів':'активний'}</span> <span class="pill ${acc?'g':'y'}">${acc?'є акаунт':'без акаунта'}</span></h1>
+    <div class="sub">${esc(dr.phone||'телефон не вказано')}${dr.dash_name?` · у дашборді: ${esc(dr.dash_name)}`:''} · план ${esc(planLabel(dr))}</div></div>
+    <div class="toolbar noprint"><button class="btn sm sec" data-addrep="${dr.id}">＋ Звіт за водія</button><button class="btn sm sec" data-arch="${dr.id}">${arch?'Відновити':'В архів'}</button><button class="btn sm red" data-deldr="${dr.id}">Видалити</button></div></div>
+   <div class="kpis">
+    <div class="kpi"><div class="l">Оборот тижня</div><div class="v">${money(cur.gross)}</div><div class="s">${cur.days} дн. з даними</div></div>
+    <div class="kpi good"><div class="l">Нараховано</div><div class="v">${money(cur.total)}</div><div class="s">${cur.pct}% + мийка</div></div>
+    <div class="kpi ${bal>0?'bad':''}"><div class="l">Борг</div><div class="v">${money(bal)}</div></div>
+    <div class="kpi"><div class="l">Середній день (30 дн)</div><div class="v">${money(avgDay)}</div><div class="s">${last30.length} змін</div></div>
+   </div>
+   <div class="cols"><div>
+    <div class="card tblwrap"><h2>Історія тижнів</h2><table class="tbl"><thead><tr><th>Тиждень</th><th class="r">Оборот</th><th class="r">%</th><th class="r">Нараховано</th><th>Виплата</th></tr></thead><tbody>
+     ${hist.map(h=>`<tr class="${h.w.days?'':'muted'}"><td>${dm(h.days[0])} – ${dm(h.days[6])}</td><td class="r num">${money(h.w.gross)}</td><td class="r num">${h.w.pct}%</td><td class="r num"><b>${money(h.w.total)}</b></td><td>${h.po?`<span class="pill g">✓ ${money(h.po.amount)}</span>`:(h.w.total>0?'<span class="pill y">не виплачено</span>':'—')}</td></tr>`).join('')}</tbody></table></div>
+    <div class="card"><h2>Останні 14 днів</h2>${recent.map(e=>`<div class="row"><span><b>${dayName(e.report_date)} ${dm(e.report_date)}</b><div class="muted">Bolt ${money(e.bolt)} · Uklon ${money(e.uklon)}${e.other?` · Інше ${money(e.other)}`:''}</div></span><span style="text-align:right"><b class="num">${money(repGross(e))}</b><div>${srcPill(e)}</div></span></div>`).join('') || '<div class="muted">Даних ще немає</div>'}</div>
+    <div class="card"><h2>ДТП і пошкодження</h2>${incs.map(i=>`<div class="row"><div><b>${i.kind==='self_damage'?'Самост. пошкодження':'ДТП'}</b><div class="muted">${i.created_at.slice(0,10)} · ${esc(i.location||'')}</div></div><span class="pill ${i.status==='new'?'r':i.status==='review'?'y':'g'}">${esc(i.status)}</span></div>`).join('') || '<div class="muted">Звернень немає</div>'}</div>
+   </div><div>
+    <div class="card"><h2>Дані водія</h2>
+     <div class="two">${fld('fN',"Прізвище та ім'я",dr.full_name)}${fld('fP','Телефон',dr.phone,'tel')}</div>
+     <div class="two">${fld('fD',"Ім'я в дашборді",dr.dash_name)}<div><label>План (літера)</label><select id="fL">${plansList().map(p=>`<option value="${esc(p.code)}" ${dr.plan_letter===p.code?'selected':''}>${esc(p.code)} · ${esc(p.name)}</option>`).join('')}</select></div></div>
+     ${dossier ? `<div class="two">${fld('fT','ІПН',dr.tax_id)}${fld('fPass','Паспорт',dr.passport)}</div>
+     <div class="two">${fld('fLn','Посвідчення водія №',dr.license_no)}${fld('fLu','Права дійсні до',dr.license_until,'date')}</div>
+     ${fld('fA','Адреса',dr.address)}<div><label>Нотатки менеджера</label><textarea id="fNote">${esc(dr.notes||'')}</textarea></div>` : '<div class="muted" style="margin-bottom:10px">Щоб тут зберігати ІПН, паспорт, права, адресу й нотатки, запустіть payouts.sql у Supabase.</div>'}
+     <button class="btn" id="dSave">Зберегти</button></div>
+    <div class="card"><h2>Авто й документи</h2>
+     <label>Авто</label><select data-car="${dr.id}"><option value="">— без авто —</option>${free.map(c=>`<option value="${c.id}" ${car?.id===c.id?'selected':''}>${esc(c.plate)} ${esc(c.model||'')}</option>`).join('')}</select>
+     ${car ? DOCS.map(([f,l])=>`<div class="row"><span>${l}<div class="muted">${car[f]?fmtDate(car[f]):'не вказано'}</div></span>${docPill(car[f]?daysLeft(car[f]):null)}</div>`).join('') : '<div class="muted">Авто не закріплено.</div>'}</div>
+    <div class="card"><h2>Борги</h2><div class="row"><span>Баланс</span><b style="color:${bal>0?'var(--bad)':'var(--good)'}">${money(bal)}</b></div>
+     ${ds.slice(0,8).map(d=>`<div class="row" style="font-size:12px"><span>${dm(d.created_at.slice(0,10))} ${d.kind==='charge'?'+':'−'}${money(d.amount)}${d.note?` · ${esc(d.note)}`:''}</span><a data-deldebt="${d.id}" style="cursor:pointer;color:var(--bad)">✕</a></div>`).join('')}
+     <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><button class="btn sm sec" data-debt="${dr.id}|charge">+ Нарахувати</button><button class="btn sm sec" data-debt="${dr.id}|payment">+ Оплата</button></div></div>
+   </div></div>`;
+  const msg = (t,ok) => { $('#dmsg').innerHTML = `<div class="${ok?'ok':'err'}">${esc(t)}</div>`; window.scrollTo(0,0); };
+  el.onchange = async e => {
+    const t = e.target;
+    if (t.dataset.car !== undefined) {
+      let r = await db.from('cars').update({driver_id:null}).eq('driver_id', dr.id); if (r.error) return msg(r.error.message);
+      if (t.value) { r = await db.from('cars').update({driver_id:dr.id}).eq('id', t.value); if (r.error) return msg(r.error.message); }
+      await load(); render();
+    }
+  };
+  el.onclick = async e => {
+    const b = e.target;
+    if (b.dataset.back) { S.drvOpen = null; render(); window.scrollTo(0,0); return; }
+    if (b.id==='dSave') {
+      const upd = {full_name:$('#fN').value.trim()||dr.full_name, phone:$('#fP').value.trim()||null, dash_name:$('#fD').value.trim()||null, plan_letter:$('#fL').value};
+      if (dossier) Object.assign(upd, {tax_id:$('#fT').value.trim()||null, passport:$('#fPass').value.trim()||null, license_no:$('#fLn').value.trim()||null, license_until:$('#fLu').value||null, address:$('#fA').value.trim()||null, notes:$('#fNote').value.trim()||null});
+      const r = await db.from('drivers').update(upd).eq('id',dr.id); if (r.error) return msg(r.error.message);
+      await load(); render(); $('#dmsg').innerHTML = '<div class="ok">Збережено</div>'; return; }
+    if (b.dataset.addrep) { S.repFor = dr.id; S.repDate = todayStr(); S.tab = 'd_rep'; render(); window.scrollTo(0,0); return; }
+    if (b.dataset.debt) { const [id,kind] = b.dataset.debt.split('|');
+      const a = parseFloat((prompt(kind==='charge'?'Сума боргу, ₴':'Сума оплати, ₴')||'').replace(',','.')); if (!(a>0)) return;
+      const note = prompt('Коментар (за що)')||null;
+      const r = await db.from('debts').insert({driver_id:id,kind,amount:a,note}); if (r.error) return msg(r.error.message); await load(); render(); return; }
+    if (b.dataset.deldebt) { if (!confirm('Видалити цей запис боргу?')) return; const r = await db.from('debts').delete().eq('id', b.dataset.deldebt); if (r.error) return msg(r.error.message); await load(); render(); return; }
+    if (b.dataset.arch) { const to = dr.status==='archived'?'active':'archived';
+      if (to==='archived' && !confirm('Перенести в архів? Водій втратить доступ до кабінету, а звіти збережуться.')) return;
+      let r = await db.from('drivers').update({status:to}).eq('id',dr.id); if (r.error) return msg(r.error.message);
+      r = await db.from('profiles').update({status: to==='archived'?'rejected':'active'}).eq('driver_id',dr.id); if (r.error) return msg(r.error.message);
+      if (to==='archived') { r = await db.from('cars').update({driver_id:null}).eq('driver_id',dr.id); if (r.error) return msg(r.error.message); }
+      await load(); render(); return; }
+    if (b.dataset.deldr) {
+      if (!confirm(`Видалити водія «${dr.full_name}» НАЗАВЖДИ разом з усіма його звітами, боргами й ДТП?\nЦе не можна скасувати. Якщо сумніваєтесь, оберіть «В архів».`)) return;
+      let r = await db.from('profiles').update({status:'rejected'}).eq('driver_id',dr.id); if (r.error) return msg(r.error.message);
+      r = await db.from('drivers').delete().eq('id',dr.id); if (r.error) return msg(r.error.message); S.drvOpen = null; await load(); render(); }
+  };
+}
 
 const VIEWS = {
 // ---------- ВОДІЙ: ТИЖДЕНЬ ----------
@@ -369,6 +525,7 @@ d_week(el){
   el.insertAdjacentHTML('beforeend', `
    <div class="card"><div class="muted">Ваш заробіток за тиждень</div>
     <div class="big">${money(w.total)}</div>
+    ${(()=>{ const po = payoutOf(did, days[0]); return po ? `<div style="margin:6px 0"><span class="pill g">✓ Виплачено ${fmtDate((po.paid_at||po.created_at||days[0]).slice(0,10))}: ${money(po.amount)}</span></div>` : ''; })()}
     <div class="muted">${w.days ? `Оборот ${money(w.gross)} · виплата за відсотками <b>${money(w.share)}</b> (${PL.period==='week'?'відсоток тижня':'в середньому'} ${w.pct}%)${w.washBack?` · мийка +${money(w.washBack)}`:''}` : 'Даних за цей тиждень ще немає'}</div>
     ${(PL.period==='week' && tierNext(PL,w.gross) && w.gross>0) ? `<div class="muted" style="margin-top:6px">До ${tierNext(PL,w.gross).pct}%: ще ${money(tierNext(PL,w.gross).need)} обороту за тиждень</div>`:''}
    </div>
@@ -393,7 +550,7 @@ d_rep(el){
    <div id="repMsg"></div>
    <label>Дата зміни</label><select id="rDate">${opts.map(d=>`<option value="${d}" ${d===cur?'selected':''}>${dayName(d)} ${dm(d)}${d===todayStr()?' (сьогодні)':''}</option>`).join('')}</select>
    ${r.id?'<div class="ok">За цей день звіт уже є — можна виправити.</div>':''}
-   ${apiRow?`<div class="card" style="background:#F2FBF7;box-shadow:none;border:1px solid #cfeedd"><b>Дані з системи за цей день</b><div class="row"><span>Bolt</span><b>${money(apiRow.bolt_net)}</b></div><div class="row"><span>Uklon</span><b>${money(apiRow.uklon_net)}</b></div><div class="muted">Якщо ваші цифри такі самі, поля нижче можна не заповнювати. Якщо інші — впишіть свої, менеджер перевірить.</div></div>`:''}
+   ${apiRow?`<div class="card" style="background:var(--good-bg);box-shadow:none"><b>Дані з системи за цей день</b><div class="row"><span>Bolt</span><b>${money(apiRow.bolt_net)}</b></div><div class="row"><span>Uklon</span><b>${money(apiRow.uklon_net)}</b></div><div class="muted">Якщо ваші цифри такі самі, поля нижче можна не заповнювати. Якщо інші — впишіть свої, менеджер перевірить.</div></div>`:''}
    <div class="two"><div><label>Bolt, ₴ ${apiRow?'(якщо відрізняється)':''}</label><input id="rBolt" inputmode="decimal" placeholder="${apiRow?Math.round(apiRow.bolt_net):'0'}" value="${r.bolt||''}"></div>
    <div><label>Uklon, ₴ ${apiRow?'(якщо відрізняється)':''}</label><input id="rUklon" inputmode="decimal" placeholder="${apiRow?Math.round(apiRow.uklon_net):'0'}" value="${r.uklon||''}"></div></div>
    <label>Бордюри та інше, ₴</label><input id="rOther" inputmode="decimal" placeholder="0" value="${r.other??''}">
@@ -457,39 +614,134 @@ d_car(el){
 // ---------- ВОДІЙ: ДТП ----------
 d_inc(el){ incidentForm(el, me.driver_id, S.incidents.filter(i=>i.driver_id===me.driver_id)); },
 
-// ---------- МЕНЕДЖЕР: ОГЛЯД ----------
-m_over(el){
-  const pend = S.profiles.filter(p=>p.role==='driver' && p.status==='pending');
-  const t = todayStr(), y = ymd(addDays(new Date(),-1));
+// ---------- МЕНЕДЖЕР: СЬОГОДНІ ----------
+m_today(el){
   const act = S.drivers.filter(d=>d.status==='active');
-  const missing = act.filter(d=>!S.reports.some(r=>r.driver_id===d.id && r.report_date===y));
-  const days = weekDays(0);
-  const wk = act.map(d=>({d, w: weekCalc(effReps(d.id, days), S.settings, d.plan_letter)}));
-  const total = wk.reduce((a,x)=>a+x.w.gross,0);
-    const step = (ok,t,tab,hint) => `<div class="row" style="align-items:flex-start"><span><b>${ok?'✅':'⬜'} ${t}</b><div class="muted">${hint}</div></span><a data-go="${tab}" class="pill y" style="cursor:pointer;white-space:nowrap">відкрити</a></div>`;
-  const guide = `<div class="card"><h2>З чого почати</h2>
-   ${step(S.cars.length>0,`Авто в парку: ${S.cars.length}`,'m_cars','Вкладка «Парк»: додайте авто або імпортуйте номери з дашборду.')}
-   ${step(S.drivers.length>0,`Водії в базі: ${S.drivers.length}`,'m_drv','Вкладка «Водії»: додайте водія або підтвердіть заявку нижче, потім закріпіть за ним авто.')}
+  const t = todayStr(), y = ymd(addDays(new Date(),-1)), days = weekDays(0);
+  const pend = S.profiles.filter(p=>p.role==='driver' && p.status==='pending');
+  const rows = act.map(dr => { const {reps,w} = weekRow(dr,days); return {dr, w, reps, td:effDay(dr.id,t), rep:S.reports.find(r=>r.driver_id===dr.id && r.report_date===t)}; });
+  const missingY = act.filter(d=>!S.reports.some(r=>r.driver_id===d.id && r.report_date===y));
+  const diffs = rows.reduce((a,x)=>a+x.reps.filter(r=>r.diff).length,0);
+  const docBad = docItems().filter(x=>x.left!=null && x.left<=30);
+  const incOpen = S.incidents.filter(i=>i.status==='new'||i.status==='review');
+  const debtTotal = act.reduce((a,d)=>a+Math.max(0,debtBalance(S.debts.filter(x=>x.driver_id===d.id))),0);
+  const todayGross = rows.reduce((a,x)=>a+(x.td?repGross(x.td):0),0);
+  const weekGross = rows.reduce((a,x)=>a+x.w.gross,0), weekPay = rows.reduce((a,x)=>a+x.w.total,0);
+  const subm = rows.filter(x=>x.rep).length;
+  const att = [];
+  if (pend.length) att.push(['warn','🆕',`Нових заявок водіїв: ${pend.length}`,'Підтвердіть їх нижче','#apps']);
+  if (missingY.length) att.push(['bad','📋',`Не подали звіт за вчора (${dm(y)}): ${missingY.length}`, missingY.slice(0,5).map(d=>d.full_name).join(', ')+(missingY.length>5?'…':''),'m_rep']);
+  if (diffs) att.push(['warn','⚖️',`Розбіжності з Bolt/Uklon: ${diffs}`,'Водії вказали інші суми, ніж у системі. Перевірте у «Звітах»','m_rep']);
+  if (docBad.length) att.push([docBad.some(x=>x.left<0)?'bad':'warn','📅',`Документи: ${docBad.length} прострочено або спливають за 30 днів`, docBad.slice(0,4).map(x=>`${x.car.plate} ${x.label.toLowerCase()}`).join(', '),'m_docs']);
+  if (incOpen.length) att.push(['bad','⚠️',`ДТП і пошкодження без рішення: ${incOpen.length}`,'Відкрийте вкладку «ДТП»','m_inc']);
+  if (debtTotal>0) att.push(['warn','💸',`Борги водіїв: ${money(debtTotal)}`,'Деталі в картках водіїв','m_drv']);
+  const setup = [S.cars.length>0, S.drivers.length>0, S.drivers.some(d=>carOf(d.id)), Object.keys(S.apiMap||{}).length>0];
+  const step = (ok,t,tab,hint) => `<div class="row" style="align-items:flex-start"><span><b>${ok?'✅':'⬜'} ${t}</b><div class="muted">${hint}</div></span><a data-go="${tab}" class="pill y" style="cursor:pointer;white-space:nowrap">відкрити</a></div>`;
+  const guide = setup.every(Boolean) ? '' : `<div class="card"><h2>З чого почати</h2>
+   ${step(S.cars.length>0,`Авто в парку: ${S.cars.length}`,'m_cars','«Парк»: додайте авто або імпортуйте номери з дашборду.')}
+   ${step(S.drivers.length>0,`Водії в базі: ${S.drivers.length}`,'m_drv','«Водії»: додайте водія або підтвердіть заявку нижче.')}
    ${step(S.drivers.some(d=>carOf(d.id)),`Водіїв з авто: ${S.drivers.filter(d=>carOf(d.id)).length}`,'m_drv','У картці водія виберіть авто зі списку.')}
-   ${step(S.reports.length>0,`Звітів від водіїв: ${S.reports.length}`,'m_rep','Вкладка «Звіти»: тут з’являються звіти, які подають водії.')}
-   <div class="muted" style="margin-top:8px">Водіям надсилайте посилання на цю сторінку: вони самі реєструються, ви підтверджуєте.</div></div>`;
-  el.innerHTML = `<div class="cols"><div>
-   ${guide}
-   <datalist id="dnames">${(S.dashNames||[]).map(n=>`<option value="${esc(n)}">`).join('')}</datalist><div class="card"><h2>Нові заявки водіїв ${pend.length?`<span class="pill y">${pend.length}</span>`:''}</h2>
-    ${pend.map(p=>`<div class="row"><div><b>${esc(p.full_name||'—')}</b><div class="muted">${esc(p.phone||'')}</div></div>
+   ${step(Object.keys(S.apiMap||{}).length>0,'Дані Bolt/Uklon у кабінеті','m_pay','У дашборді: «Аналіз за тиждень» → «Опублікувати тиждень водіям».')}</div>`;
+  el.innerHTML = `
+   <div class="kpis">
+    <div class="kpi"><div class="l">Оборот сьогодні</div><div class="v">${money(todayGross)}</div><div class="s">${rows.filter(x=>x.td).length} водіїв з даними</div></div>
+    <div class="kpi"><div class="l">Оборот за тиждень</div><div class="v">${money(weekGross)}</div><div class="s">${act.length} активних водіїв</div></div>
+    <div class="kpi good"><div class="l">Нараховано водіям</div><div class="v">${money(weekPay)}</div><div class="s">за цей тиждень</div></div>
+    <div class="kpi ${missingY.length?'warn':''}"><div class="l">Звіти сьогодні</div><div class="v">${subm} / ${act.length}</div><div class="s">подали</div></div>
+    <div class="kpi ${debtTotal>0?'bad':''}"><div class="l">Борги</div><div class="v">${money(debtTotal)}</div><div class="s">всього по водіях</div></div>
+   </div>
+   <div class="cols"><div>
+    <div class="card"><h2>Потрібна увага</h2>${att.length ? att.map(a=>`<div class="attn ${a[0]}" data-go="${a[4]}"><span class="ic">${a[1]}</span><div style="pointer-events:none"><b>${a[2]}</b><span>${esc(a[3])}</span></div></div>`).join('') : '<div class="muted">Усе спокійно 👍</div>'}</div>
+    ${guide}
+    <datalist id="dnames">${(S.dashNames||[]).map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
+    <div class="card" id="apps"><h2>Нові заявки водіїв ${pend.length?`<span class="pill y">${pend.length}</span>`:''}</h2>
+    ${pend.map(p=>`<div class="row" style="flex-wrap:wrap"><div><b>${esc(p.full_name||'—')}</b><div class="muted">${esc(p.phone||'')}</div></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><select data-link="${p.id}" style="width:150px;margin:0;padding:8px 10px;font-size:13px"><option value="">нова картка</option>${S.drivers.filter(d=>!S.profiles.some(x=>x.driver_id===d.id)).map(d=>`<option value="${d.id}">${esc(d.full_name)}</option>`).join('')}</select><input list="dnames" data-dn="${p.id}" placeholder="Ім'я в дашборді" style="width:150px;margin:0;padding:8px 10px;font-size:13px"><button class="btn sm grn" data-ap="${p.id}">Підтвердити</button><button class="btn sm sec" data-rj="${p.id}">Відхилити</button></div></div>`).join('') || '<div class="muted">Нових заявок немає</div>'}</div>
-   <div class="card"><h2>Не подали звіт за вчора (${dm(y)})</h2>
-    ${missing.map(d=>`<div class="row"><span>${esc(d.full_name)}</span><span class="pill r">немає звіту</span></div>`).join('') || '<div class="muted">Усі подали 👍</div>'}</div>
    </div><div>
-   <div class="card"><div class="muted">Оборот парку за цей тиждень</div><div class="big">${money(total)}</div><div class="muted">${act.length} активних водіїв</div></div>
-   <div class="card"><h2>Водії за тиждень</h2>${wk.sort((a,b)=>b.w.gross-a.w.gross).map(x=>`<div class="row"><span>${esc(x.d.full_name)}<div class="muted">${x.w.days} зв.</div></span><span style="text-align:right"><b class="num">${money(x.w.gross)}</b><div class="muted">${x.w.pct}%</div></span></div>`).join('') || '<div class="muted">Поки порожньо</div>'}</div>
+    <div class="card tblwrap"><h2>Водії: сьогодні і тиждень</h2>
+     <table class="tbl"><thead><tr><th>Водій</th><th class="r">Сьогодні</th><th class="r">Тиждень</th><th class="r">Нараховано</th><th>Звіт</th></tr></thead><tbody>
+     ${rows.sort((a,b)=>b.w.gross-a.w.gross).map(x=>`<tr class="clk" data-open="${x.dr.id}"><td><b>${esc(x.dr.full_name)}</b><div class="muted">${esc(carOf(x.dr.id)?.plate||'без авто')} · ${esc(planLabel(x.dr))}</div></td>
+       <td class="r num">${x.td?money(repGross(x.td)):'—'}</td><td class="r num">${money(x.w.gross)}</td><td class="r num">${money(x.w.total)}</td>
+       <td>${x.rep?'<span class="pill g">подав</span>':'<span class="pill r">немає</span>'}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">Активних водіїв ще немає</td></tr>'}
+     </tbody></table></div>
    </div></div>`;
   el.onclick = async e => {
-    const go = e.target.dataset.go; if (go) { S.tab = go; render(); window.scrollTo(0,0); return; }
+    const open = e.target.closest('[data-open]'); if (open) { S.drvOpen = open.dataset.open; S.tab = 'm_drv'; render(); window.scrollTo(0,0); return; }
+    const go = e.target.closest('[data-go]');
+    if (go) { const g = go.dataset.go; if (g==='#apps') { $('#apps').scrollIntoView({behavior:'smooth'}); return; } S.tab = g; render(); window.scrollTo(0,0); return; }
     const a = e.target.dataset.ap, r = e.target.dataset.rj;
     if (a) { e.target.disabled=true; const dn = (document.querySelector(`[data-dn="${a}"]`)||{}).value||null; const lk = (document.querySelector(`[data-link="${a}"]`)||{}).value||null; const {error} = await db.rpc('approve_driver',{p_profile:a,p_dash_name:dn&&dn.trim()||null,p_driver_id:lk}); if (error) return alert(error.message); await load(); render(); }
     if (r) { if(!confirm('Відхилити заявку?')) return; const {error} = await db.from('profiles').update({status:'rejected'}).eq('id',r); if (error) return alert(error.message); await load(); render(); }
   };
+},
+
+// ---------- МЕНЕДЖЕР: ВИПЛАТИ ----------
+m_pay(el){
+  const days = weekNav(el, render), ws = days[0];
+  const act = S.drivers.filter(d=>d.status==='active');
+  const data = act.map(dr => { const {w} = weekRow(dr,days); return {dr, w, po:payoutOf(dr.id,ws), bal:debtBalance(S.debts.filter(x=>x.driver_id===dr.id)), car:carOf(dr.id)}; }).sort((a,b)=>b.w.total-a.w.total);
+  const sum = f => data.reduce((a,x)=>a+f(x),0);
+  const todo = data.filter(x=>!x.po && Math.round(x.w.total)>0);
+  el.insertAdjacentHTML('beforeend', `<div id="pmsg"></div>
+   ${S.payMissing?'<div class="err">Таблиці виплат у базі ще немає: запустіть payouts.sql у Supabase (інструкція в чаті). Відомість працює, але статус «Виплачено» не збережеться.</div>':''}
+   <div class="kpis">
+    <div class="kpi"><div class="l">Оборот</div><div class="v">${money(sum(x=>x.w.gross))}</div></div>
+    <div class="kpi good"><div class="l">Нараховано</div><div class="v">${money(sum(x=>x.w.total))}</div><div class="s">з урахуванням мийки</div></div>
+    <div class="kpi"><div class="l">Виплачено</div><div class="v">${money(sum(x=>x.po?+x.po.amount:0))}</div><div class="s">${data.filter(x=>x.po).length} з ${data.length}</div></div>
+    <div class="kpi ${todo.length?'warn':'good'}"><div class="l">Лишилось виплатити</div><div class="v">${money(todo.reduce((a,x)=>a+Math.round(x.w.total),0))}</div><div class="s">${todo.length} водіїв</div></div>
+   </div>
+   <div class="toolbar noprint" style="margin-bottom:12px"><button class="btn sm sec" id="pCsv">⬇ Excel (CSV)</button><button class="btn sm sec" id="pPrint">🖨 Друк</button><span style="flex:1"></span>${todo.length?'<button class="btn sm grn" id="pAll">Позначити виплаченими всіх ('+todo.length+')</button>':''}</div>
+   <div class="card tblwrap"><table class="tbl"><thead><tr><th>Водій</th><th>План</th><th class="r">Оборот</th><th class="r">%</th><th class="r">За відсотки</th><th class="r">Мийка</th><th class="r">Нараховано</th><th class="r">Борг</th><th>Виплата</th></tr></thead><tbody>
+   ${data.map(x=>{ const tot=Math.round(x.w.total); const po=x.po; return `<tr class="clk${x.w.days?'':' muted'}" data-open="${x.dr.id}">
+     <td><b>${esc(x.dr.full_name)}</b><div class="muted">${esc(x.car?.plate||'без авто')}</div></td><td>${esc(planLabel(x.dr))}</td>
+     <td class="r num">${money(x.w.gross)}</td><td class="r num">${x.w.pct}%</td><td class="r num">${money(x.w.share)}</td><td class="r num">${x.w.washBack?money(x.w.washBack):'—'}</td>
+     <td class="r num"><b>${money(tot)}</b></td><td class="r num" style="${x.bal>0?'color:var(--bad)':''}">${x.bal?money(x.bal):'—'}</td>
+     <td>${po?`<span class="pill g">✓ ${fmtDate((po.paid_at||po.created_at||ws).slice(0,10))}</span> <span class="num">${money(po.amount)}</span>${Math.abs(po.amount-tot)>1?` <span class="pill y" title="Після виплати цифри змінились">тепер ${money(tot)}</span>`:''} <a class="lnk noprint" data-unpay="${x.dr.id}">скасувати</a>`:(tot>0?`<button class="btn sm noprint" data-pay="${x.dr.id}">Виплатити</button>`:'<span class="muted">—</span>')}</td></tr>`; }).join('') || '<tr><td colspan="9" class="muted">Активних водіїв ще немає</td></tr>'}
+   </tbody><tfoot><tr><td colspan="2">Разом</td><td class="r num">${money(sum(x=>x.w.gross))}</td><td></td><td class="r num">${money(sum(x=>x.w.share))}</td><td class="r num">${money(sum(x=>x.w.washBack))}</td><td class="r num">${money(sum(x=>Math.round(x.w.total)))}</td><td class="r num">${money(sum(x=>Math.max(0,x.bal)))}</td><td></td></tr></tfoot></table></div>
+   <div class="muted">Виплата рахується за планом (літерою) кожного водія з вкладки «Умови». «Борг» — окремо, з виплати він автоматично не віднімається. Натисніть «Виплатити», коли переказали гроші: сума запам'ятається, і якщо потім цифри зміняться, ви побачите позначку.</div>`);
+  const msg = (t,ok) => { $('#pmsg').innerHTML = `<div class="${ok?'ok':'err'}">${esc(t)}</div>`; };
+  el.onclick = async e => {
+    const t = e.target;
+    if (t.id==='pCsv') {
+      const head = ['Водій','Авто','План','Оборот','Відсоток','За відсотки','Мийка','Нараховано','Борг','Виплачено','Дата виплати'];
+      const lines = [head].concat(data.map(x=>[x.dr.full_name, x.car?.plate||'', planLabel(x.dr), Math.round(x.w.gross), x.w.pct, Math.round(x.w.share), Math.round(x.w.washBack), Math.round(x.w.total), Math.round(x.bal), x.po?Math.round(x.po.amount):'', x.po?fmtDate((x.po.paid_at||x.po.created_at||ws).slice(0,10)):'']));
+      const csv = '﻿' + lines.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(';')).join('\r\n');
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download = `vidomist_${ws}.csv`; document.body.appendChild(a); a.click(); a.remove(); return; }
+    if (t.id==='pPrint') { window.print(); return; }
+    if (t.id==='pAll') { if (!confirm(`Позначити виплаченими ${todo.length} водіїв на суму ${money(todo.reduce((a,x)=>a+Math.round(x.w.total),0))}?`)) return;
+      const r = await db.from('payouts').upsert(todo.map(x=>({driver_id:x.dr.id, week_start:ws, amount:Math.round(x.w.total)})),{onConflict:'driver_id,week_start'}); if (r.error) return msg(r.error.message); await load(); render(); return; }
+    const pay = t.dataset.pay, unpay = t.dataset.unpay;
+    if (pay) { const x = data.find(y=>y.dr.id===pay); const note = prompt(`Виплата: ${x.dr.full_name}, ${money(x.w.total)}.\nКоментар (необов'язково):`, ''); if (note===null) return;
+      const r = await db.from('payouts').upsert({driver_id:pay, week_start:ws, amount:Math.round(x.w.total), note:note||null},{onConflict:'driver_id,week_start'}); if (r.error) return msg(r.error.message); await load(); render(); return; }
+    if (unpay) { if (!confirm('Скасувати позначку «Виплачено»?')) return; const r = await db.from('payouts').delete().eq('driver_id',unpay).eq('week_start',ws); if (r.error) return msg(r.error.message); await load(); render(); return; }
+    const open = t.closest('[data-open]'); if (open) { S.drvOpen = open.dataset.open; S.tab = 'm_drv'; render(); window.scrollTo(0,0); }
+  };
+},
+
+// ---------- МЕНЕДЖЕР: ДОКУМЕНТИ ----------
+m_docs(el){
+  const all = docItems();
+  const f = S.docFilter || 'all';
+  const cnt = { bad: all.filter(x=>x.left!=null && x.left<0).length, soon: all.filter(x=>x.left!=null && x.left>=0 && x.left<=30).length, none: all.filter(x=>x.left==null).length };
+  let list = all.slice();
+  if (f==='bad') list = list.filter(x=>x.left!=null && x.left<0); else if (f==='soon') list = list.filter(x=>x.left!=null && x.left<=30); else if (f==='none') list = list.filter(x=>x.left==null);
+  list.sort((a,b)=>(a.left==null)-(b.left==null) || (a.left??0)-(b.left??0));
+  el.innerHTML = `<div id="xmsg"></div>
+   <div class="kpis">
+    <div class="kpi ${cnt.bad?'bad':'good'}"><div class="l">Прострочено</div><div class="v">${cnt.bad}</div></div>
+    <div class="kpi ${cnt.soon?'warn':'good'}"><div class="l">Спливає за 30 днів</div><div class="v">${cnt.soon}</div></div>
+    <div class="kpi"><div class="l">Дата не вказана</div><div class="v">${cnt.none}</div></div>
+    <div class="kpi"><div class="l">Авто в парку</div><div class="v">${S.cars.length}</div></div>
+   </div>
+   <div class="toolbar" style="margin-bottom:12px">${[['all','Усі'],['bad','Прострочені'],['soon','≤ 30 днів'],['none','Без дати']].map(([k,l])=>`<span class="chip ${f===k?'on':''}" data-f="${k}">${l}</span>`).join('')}</div>
+   <div class="card tblwrap"><table class="tbl"><thead><tr><th>Авто</th><th>Водій</th><th>Документ</th><th>Дійсний до</th><th>Стан</th></tr></thead><tbody>
+   ${list.map(x=>{ const dr=S.drivers.find(d=>d.id===x.car.driver_id); return `<tr><td><b>${esc(x.car.plate)}</b><div class="muted">${esc(x.car.model||'')}</div></td><td>${dr?esc(dr.full_name):'<span class="muted">—</span>'}</td><td>${x.label}</td>
+     <td><input type="date" data-cf="${x.f}|${x.car.id}" value="${x.date||''}" style="margin:0;padding:7px 10px;font-size:14px;width:auto"></td><td>${docPill(x.left)}</td></tr>`; }).join('') || '<tr><td colspan="5" class="muted">Тут нічого немає 👍</td></tr>'}
+   </tbody></table></div>
+   <div class="muted">Змініть дату прямо в таблиці: вона збережеться одразу. Водій теж бачить свої терміни у вкладці «Авто».</div>`;
+  el.onclick = e => { const k = e.target.dataset.f; if (k) { S.docFilter = k; render(); } };
+  el.onchange = async e => { const v = e.target.dataset.cf; if (!v) return; const [fld,id] = v.split('|');
+    const r = await db.from('cars').update({[fld]: e.target.value||null}).eq('id',id); if (r.error) return $('#xmsg').innerHTML = `<div class="err">${esc(r.error.message)}</div>`; await load(); render(); };
 },
 
 // ---------- МЕНЕДЖЕР: ЗВІТИ ----------
@@ -524,65 +776,46 @@ m_rep(el){
     $('#repDetail').scrollIntoView({behavior:'smooth'}); };
 },
 
-// ---------- МЕНЕДЖЕР: ВОДІЇ ----------
+// ---------- МЕНЕДЖЕР: ВОДІЇ (список і картка) ----------
 m_drv(el){
-  const list = S.drivers.slice().sort((a,b)=>(a.status==='archived')-(b.status==='archived') || a.full_name.localeCompare(b.full_name));
+  if (S.drvOpen) { const dr = S.drivers.find(d=>d.id===S.drvOpen); if (dr) return drvCard(el, dr); S.drvOpen = null; }
+  const filt = S.drvFilter || 'active';
   const hasAcc = id => S.profiles.find(x=>x.driver_id===id);
   el.innerHTML = `<div id="dmsg"></div>
-   <div class="card"><h2>Додати водія в базу</h2>
+   <div class="toolbar noprint" style="margin-bottom:12px"><input id="dq" placeholder="Пошук: ім'я, телефон, номер авто" value="${esc(S.drvQ||'')}" style="min-width:260px">
+    ${[['active','Активні'],['archived','Архів'],['all','Усі']].map(([k,l])=>`<span class="chip ${filt===k?'on':''}" data-f="${k}">${l}</span>`).join('')}<span style="flex:1"></span><button class="btn sm amb" id="dAddToggle">＋ Додати водія</button></div>
+   <div class="card ${S.drvAdd?'':'hidden'}" id="addbox"><h2>Додати водія в базу</h2>
     <div class="two"><div><label>Прізвище та ім'я</label><input id="nName"></div><div><label>Телефон</label><input id="nPhone" type="tel"></div></div>
-    <div class="two"><div><label>Ім'я в дашборді</label><input id="nDash" list="dnames"></div><div><label>Літера</label><select id="nLet">${plansList().map(p=>`<option ${p.code==='Г'?'selected':''}>${esc(p.code)}</option>`).join('')}</select></div></div>
+    <div class="two"><div><label>Ім'я в дашборді</label><input id="nDash" list="dnames"></div><div><label>План (літера)</label><select id="nLet">${plansList().map(p=>`<option ${p.code==='Г'?'selected':''}>${esc(p.code)}</option>`).join('')}</select></div></div>
     <datalist id="dnames">${(S.dashNames||[]).map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
     <button class="btn" id="nAdd">Додати водія</button>
-    <div class="muted" style="margin-top:6px">Картка створюється одразу. Коли водій сам зареєструється, у «Огляді» вкажіть цю картку у списку «нова картка» і підтвердьте: акаунт прив'яжеться до неї.</div></div>
-   ${S.cars.length?'':'<div class="err">Спершу додайте авто у вкладці «Парк» (є кнопка імпорту з дашборду).</div>'}<div class="cols">` + list.map(dr=>{
-    const car = carOf(dr.id); const ds = S.debts.filter(d=>d.driver_id===dr.id); const bal = debtBalance(ds);
-    const free = S.cars.filter(c=>!c.driver_id || c.driver_id===dr.id); const acc = hasAcc(dr.id); const arch = dr.status==='archived';
-    return `<div class="card" style="${arch?'opacity:.6':''}"><h2>${esc(dr.full_name)} <span class="pill ${arch?'':'g'}">${arch?'архів':'активний'}</span> <span class="pill ${acc?'g':'y'}">${acc?'є акаунт':'без акаунта'}</span></h2>
-     <div class="muted" style="margin-bottom:10px">${esc(dr.phone||'')}${dr.dash_name?` · у дашборді: ${esc(dr.dash_name)}`:''}</div>
-     <label>Авто</label><select data-car="${dr.id}"><option value="">— без авто —</option>${free.map(c=>`<option value="${c.id}" ${car?.id===c.id?'selected':''}>${esc(c.plate)} ${esc(c.model||'')}</option>`).join('')}</select>
-     <label>План розрахунку (літера)</label><select data-letter="${dr.id}">${plansList().map(p=>`<option value="${esc(p.code)}" ${dr.plan_letter===p.code?'selected':''}>${esc(p.code)} · ${esc(p.name)}</option>`).join('')}</select>
-     <div class="row"><span>Борг</span><b style="color:${bal>0?'var(--danger)':'var(--money)'}">${money(bal)}</b></div>
-     ${ds.slice(0,4).map(d=>`<div class="row" style="font-size:12px"><span>${dm(d.created_at.slice(0,10))} ${d.kind==='charge'?'+':'−'}${money(d.amount)}${d.note?` · ${esc(d.note)}`:''}</span><a data-deldebt="${d.id}" style="cursor:pointer;color:var(--danger)">✕</a></div>`).join('')}
-     <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><button class="btn sm sec" data-debt="${dr.id}|charge">+ Нарахувати</button><button class="btn sm sec" data-debt="${dr.id}|payment">+ Оплата</button></div>
-     <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:12px"><button class="btn sm sec" data-edit="${dr.id}">Змінити дані</button><button class="btn sm sec" data-arch="${dr.id}">${arch?'Відновити':'В архів'}</button><button class="btn sm red" data-deldr="${dr.id}">Видалити</button></div></div>`;
-  }).join('') + (list.length?'':'<div class="card muted">Водіїв ще немає. Додайте вище або підтвердьте заявку в «Огляді».</div>') + `</div>`;
+    <div class="muted" style="margin-top:6px">Картка створюється одразу. Коли водій сам зареєструється, у «Сьогодні» вкажіть цю картку у списку «нова картка» і підтвердьте: акаунт прив'яжеться до неї.</div></div>
+   ${S.cars.length?'':'<div class="err">Спершу додайте авто у вкладці «Парк» (є кнопка імпорту з дашборду).</div>'}
+   <div id="dlist"></div>`;
+  const days = weekDays(0);
+  const draw = () => {
+    const q = (S.drvQ||'').trim().toLowerCase();
+    const list = S.drivers.filter(d => (filt==='all' || (filt==='archived') === (d.status==='archived')) && (!q || [d.full_name,d.phone,d.dash_name,carOf(d.id)?.plate].some(v=>String(v||'').toLowerCase().includes(q))))
+      .sort((a,b)=>a.full_name.localeCompare(b.full_name));
+    $('#dlist').innerHTML = `<div class="card tblwrap"><table class="tbl"><thead><tr><th>Водій</th><th>Авто</th><th>План</th><th class="r">Оборот тижня</th><th class="r">Борг</th><th>Акаунт</th></tr></thead><tbody>
+     ${list.map(dr=>{ const {w} = weekRow(dr,days); const bal = debtBalance(S.debts.filter(x=>x.driver_id===dr.id)); const acc = hasAcc(dr.id);
+       return `<tr class="clk" data-open="${dr.id}" style="${dr.status==='archived'?'opacity:.55':''}"><td><b>${esc(dr.full_name)}</b><div class="muted">${esc(dr.phone||'')}${dr.dash_name?` · ${esc(dr.dash_name)}`:''}</div></td>
+       <td>${esc(carOf(dr.id)?.plate||'—')}</td><td>${esc(planLabel(dr))}</td><td class="r num">${money(w.gross)}</td><td class="r num" style="${bal>0?'color:var(--bad)':''}">${bal?money(bal):'—'}</td>
+       <td><span class="pill ${acc?'g':'y'}">${acc?'є':'нема'}</span></td></tr>`; }).join('') || '<tr><td colspan="6" class="muted">Нікого не знайдено. Додайте водія кнопкою вгорі або підтвердіть заявку у «Сьогодні».</td></tr>'}
+     </tbody></table></div>`;
+  };
+  draw();
   const msg = (t,ok) => { $('#dmsg').innerHTML = `<div class="${ok?'ok':'err'}">${esc(t)}</div>`; window.scrollTo(0,0); };
+  $('#dq').oninput = e => { S.drvQ = e.target.value; draw(); };
+  $('#dAddToggle').onclick = () => { S.drvAdd = !S.drvAdd; $('#addbox').classList.toggle('hidden', !S.drvAdd); };
   $('#nAdd').onclick = async () => {
     const full_name = $('#nName').value.trim(); if (!full_name) return msg("Вкажіть прізвище та ім'я");
     const r = await db.from('drivers').insert({full_name, phone:$('#nPhone').value.trim()||null, dash_name:$('#nDash').value.trim()||null, plan_letter:$('#nLet').value});
-    if (r.error) return msg(r.error.message); await load(); render();
+    if (r.error) return msg(r.error.message); S.drvAdd = false; await load(); render();
   };
-  el.onchange = async e => {
-    const t = e.target;
-    if (t.dataset.car !== undefined) {
-      const did = t.dataset.car;
-      let r = await db.from('cars').update({driver_id:null}).eq('driver_id', did); if (r.error) return msg(r.error.message);
-      if (t.value) { r = await db.from('cars').update({driver_id:did}).eq('id', t.value); if (r.error) return msg(r.error.message); }
-      await load(); render();
-    }
-    if (t.dataset.letter) { const r = await db.from('drivers').update({plan_letter:t.value}).eq('id',t.dataset.letter); if (r.error) return msg(r.error.message); await load(); }
-  };
-  el.onclick = async e => {
-    const b = e.target;
-    if (b.dataset.debt) { const [id,kind] = b.dataset.debt.split('|');
-      const a = parseFloat((prompt(kind==='charge'?'Сума боргу, ₴':'Сума оплати, ₴')||'').replace(',','.')); if (!(a>0)) return;
-      const note = prompt('Коментар (за що)')||null;
-      const r = await db.from('debts').insert({driver_id:id,kind,amount:a,note}); if (r.error) return msg(r.error.message); await load(); render(); }
-    if (b.dataset.deldebt) { if (!confirm('Видалити цей запис боргу?')) return; const r = await db.from('debts').delete().eq('id', b.dataset.deldebt); if (r.error) return msg(r.error.message); await load(); render(); }
-    if (b.dataset.edit) { const dr = S.drivers.find(d=>d.id===b.dataset.edit);
-      const n = prompt("Прізвище та ім'я", dr.full_name); if (n===null) return; const ph = prompt('Телефон', dr.phone||''); if (ph===null) return; const dn = prompt("Ім'я в дашборді", dr.dash_name||''); if (dn===null) return;
-      const r = await db.from('drivers').update({full_name:n.trim()||dr.full_name, phone:ph.trim()||null, dash_name:dn.trim()||null}).eq('id',dr.id); if (r.error) return msg(r.error.message); await load(); render(); }
-    if (b.dataset.arch) { const dr = S.drivers.find(d=>d.id===b.dataset.arch); const to = dr.status==='archived'?'active':'archived';
-      if (to==='archived' && !confirm('Перенести в архів? Водій втратить доступ до кабінету, а звіти збережуться.')) return;
-      let r = await db.from('drivers').update({status:to}).eq('id',dr.id); if (r.error) return msg(r.error.message);
-      r = await db.from('profiles').update({status: to==='archived'?'rejected':'active'}).eq('driver_id',dr.id); if (r.error) return msg(r.error.message);
-      if (to==='archived') { r = await db.from('cars').update({driver_id:null}).eq('driver_id',dr.id); if (r.error) return msg(r.error.message); }
-      await load(); render(); }
-    if (b.dataset.deldr) { const dr = S.drivers.find(d=>d.id===b.dataset.deldr);
-      if (!confirm(`Видалити водія «${dr.full_name}» НАЗАВЖДИ разом з усіма його звітами, боргами й ДТП?\nЦе не можна скасувати. Якщо сумніваєтесь, оберіть «В архів».`)) return;
-      let r = await db.from('profiles').update({status:'rejected'}).eq('driver_id',dr.id); if (r.error) return msg(r.error.message);
-      r = await db.from('drivers').delete().eq('id',dr.id); if (r.error) return msg(r.error.message); await load(); render(); }
+  el.onclick = e => {
+    const f = e.target.dataset.f; if (f) { S.drvFilter = f; render(); return; }
+    const open = e.target.closest('[data-open]'); if (open) { S.drvOpen = open.dataset.open; render(); window.scrollTo(0,0); }
   };
 },
 
