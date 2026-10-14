@@ -95,6 +95,19 @@ export default async function handler(req, res) {
     const tripsRaw = await pull(tripsTblIdx);
     const stopsRaw = await pull(stopsTblIdx);
 
+    // Додаткові колонки шаблону (напр. «Початкове/Кінцеве місцезнаходження»): беремо за назвою колонки.
+    // Перші 8 колонок лишаються як раніше, тож існуюча логіка дашборду не змінюється.
+    function extraCols(idx, c) {
+      const out = {};
+      const hdr = (tables[idx] && tables[idx].header) || [];
+      for (let i = 8; i < hdr.length && i < c.length; i++) {
+        const name = String(hdr[i] || '').trim(); if (!name) continue;
+        const v = cellText(c[i]); if (v) out[name] = v;
+      }
+      return out;
+    }
+    const tripsColumns = (tables[tripsTblIdx] && tables[tripsTblIdx].header) || [];
+
     const trips = [];
     flatten(tripsRaw, []).forEach(r => {
       const c = r.c; const num = cellText(c[0]); if (num.indexOf('.') < 0) return;
@@ -103,6 +116,7 @@ export default async function handler(req, res) {
         'Початок': cellTime(c[2], true), 'Кінець': cellTime(c[3], true),
         'Тривалість': cellText(c[4]), 'Пробіг': cellText(c[5]),
         'Макс. швидкість': cellText(c[6]), 'Штраф': cellText(c[7]),
+        ...extraCols(tripsTblIdx, c),
       });
     });
 
@@ -118,7 +132,7 @@ export default async function handler(req, res) {
     });
 
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.status(200).send(JSON.stringify({ ok: true, date: dateStr, trips, stops }));
+    res.status(200).send(JSON.stringify({ ok: true, date: dateStr, trips, stops, trips_columns: tripsColumns }));
   } catch (err) {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.status(200).send(JSON.stringify({ ok: false, error: err.message }));
