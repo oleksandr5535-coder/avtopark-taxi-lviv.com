@@ -110,6 +110,63 @@ nav.tabs button.exitdash{background:var(--soft);color:var(--ink);font-weight:700
 input.mini,select.mini{margin:0;padding:6px 8px;font-size:13px;border-radius:10px;width:auto;min-width:100px}
 input.mini[type=date]{min-width:128px}
 header.top{} .embed header.top{display:none}.embed nav.tabs{top:0}
+
+/* ===== кабінет водія: нижнє меню, головна картка, плитки ===== */
+#app:not(.staff) nav.tabs{position:fixed;top:auto;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;justify-content:space-around;gap:0;padding:0 4px env(safe-area-inset-bottom);border-top:1px solid var(--line);border-bottom:none;z-index:7;overflow:visible}
+#app:not(.staff) nav.tabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 4px 9px;font-size:11px;border-bottom:none;border-top:3px solid transparent}
+#app:not(.staff) nav.tabs button span:first-child{font-size:21px;line-height:1.2}
+#app:not(.staff) nav.tabs button.on{border-top-color:var(--amber)}
+#app:not(.staff) main{padding-bottom:100px}
+.hero{background:var(--inkp);color:var(--inkp-fg);border-radius:20px;padding:20px 20px 18px;margin-bottom:12px}
+.hero .lb{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;opacity:.65}
+.hero .amt{font-family:var(--mono);font-size:42px;font-weight:700;letter-spacing:-.03em;margin:4px 0 8px;line-height:1.1}
+.hero .pill{background:rgba(255,255,255,.14);color:inherit}
+.hero .pill.g{background:rgba(59,201,140,.22);color:#6fe3b0}
+.hero .pill.y{background:rgba(226,164,69,.22);color:#f0c27a}
+.hero .sub{font-size:13px;opacity:.75;margin-top:10px;line-height:1.45}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.st{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-md);padding:13px 15px;box-shadow:var(--sh-card)}
+.st .l{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.st .v{font-family:var(--mono);font-size:22px;font-weight:700;margin-top:5px;letter-spacing:-.02em}
+.st .s{font-size:12px;color:var(--muted);margin-top:2px}
+.stats .st{min-width:0}
+.stats.s3{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stats.s3 .st{padding:10px 11px;box-shadow:none}
+.stats.s3 .l{font-size:9.5px;letter-spacing:.02em}
+.stats.s3 .v{font-size:20px}
+.bar{height:9px;background:var(--soft);border:1px solid var(--line);border-radius:99px;overflow:hidden;margin:8px 0 6px}
+.bar i{display:block;height:100%;background:var(--amber);border-radius:99px}
+.sumrow{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.sumrow:last-child{border:none}
+.sumrow.tot{font-weight:800;font-size:16px;border-top:2px solid var(--line);border-bottom:none;margin-top:4px;padding-top:12px}
+.day{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+.day:last-child{border:none}
+.day .dt{width:46px;text-align:center;flex:none}
+.day .dt b{display:block;font-size:15px}.day .dt span{font-size:11px;color:var(--muted)}
+.day .mid{flex:1;min-width:0;font-size:12.5px;color:var(--ink2)}
+.day .mid .pill{margin-top:4px}
+.day .amt{text-align:right;flex:none}
+.day .amt b{font-family:var(--mono);font-size:16px}
+.day.empty{opacity:.45}
+.day.future{opacity:.3}
+.pickrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.prev{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.prev .pv{position:relative;width:84px;height:84px;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--soft);display:flex;align-items:center;justify-content:center;font-size:12px;text-align:center}
+.prev .pv img{width:100%;height:100%;object-fit:cover}
+.prev .pv a{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;font-size:13px;line-height:22px;text-align:center;cursor:pointer}
+.plate{display:inline-block;font-family:var(--mono);font-weight:700;font-size:24px;border:2px solid var(--ink);border-radius:8px;padding:4px 12px;margin-bottom:6px;letter-spacing:.02em}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.cal .h{font-size:11px;color:var(--muted);text-align:center;font-weight:700;padding-bottom:2px}
+.cal .c{aspect-ratio:1/1.05;border-radius:11px;border:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;font-size:15px;line-height:1.1;overflow:hidden}
+.cal .c small{font-size:8.5px;font-weight:600;opacity:.85;margin-top:1px}
+.cal .c.blank{border:none;background:none}
+.cal .c.w{background:var(--good-bg);color:var(--good)}
+.cal .c.off{background:var(--amber);color:#1a1304;border-color:var(--amber)}
+.cal .c.miss{background:var(--bad-bg);color:var(--bad)}
+.cal .c.today{outline:2px solid var(--ink);outline-offset:1px}
+.cal .c.tap{cursor:pointer}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--ink2)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px}
 @media print{
  header.top,nav.tabs,.noprint{display:none!important}
  #app.staff main{margin:0;padding:0}
@@ -194,6 +251,7 @@ function mondayOf(d){ const x = new Date(d.getFullYear(),d.getMonth(),d.getDate(
 function weekDays(off){ const m = addDays(mondayOf(new Date()), off*7); return Array.from({length:7},(_,i)=>ymd(addDays(m,i))); }
 const dayName = s => DAYS[parse(s).getDay()];
 const todayStr = () => ymd(new Date());
+const defaultRepDate = () => new Date().getHours() < 6 ? ymd(addDays(new Date(),-1)) : todayStr();  // нічна зміна: до 6 ранку звітуємо за вчора
 
 const EMBED = (function(){try{return window.self !== window.top;}catch(e){return true;}})();
 if (EMBED) document.documentElement.classList.add('embed');
@@ -207,7 +265,7 @@ function applyTheme(t){ document.documentElement.setAttribute('data-theme', t===
   if (EMBED) { try { new MutationObserver(() => applyTheme(window.parent.document.documentElement.getAttribute('data-theme'))).observe(window.parent.document.documentElement,{attributes:true,attributeFilter:['data-theme']}); } catch(e){} }
 })();
 let db, me = null, S = {};   // S = стан застосунку
-const defaultSettings = {wash_week:300};
+const defaultSettings = {wash_week:300, dayoff_month:0};
 // Плани виплати (літера → шкала). Кожен план: період рахунку («за добу» або «за тиждень») і сходинки «від суми → %».
 // Сходинка діє, коли оборот ≥ її «від». Менеджер додає/міняє плани у вкладці «Умови» (таблиця pay_plans).
 const PLAN_DEFAULTS = [
@@ -250,6 +308,7 @@ function weekCalc(reps, st, letter){
   const washSpent = reps.reduce((a,r)=>a+(+r.wash||0),0);
   const washBack = Math.min(washSpent, st.wash_week);
   return {noPlan, gross, pct, share, washBack, total: noPlan ? 0 : share+washBack, days: reps.length,
+          trips: reps.reduce((a,r)=>a+(+r.trips||0),0), km: reps.reduce((a,r)=>a+(+r.km||0),0),
           bolt: reps.reduce((a,r)=>a+(+r.bolt||0),0), uklon: reps.reduce((a,r)=>a+(+r.uklon||0),0),
           other: reps.reduce((a,r)=>a+(+r.other||0),0)};
 }
@@ -265,7 +324,9 @@ function effDay(did, date){
   if (r && (!a || r.accepted)) { bolt = a && !(+r.bolt>0) ? (+a.bolt_net||0) : (+r.bolt||0); uklon = a && !(+r.uklon>0) ? (+a.uklon_net||0) : (+r.uklon||0); src = a ? 'accepted' : 'driver'; }
   else { bolt = +a.bolt_net||0; uklon = +a.uklon_net||0; src = 'api'; }
   const diff = !!(a && r && !r.accepted && (((+r.bolt||0)>0 && Math.abs((+r.bolt||0)-(+a.bolt_net||0))>DIFF) || ((+r.uklon||0)>0 && Math.abs((+r.uklon||0)-(+a.uklon_net||0))>DIFF)));
-  return { report_date:date, bolt, uklon, other: r?(+r.other||0):0, wash: r?(+r.wash||0):0, src, diff, api:a||null, rep:r||null };
+  const trips = (a && a.orders!=null) ? (+a.orders||0) : (r && r.trips!=null ? (+r.trips||0) : null);
+  const km = (a && a.km!=null && +a.km>0) ? (+a.km||0) : (r && r.km!=null ? (+r.km||0) : null);
+  return { report_date:date, bolt, uklon, other: r?(+r.other||0):0, wash: r?(+r.wash||0):0, trips, km, src, diff, api:a||null, rep:r||null };
 }
 const effReps = (did, days) => days.map(d => effDay(did,d)).filter(Boolean);
 const SRC = { api:['з системи','g'], driver:['ваші дані, чекають перевірки','y'], accepted:['прийнято менеджером','g'] };
@@ -364,24 +425,24 @@ async function boot(){
   $('#whoName').textContent = p.full_name || session.user.email;
   showOnly('app');
   S.staff = staff; $('#dashLink').classList.toggle('hidden', !staff); S.week = 0; S.tab = staff ? 'm_today' : 'd_week'; $('#app').classList.toggle('staff', staff);
-  S.repDate = todayStr();
+  S.repDate = defaultRepDate();
   $('#mainBox').className = staff ? 'wide' : '';
   buildTabs(); await load(); render();
 }
 function buildTabs(){
   const t = S.staff
     ? [['m_today','☀️ Сьогодні'],['m_drv','👥 Водії'],['m_cars','🚗 Парк'],['m_rep','📋 Звіти'],['m_pay','💳 Виплати'],['m_inc','⚠️ ДТП'],['m_docs','📅 Документи'],['m_set','⚙️ Умови']]
-    : [['d_week','💰 Тиждень'],['d_rep','📝 Звіт'],['d_car','🚗 Авто'],['d_inc','⚠️ ДТП']];
-  $('#tabs').innerHTML = (EMBED ? '<button class="exitdash" id="exitDash" title="Повернутись до дашборду парку">← До дашборду</button>' : '') + t.map(([k,l])=>`<button data-k="${k}">${l}</button>`).join('');
+    : [['d_week','💰 Тиждень'],['d_rep','📝 Звіт'],['d_off','🗓 Вихідні'],['d_car','🚗 Авто'],['d_inc','⚠️ ДТП']];
+  $('#tabs').innerHTML = (EMBED ? '<button class="exitdash" id="exitDash" title="Повернутись до дашборду парку">← До дашборду</button>' : '') + t.map(([k,l])=>{ const i=l.indexOf(' '); return S.staff ? `<button data-k="${k}">${l}</button>` : `<button data-k="${k}"><span>${l.slice(0,i)}</span><span>${l.slice(i+1)}</span></button>`; }).join('');
   const ex = $('#exitDash'); if (ex) ex.onclick = () => { try { window.parent.postMessage({cabinetExit:true}, '*'); } catch(e){} };
-  $('#tabs').onclick = e => { const bt = e.target.closest('button[data-k]'); const k = bt && bt.dataset.k; if (k) { S.tab = k; if (k!=='d_rep') S.repFor = null; if (k==='m_drv') S.drvOpen = null; render(); window.scrollTo(0,0); } };
+  $('#tabs').onclick = e => { const bt = e.target.closest('button[data-k]'); const k = bt && bt.dataset.k; if (k) { S.tab = k; if (k!=='d_rep') S.repFor = null; if (k==='d_rep' && !S.repFor) S.repDate = defaultRepDate(); if (k==='m_drv') S.drvOpen = null; render(); window.scrollTo(0,0); } };
 }
 
 // ====================== ЗАВАНТАЖЕННЯ ======================
 async function load(){
   const q = (p) => p.then(r => { if (r.error) throw r.error; return r.data || []; });
   const since = ymd(addDays(new Date(), -120));
-  const [settings, reports, incidents, cars, debts, apiRows, plansRows, payRows, mediaRows, brandRows] = await Promise.all([
+  const [settings, reports, incidents, cars, debts, apiRows, plansRows, payRows, mediaRows, brandRows, offRows] = await Promise.all([
     q(db.from('settings').select('*')),
     q(db.from('reports').select('*').gte('report_date', since).order('report_date',{ascending:false}).limit(5000)),
     q(db.from('incidents').select('*').order('created_at',{ascending:false}).limit(500)),
@@ -391,8 +452,11 @@ async function load(){
     q(db.from('pay_plans').select('*').order('code')).catch(() => null),
     q(db.from('payouts').select('*').limit(5000)).catch(() => null),
     q(db.from('incident_media').select('*').order('created_at').limit(3000)).catch(() => []),
-    q(db.from('brand_weeks').select('*').limit(5000)).catch(() => null)
+    q(db.from('brand_weeks').select('*').limit(5000)).catch(() => null),
+    q(db.from('day_offs').select('*').gte('day', since).limit(10000)).catch(() => null)
   ]);
+  S.offMissing = offRows === null;
+  S.offs = new Set((offRows||[]).map(o => o.driver_id+'|'+String(o.day).slice(0,10)));
   S.brandMissing = brandRows === null;
   S.brandMap = Object.fromEntries((brandRows||[]).map(b => [b.driver_id+'|'+String(b.week_start).slice(0,10), b]));
   S.brandWeeks = new Set((brandRows||[]).map(b => String(b.week_start).slice(0,10)));
@@ -530,6 +594,60 @@ async function appsClick(e, say){
   if (r) { if(!confirm('Відхилити заявку?')) return; const {error} = await db.from('profiles').update({status:'rejected'}).eq('id',r); if (error) return say(error.message); await load(); render(); return true; }
 }
 
+
+// ====================== ВИХІДНІ ======================
+const MONTHS = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+const isOff = (did, day) => !!(S.offs && S.offs.has(did+'|'+day));
+function firstWorkDay(did){
+  let f = null;
+  for (const k in (S.apiMap||{})) if (k.startsWith(did+'|')) { const d = k.slice(did.length+1); if (!f || d<f) f = d; }
+  for (const r of S.reports) if (r.driver_id===did && (!f || r.report_date<f)) f = r.report_date;
+  return f;
+}
+function offStats(did, ym){
+  const [y,m] = ym.split('-').map(Number), n = new Date(y,m,0).getDate(), today = todayStr(), fw = firstWorkDay(did);
+  let worked = 0, off = 0, missed = 0;
+  for (let d=1; d<=n; d++) { const ds = ym+'-'+pad(d), e = ds<=today ? effDay(did,ds) : null, w = !!(e && repGross(e)>0), o = isOff(did,ds);
+    if (o) off++; if (w) worked++; else if (!o && fw && ds>=fw && ds<today) missed++; }
+  return {worked, off, missed, n};
+}
+const shiftMonth = (ym, k) => { const [y,m] = ym.split('-').map(Number); const d = new Date(y, m-1+k, 1); return d.getFullYear()+'-'+pad(d.getMonth()+1); };
+function offBlock(did, staff){
+  if (S.offMissing) return `<div class="err">${staff?'Вихідні ще не підключені: запустіть day_offs.sql у Supabase.':'Вихідні скоро запрацюють. Зверніться до менеджера.'}</div>`;
+  const ym = S.offMonth || todayStr().slice(0,7), [y,m] = ym.split('-').map(Number), today = todayStr();
+  const st = offStats(did, ym), quota = +S.settings.dayoff_month || 0;
+  const lead = (new Date(y,m-1,1).getDay()+6)%7;
+  let cells = ['Пн','Вт','Ср','Чт','Пт','Сб','Нд'].map(x=>`<div class="h">${x}</div>`).join('') + '<div class="c blank"></div>'.repeat(lead);
+  const fw = firstWorkDay(did);
+  for (let d=1; d<=st.n; d++) { const ds = ym+'-'+pad(d), e = ds<=today ? effDay(did,ds) : null, w = !!(e && repGross(e)>0), o = isOff(did,ds);
+    const miss = !o && !w && fw && ds>=fw && ds<today;
+    const tap = staff || ds >= today;
+    cells += `<div class="c ${o?'off':(w?'w':(miss?'miss':''))} ${ds===today?'today':''} ${tap?'tap':''}" ${tap?`data-offday="${ds}"`:''}>${d}<small>${o?'вихідний':(w?'зміна':(miss?'без зміни':''))}</small></div>`; }
+  const left = quota ? quota - st.off : null;
+  return `<div class="wk"><button data-om="-1">‹</button><b>${MONTHS[m-1]} ${y}</b><button data-om="1">›</button></div>
+   <div class="stats s3">
+    <div class="st"><div class="l">Відпрацьовано</div><div class="v">${st.worked}</div><div class="s">змін</div></div>
+    <div class="st"><div class="l">Вихідних</div><div class="v">${st.off}</div><div class="s">${quota?`із ${quota} за місяць`:'обрано'}</div></div>
+    <div class="st"><div class="l">Без зміни</div><div class="v" style="${st.missed?'color:var(--bad)':''}">${st.missed}</div><div class="s">без вихідного</div></div></div>
+   ${quota?`<div class="${left<0?'err':'ok'}" style="margin-bottom:12px">${left>=0?`Залишилось вихідних на цей місяць: <b>${left}</b>`:`Вихідних більше норми на <b>${-left}</b>`}</div>`:''}
+   <div class="cal">${cells}</div>
+   <div class="muted" style="margin-top:10px">${staff?'Натисніть на дату, щоб додати або прибрати вихідний (можна і за минулі дні).':'Натисніть на дату, щоб обрати або скасувати вихідний. Минулі дні змінює менеджер.'}</div>
+   <div class="legend"><span><i style="background:var(--amber)"></i>вихідний</span><span><i style="background:var(--good)"></i>була зміна</span><span><i style="background:var(--bad)"></i>без зміни</span></div>`;
+}
+async function offClick(oc, did, staff){
+  if (oc.dataset.om) { S.offMonth = shiftMonth(S.offMonth || todayStr().slice(0,7), +oc.dataset.om); render(); return; }
+  const ds = oc.dataset.offday; if (!ds) return;
+  let r;
+  if (isOff(did, ds)) r = await db.from('day_offs').delete().eq('driver_id',did).eq('day',ds);
+  else {
+    const quota = +S.settings.dayoff_month || 0, taken = offStats(did, ds.slice(0,7)).off;
+    if (quota && taken >= quota && !confirm(`Це буде ${taken+1}-й вихідний у місяці, а норма — ${quota}. Все одно додати?`)) return;
+    r = await db.from('day_offs').insert({driver_id:did, day:ds});
+  }
+  if (r.error) return alert('Не вдалося зберегти: '+r.error.message);
+  await load(); render();
+}
+
 // Картка водія: усе про одного водія в одному місці
 function drvCard(el, dr){
   const car = carOf(dr.id), ds = S.debts.filter(x=>x.driver_id===dr.id), bal = debtBalance(ds), acc = S.profiles.find(x=>x.driver_id===dr.id), arch = dr.status==='archived';
@@ -565,6 +683,7 @@ function drvCard(el, dr){
      <div class="two">${fld('fLn','Посвідчення водія №',dr.license_no)}${fld('fLu','Права дійсні до',dr.license_until,'date')}</div>
      ${fld('fA','Адреса',dr.address)}<div><label>Нотатки менеджера</label><textarea id="fNote">${esc(dr.notes||'')}</textarea></div>` : '<div class="muted" style="margin-bottom:10px">Щоб тут зберігати ІПН, паспорт, права, адресу й нотатки, запустіть payouts.sql у Supabase.</div>'}
      <button class="btn" id="dSave">Зберегти</button></div>
+    <div class="card"><h2>Вихідні</h2>${offBlock(dr.id,true)}</div>
     <div class="card"><h2>Авто й документи</h2>
      <label>Авто</label><select data-car="${dr.id}"><option value="">— без авто —</option>${free.map(c=>`<option value="${c.id}" ${car?.id===c.id?'selected':''}>${esc(c.plate)} ${esc(c.model||'')}</option>`).join('')}</select>
      ${car ? DOCS.map(([f,l])=>`<div class="row"><span>${l}<div class="muted">${car[f]?fmtDate(car[f]):'не вказано'}</div></span>${docPill(car[f]?daysLeft(car[f]):null)}</div>`).join('') : '<div class="muted">Авто не закріплено.</div>'}</div>
@@ -583,6 +702,7 @@ function drvCard(el, dr){
   };
   el.onclick = async e => {
     const b = e.target;
+    const oc = b.closest('[data-offday],[data-om]'); if (oc) { offClick(oc, dr.id, true); return; }
     if (b.dataset.back) { S.drvOpen = null; render(); window.scrollTo(0,0); return; }
     if (b.id==='dSave') {
       const upd = {full_name:$('#fN').value.trim()||dr.full_name, phone:$('#fP').value.trim()||null, dash_name:$('#fD').value.trim()||null, plan_letter:$('#fL').value||null};
@@ -612,26 +732,49 @@ const VIEWS = {
 // ---------- ВОДІЙ: ТИЖДЕНЬ ----------
 d_week(el){
   const days = weekNav(el, render);
-  const did = me.driver_id;
+  const did = me.driver_id, ws = days[0];
   const infos = days.map(d=>effDay(did,d));
   const LET = letterOf(did); const PL = planByCode(LET);
   const w = weekCalc(infos.filter(Boolean), S.settings, LET);
   const lastI = infos.reduce((a,x,i)=>x&&repGross(x)>0?i:a, -1);
   const hasApi = infos.some(x=>x&&x.api);
+  const bl = brandLoaded(ws), B = bl ? brandOf(did,ws) : null, brandAmt = B ? B.eff : 0;
+  const total = w.total + brandAmt;
+  const po = payoutOf(did, ws), ended = days[6] < todayStr();
+  const tw = n => { const m=n%100, k=n%10; return (m>10&&m<20)||k===0||k>4 ? 'поїздок' : (k===1 ? 'поїздка' : 'поїздки'); };
+  const status = po ? `<span class="pill g">✓ Виплачено ${fmtDate((po.paid_at||po.created_at||ws).slice(0,10))}: ${money(po.amount)}</span>`
+    : (!w.days ? '' : (ended ? (bl||S.brandMissing ? '<span class="pill y">Нараховано · очікує виплати</span>' : '<span class="pill y">Нараховано · чекаємо дані брендування</span>') : '<span class="pill">Тиждень триває</span>'));
+  // прогрес до наступного відсотка (для планів «за тиждень»)
+  let prog = '';
+  if (PL.period==='week' && w.gross>0) { const nx = tierNext(PL,w.gross);
+    if (nx) { const t=(PL.tiers||[]).slice().sort((x,y)=>x.from-y.from); const cur=t.filter(x=>x.from<=w.gross).pop(); const from=cur?cur.from:0, to=w.gross+nx.need; const pc=Math.max(0,Math.min(100,Math.round((w.gross-from)/(to-from)*100)));
+      prog = `<div class="card"><div class="row" style="border:none;padding:0"><b>До ${nx.pct}% залишилось ${money(nx.need)}</b><span class="muted">${pc}%</span></div><div class="bar"><i style="width:${pc}%"></i></div><div class="muted">Якщо оборот за тиждень досягне ${money(to)}, відсоток зросте з ${w.pct}% до ${nx.pct}%.</div></div>`; } }
   el.insertAdjacentHTML('beforeend', `
-   <div class="card"><div class="muted">Ваш заробіток за тиждень</div>
-    <div class="big">${w.noPlan?'—':money(w.total + (brandLoaded(days[0])?brandOf(did,days[0]).eff:0))}</div>
-    ${w.noPlan?'<div class="err" style="margin:8px 0">Менеджер ще не призначив вам умови виплат, тому відсоток поки не рахується. Це не помилка: ваш оборот нижче вже враховано.</div>':''}
-    ${(()=>{ const po = payoutOf(did, days[0]); return po ? `<div style="margin:6px 0"><span class="pill g">✓ Виплачено ${fmtDate((po.paid_at||po.created_at||days[0]).slice(0,10))}: ${money(po.amount)}</span></div>` : ''; })()}
-    <div class="muted">${w.days ? `Оборот ${money(w.gross)} · виплата за відсотками <b>${money(w.share)}</b> (${PL.period==='week'?'відсоток тижня':'в середньому'} ${w.pct}%)${w.washBack?` · мийка +${money(w.washBack)}`:''}${(()=>{ if (!brandLoaded(days[0])) return ''; const B = brandOf(did,days[0]); return B.eff>0 ? ` · брендування +${money(B.eff)}${B.pct?` (${B.pct}%)`:''}` : ''; })()}` : 'Даних за цей тиждень ще немає'}</div>
-    ${(!S.brandMissing && !brandLoaded(days[0]) && days[6] < todayStr()) ? '<div class="muted" style="margin-top:6px">Брендування за цей тиждень буде додано після завантаження даних менеджером.</div>' : ''}
-    ${(PL.period==='week' && tierNext(PL,w.gross) && w.gross>0) ? `<div class="muted" style="margin-top:6px">До ${tierNext(PL,w.gross).pct}%: ще ${money(tierNext(PL,w.gross).need)} обороту за тиждень</div>`:''}
+   <div class="hero"><div class="lb">Ваш заробіток за тиждень</div>
+    <div class="amt">${w.noPlan?'—':money(total)}</div>
+    ${status}
+    ${w.noPlan?'<div class="sub">Менеджер ще не призначив вам умови виплат, тому відсоток поки не рахується. Це не помилка: оборот нижче вже враховано.</div>':''}
+    ${(!w.days && !w.noPlan)?'<div class="sub">Даних за цей тиждень ще немає</div>':''}
+    ${(!S.brandMissing && !bl && ended && w.days) ? '<div class="sub">Брендування за цей тиждень додасться після завантаження даних менеджером.</div>' : ''}</div>
+   <div class="stats">
+    <div class="st"><div class="l">Оборот</div><div class="v">${money(w.gross)}</div><div class="s">Bolt ${money(w.bolt)} · Uklon ${money(w.uklon)}</div></div>
+    <div class="st"><div class="l">Поїздки</div><div class="v">${w.trips||'—'}</div><div class="s">${w.trips? (w.km?`${Math.round(w.km)} км за тиждень`:tw(w.trips)) : 'з’являться з даних системи'}</div></div>
+    <div class="st"><div class="l">Ваш відсоток</div><div class="v">${w.days&&!w.noPlan?w.pct+'%':'—'}</div><div class="s">${w.noPlan?'план не призначено':(PL.period==='week'?'за тиждень, літера '+LET:'в середньому, літера '+LET)}</div></div>
+    <div class="st"><div class="l">Змін з даними</div><div class="v">${w.days}</div><div class="s">${w.trips&&w.days?`≈ ${Math.round(w.trips/w.days)} ${tw(Math.round(w.trips/w.days))} за зміну`:'із 7 днів'}</div></div>
    </div>
+   ${prog}
+   ${w.days && !w.noPlan ? `<div class="card"><h2>З чого складається виплата</h2>
+    <div class="sumrow"><span>За відсотками <span class="muted">(${w.pct}% від ${money(w.gross)})</span></span><b class="num">${money(w.share)}</b></div>
+    ${w.washBack?`<div class="sumrow"><span>Мийка <span class="muted">(повернення)</span></span><b class="num">+${money(w.washBack)}</b></div>`:''}
+    ${B && B.eff>0 ? `<div class="sumrow"><span>Брендування <span class="muted">${B.pct?`(${B.pct}% від суми)`:''}</span></span><b class="num">+${money(B.eff)}</b></div>`:''}
+    <div class="sumrow tot"><span>Разом</span><b class="num">${money(total)}</b></div></div>` : ''}
    <div class="card"><h2>Дні тижня</h2>${days.map((d,i)=>{
      const e = infos[i]; const isFuture = d>todayStr(); const hasRep = e && e.rep;
-     return `<div class="row" style="align-items:flex-start"><div><b>${dayName(d)} ${dm(d)}</b>${e?`<div class="muted">Bolt ${money(e.bolt)} · Uklon ${money(e.uklon)}${e.other?` · Інше ${money(e.other)}`:''}</div><div style="margin-top:3px">${srcPill(e)}</div>`:''}</div>
-      <div style="text-align:right">${e?`<b class="num">${money(repGross(e)*(PL.period==='week'?w.pct:dayPct(LET,repGross(e)))/100)}</b><div class="muted">${PL.period==='week'?w.pct:dayPct(LET,repGross(e))}% від ${money(repGross(e))}</div>${(PL.period!=='week' && i===lastI && tierNext(PL,repGross(e)))?`<div class="muted">до ${tierNext(PL,repGross(e)).pct}%: ще ${money(tierNext(PL,repGross(e)).need)}</div>`:''}`:(isFuture?'<span class="muted">—</span>':'')}
-       ${(!isFuture && !hasRep)?`<div><a class="pill y" style="cursor:pointer" data-fill="${d}">${e?'+ доповнити звіт':'+ подати звіт'}</a></div>`:''}</div></div>`;}).join('')}
+     const pct = e ? (PL.period==='week'?w.pct:dayPct(LET,repGross(e))) : 0;
+     return `<div class="day ${isFuture?'future':(e?'':'empty')}"><div class="dt"><b>${dayName(d)}</b><span>${dm(d)}</span></div>
+      <div class="mid">${e?`Bolt ${money(e.bolt)} · Uklon ${money(e.uklon)}${e.other?` · Інше ${money(e.other)}`:''}${e.trips?`<br><b style="color:var(--ink)">${e.trips}</b> ${tw(e.trips)}${e.km?` · ${Math.round(e.km)} км`:''}`:''}<div>${srcPill(e)}</div>`:(isFuture?'':'<span class="muted">даних немає</span>')}
+       ${(!isFuture && !hasRep)?`<div><a class="pill y" style="cursor:pointer" data-fill="${d}">${e?'+ доповнити звіт':'+ подати звіт'}</a></div>`:''}</div>
+      <div class="amt">${e?`<b>${money(repGross(e)*pct/100)}</b><div class="muted">${pct}% від ${money(repGross(e))}</div>${(PL.period!=='week' && i===lastI && tierNext(PL,repGross(e)))?`<div class="muted">до ${tierNext(PL,repGross(e)).pct}%: ще ${money(tierNext(PL,repGross(e)).need)}</div>`:''}`:''}</div></div>`;}).join('')}
    </div>
    <div class="muted" style="padding:0 4px">${hasApi?'«З системи» — дані Bolt і Uklon, які надійшли до парку. Якщо цифри не збігаються з вашими, подайте свій варіант у «Звіт»: менеджер перевірить.':'Дані з Bolt і Uklon з’являються тут після того, як парк їх завантажить. До того рахується за вашим звітом.'}</div>`);
   el.onclick = e => { const d = e.target.dataset.fill; if (d) { S.repDate = d; S.tab='d_rep'; render(); } };
@@ -646,7 +789,7 @@ d_rep(el){
   const apiRow = (S.apiMap||{})[RD()+'|'+cur];
   el.innerHTML = `<div class="card"><h2>${forDr?`Звіт за водія: ${esc(forDr.full_name)}`:'Звіт за зміну'}</h2>
    <div id="repMsg"></div>
-   <label>Дата зміни</label><select id="rDate">${opts.map(d=>`<option value="${d}" ${d===cur?'selected':''}>${dayName(d)} ${dm(d)}${d===todayStr()?' (сьогодні)':''}</option>`).join('')}</select>
+   <label>Дата зміни</label><select id="rDate">${opts.map(d=>`<option value="${d}" ${d===cur?'selected':''}>${dayName(d)} ${dm(d)}${d===todayStr()?' (сьогодні)':(d===ymd(addDays(new Date(),-1))?' (вчора)':'')}</option>`).join('')}</select>
    ${r.id?'<div class="ok">За цей день звіт уже є — можна виправити.</div>':''}
    ${apiRow?`<div class="card" style="background:var(--good-bg);box-shadow:none"><b>Дані з системи за цей день</b><div class="row"><span>Bolt</span><b>${money(apiRow.bolt_net)}</b></div><div class="row"><span>Uklon</span><b>${money(apiRow.uklon_net)}</b></div><div class="muted">Якщо ваші цифри такі самі, поля нижче можна не заповнювати. Якщо інші — впишіть свої, менеджер перевірить.</div></div>`:''}
    <div class="two"><div><label>Bolt, ₴ ${apiRow?'(якщо відрізняється)':''}</label><input id="rBolt" inputmode="decimal" placeholder="${apiRow?Math.round(apiRow.bolt_net):'0'}" value="${r.bolt||''}"></div>
@@ -659,7 +802,7 @@ d_rep(el){
    <label>План на 12 годин виконано?</label>
    <div class="seg" id="pSeg"><button type="button" data-v="1" class="${r.plan12===true?'on':''}">Так</button><button type="button" data-v="0" class="${r.plan12===false?'on':''}">Ні</button></div>
    <div id="pcBox" class="${r.plan12===false?'':'hidden'}"><label>Чому не виконано? (обов'язково)</label><textarea id="rPC">${esc(r.plan_comment||'')}</textarea></div>
-   <label>Вихідний (дата або «без змін»)</label><input id="rOff" value="${esc(r.dayoff_note||'')}" placeholder="напр. п'ятниця">
+   <div class="muted" style="margin:-4px 0 14px">Хочете взяти вихідний? Оберіть дату у вкладці «🗓 Вихідні».</div>
    <label>Час виходу на лінію завтра</label><input id="rNext" type="time" value="${esc(r.next_start||'')}">
    <label>Технічний стан авто (1–5)</label>
    <select id="rTech"><option value="">—</option>${[1,2,3,4,5].map(n=>`<option ${r.tech_score===n?'selected':''}>${n}</option>`).join('')}</select>
@@ -677,7 +820,7 @@ d_rep(el){
     const msg = (t,ok) => { $('#repMsg').innerHTML = `<div class="${ok?'ok':'err'}">${esc(t)}</div>`; window.scrollTo(0,0); };
     const rec = { driver_id: RD(), report_date: $('#rDate').value, bolt: n('#rBolt')||0, uklon: n('#rUklon')||0, other: n('#rOther')||0,
       curb_km: n('#rCurb'), km: n('#rKm'), trips: n('#rTrips')===null?null:Math.round(n('#rTrips')), wash: n('#rWash')||0, plan12: plan,
-      plan_comment: $('#rPC').value.trim()||null, dayoff_note: $('#rOff').value.trim()||null, next_start: $('#rNext').value||null,
+      plan_comment: $('#rPC').value.trim()||null, dayoff_note: r.dayoff_note||null, next_start: $('#rNext').value||null,
       tech_score: $('#rTech').value?+$('#rTech').value:null, tech_note: $('#rTN').value.trim()||null };
     if ([rec.bolt,rec.uklon,rec.other,rec.wash].some(x=>x<0||isNaN(x))) return msg('Суми мають бути числами від 0');
     if (rec.other>0 && !rec.curb_km) return msg('Вкажіть, скільки км проїхали по бордюрах');
@@ -698,7 +841,7 @@ d_car(el){
   const car = S.cars[0]; const bal = debtBalance(S.debts.filter(d=>d.driver_id===me.driver_id));
   const dt = (s) => { if(!s) return '<span class="muted">не вказано</span>'; const left = Math.round((parse(s)-new Date())/864e5);
     return `${dm(s)}.${parse(s).getFullYear()} <span class="pill ${left<0?'r':left<30?'y':'g'}">${left<0?'прострочено':left+' дн.'}</span>`; };
-  el.innerHTML = car ? `<div class="card"><h2>${esc(car.plate)}</h2><div class="muted" style="margin-bottom:8px">${esc(car.model||'')}</div>
+  el.innerHTML = car ? `<div class="card"><div class="plate">${esc(car.plate)}</div><div class="muted" style="margin-bottom:10px;font-size:14px">${esc(car.model||'')}</div>
     <div class="row"><span>Страховка до</span><span>${dt(car.insurance_until)}</span></div>
     <div class="row"><span>Техогляд до</span><span>${dt(car.techpass_until)}</span></div>
     <div class="row"><span>Ліцензія на авто до</span><span>${dt(car.license_until)}</span></div></div>`
@@ -707,6 +850,12 @@ d_car(el){
   el.insertAdjacentHTML('beforeend', `<div class="card"><h2>Борг за авто / пошкодження</h2>
     <div class="big" style="color:${bal>0?'var(--danger)':'var(--money)'}">${money(bal)}</div>
     ${mine.slice(0,15).map(d=>`<div class="row"><span>${dm(d.created_at.slice(0,10))} · ${d.kind==='charge'?'нараховано':'сплачено'}${d.note?` · ${esc(d.note)}`:''}</span><b>${d.kind==='charge'?'+':'−'}${money(d.amount)}</b></div>`).join('') || '<div class="muted">Боргів немає</div>'}</div>`);
+},
+
+// ---------- ВОДІЙ: ВИХІДНІ ----------
+d_off(el){
+  el.innerHTML = `<div class="card"><h2>Мої вихідні</h2>${offBlock(me.driver_id,false)}</div>`;
+  el.onclick = e => { const oc = e.target.closest('[data-offday],[data-om]'); if (oc) offClick(oc, me.driver_id, false); };
 },
 
 // ---------- ВОДІЙ: ДТП ----------
@@ -718,7 +867,7 @@ m_today(el){
   const t = todayStr(), y = ymd(addDays(new Date(),-1)), days = weekDays(0);
   const pend = S.profiles.filter(p=>p.role==='driver' && p.status==='pending');
   const rows = act.map(dr => { const {reps,w} = weekRow(dr,days); return {dr, w, reps, td:effDay(dr.id,t), rep:S.reports.find(r=>r.driver_id===dr.id && r.report_date===t)}; });
-  const missingY = act.filter(d=>!S.reports.some(r=>r.driver_id===d.id && r.report_date===y));
+  const missingY = act.filter(d=>!S.reports.some(r=>r.driver_id===d.id && r.report_date===y) && !isOff(d.id,y));
   const diffs = rows.reduce((a,x)=>a+x.reps.filter(r=>r.diff).length,0);
   const docBad = docItems().filter(x=>x.left!=null && x.left<=30);
   const incOpen = S.incidents.filter(i=>i.status==='new'||i.status==='review');
@@ -753,6 +902,8 @@ m_today(el){
    <div class="cols"><div>
     <div class="card"><h2>Потрібна увага</h2>${att.length ? att.map(a=>`<div class="attn ${a[0]}" data-go="${a[4]}"><span class="ic">${a[1]}</span><div style="pointer-events:none"><b>${a[2]}</b><span>${esc(a[3])}</span></div></div>`).join('') : '<div class="muted">Усе спокійно 👍</div>'}</div>
     ${guide}
+    ${S.offMissing ? '' : (()=>{ const tm = ymd(addDays(new Date(),1)), nm = x => act.filter(d=>isOff(d.id,x)).map(d=>esc(d.full_name)).join(', ') || '—';
+      return `<div class="card"><h2>Вихідні</h2><div class="row"><span>Сьогодні</span><b style="text-align:right">${nm(t)}</b></div><div class="row"><span>Завтра</span><b style="text-align:right">${nm(tm)}</b></div></div>`; })()}
    </div><div>
     <div class="card tblwrap"><h2>Водії: сьогодні і тиждень</h2>
      <table class="tbl"><thead><tr><th>Водій</th><th class="r">Сьогодні</th><th class="r">Тиждень</th><th class="r">Нараховано</th><th>Звіт</th></tr></thead><tbody>
@@ -1040,6 +1191,7 @@ m_set(el){
      ${plans.map(planCard).join('')}
      <div style="border-top:1px solid var(--line);padding:12px 0"><b>Новий план</b><div class="two"><div><label>Літера / код</label><input id="npCode" maxlength="3" placeholder="напр. Т"></div><div><label>Назва</label><input id="npName" placeholder="напр. Тижневий"></div></div><button class="btn sm sec" id="npAdd" style="margin-top:8px">＋ Додати план</button></div>
      <div style="border-top:1px solid var(--line);padding:12px 0"><b>Мийка</b><div class="row"><span>повернення за мийку на тиждень, ₴</span><span><input inputmode="decimal" id="washIn" value="${s.wash_week}" style="width:88px;margin:0;display:inline-block;text-align:right"></span></div></div>
+     <div style="border-top:1px solid var(--line);padding:12px 0"><b>Вихідні</b><div class="row"><span>норма вихідних на місяць для водія (0 — не вказувати)</span><span><input inputmode="numeric" id="offIn" value="${s.dayoff_month||0}" style="width:70px;margin:0;text-align:right"></span></div></div>
      <button class="btn" id="sSave">Зберегти все</button></div>`;
   };
   const read = () => {   // зчитати поля в plans
@@ -1072,7 +1224,8 @@ m_set(el){
       }
       const rows = plans.map((p,i)=>({code:p.code, name:p.name, period:p.period, tiers:p.tiers, sort:i}));
       let r = await db.from('pay_plans').upsert(rows,{onConflict:'code'}); if (r.error) return err(r.error.message);
-      r = await db.from('settings').upsert([{key:'wash_week', value:wash}],{onConflict:'key'}); if (r.error) return err(r.error.message);
+      const offq = parseInt($('#offIn').value,10); if (isNaN(offq)||offq<0||offq>31) return err('Норма вихідних: число від 0 до 31');
+      r = await db.from('settings').upsert([{key:'wash_week', value:wash},{key:'dayoff_month', value:offq}],{onConflict:'key'}); if (r.error) return err(r.error.message);
       await load(); VIEWS.m_set(el); $('#smsg').innerHTML='<div class="ok">Збережено</div>'; }
   };
 }
@@ -1093,15 +1246,32 @@ async function fillMedia(root){
       : `<a href="${x.signedUrl}" target="_blank"><img src="${x.signedUrl}" style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid var(--line)"></a>`)).join('') || '<span class="muted">Файлів немає</span>';
   }
 }
+async function shrinkImg(f){
+  if (!f.type.startsWith('image/') || f.size < 600*1024) return f;
+  try { const bm = await createImageBitmap(f); const k = Math.min(1, 1920/Math.max(bm.width,bm.height));
+    const c = document.createElement('canvas'); c.width = Math.round(bm.width*k); c.height = Math.round(bm.height*k); c.getContext('2d').drawImage(bm,0,0,c.width,c.height);
+    const b = await new Promise(r=>c.toBlob(r,'image/jpeg',0.82));
+    return (b && b.size < f.size) ? new File([b], f.name.replace(/\.\w+$/,'')+'.jpg', {type:'image/jpeg'}) : f; } catch(e) { return f; }
+}
 function incidentForm(el, driverId, list){
   el.innerHTML = `<div class="card"><h2>Повідомити про подію</h2><div id="imsg"></div>
    <div class="seg" id="iKind"><button type="button" data-v="dtp" class="on">ДТП</button><button type="button" data-v="self_damage">Самостійне пошкодження</button></div>
    <label>Де сталось</label><input id="iLoc"><label>Що сталось</label><textarea id="iDesc"></textarea>
-   <label>Фото / відео</label><input id="iFiles" type="file" accept="image/*,video/*" multiple capture="environment">
+   <label>Фото / відео</label>
+   <div class="pickrow"><button type="button" class="btn sec" id="iCam">📷 Зробити фото</button><button type="button" class="btn sec" id="iGal">🖼 Вибрати з галереї</button></div>
+   <input id="iCamIn" type="file" accept="image/*" capture="environment" hidden>
+   <input id="iGalIn" type="file" accept="image/*,video/*" multiple hidden>
+   <div class="prev" id="iPrev"></div>
    <button class="btn" id="iSend">Надіслати</button></div>
    <div class="card"><h2>Мої звернення</h2>${list.map(i=>`<div class="row"><div><b>${i.kind==='self_damage'?'Самост. пошкодження':'ДТП'}</b><div class="muted">${i.created_at.slice(0,10)} · ${esc(i.location||'')}</div></div><span class="pill">${esc(incSt(i.status))}</span></div>${mediaBox(i.id)}`).join('') || '<div class="muted">Звернень немає</div>'}</div>`;
   fillMedia(el);
-  let kind = 'dtp';
+  let kind = 'dtp'; const pick = [];
+  const drawPrev = () => { $('#iPrev').innerHTML = pick.map((f,i)=>`<div class="pv">${f.type.startsWith('image/')?`<img src="${URL.createObjectURL(f)}">`:'🎬<br>відео'}<a data-rm="${i}">✕</a></div>`).join(''); };
+  const addFiles = fl => { for (const f of fl) pick.push(f); drawPrev(); };
+  $('#iCam').onclick = () => $('#iCamIn').click(); $('#iGal').onclick = () => $('#iGalIn').click();
+  $('#iCamIn').onchange = e => { addFiles(e.target.files); e.target.value=''; };
+  $('#iGalIn').onchange = e => { addFiles(e.target.files); e.target.value=''; };
+  $('#iPrev').onclick = e => { const i = e.target.dataset.rm; if (i!==undefined) { pick.splice(+i,1); drawPrev(); } };
   $('#iKind').onclick = e => { const v = e.target.dataset.v; if (!v) return; kind = v; document.querySelectorAll('#iKind button').forEach(b=>b.classList.toggle('on', b.dataset.v===v)); };
   $('#iSend').onclick = async () => {
     const m = (t,ok) => $('#imsg').innerHTML = `<div class="${ok?'ok':'err'}">${esc(t)}</div>`;
@@ -1110,7 +1280,9 @@ function incidentForm(el, driverId, list){
     const {data:inc, error} = await db.from('incidents').insert({driver_id:driverId, kind, location:$('#iLoc').value.trim()||null, description:desc, occurred_at:new Date().toISOString()}).select().single();
     if (error) { $('#iSend').disabled=false; return m('Помилка: '+error.message); }
     let fail = 0;
-    for (const f of $('#iFiles').files) {
+    for (let f of pick) {
+      if (f.size > 50*1024*1024) { fail++; continue; }
+      f = await shrinkImg(f);
       const path = `${driverId}/${inc.id}/${Date.now()}_${f.name.replace(/[^\w.\-]/g,'_')}`;
       const up = await db.storage.from('incident-media').upload(path, f);
       if (up.error) { fail++; continue; }
