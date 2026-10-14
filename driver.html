@@ -137,6 +137,24 @@ header.top{} .embed header.top{display:none}.embed nav.tabs{top:0}
    <button class="btn" id="authBtn" type="submit">Увійти</button>
   </form>
   <div class="toggle" id="authToggle"></div>
+  <div class="toggle" id="forgotBox"><a id="forgot">Забули пароль?</a></div>
+ </div>
+</div>
+
+<!-- НОВИЙ ПАРОЛЬ (після листа «Забули пароль») -->
+<div id="recov" class="hidden">
+ <div style="display:flex;min-height:100dvh;align-items:center;justify-content:center;padding:24px;background:var(--inkp)">
+  <div class="card auth-card">
+   <div class="brand"><span class="dot"></span>Fleet XLV</div>
+   <h1>Новий пароль</h1>
+   <p class="hint">Придумайте новий пароль для входу</p>
+   <div id="recMsg"></div>
+   <form id="recForm">
+    <label>Новий пароль</label><input id="rPass" type="password" autocomplete="new-password" required minlength="6" placeholder="мінімум 6 символів">
+    <label>Ще раз</label><input id="rPass2" type="password" autocomplete="new-password" required minlength="6">
+    <button class="btn" id="recBtn" type="submit">Зберегти пароль</button>
+   </form>
+  </div>
  </div>
 </div>
 
@@ -255,8 +273,8 @@ const srcPill = e => e.diff ? '<span class="pill r">розбіжність: вр
 const debtBalance = list => (list||[]).reduce((a,d)=>a+(d.kind==='charge'?+d.amount:-d.amount),0);
 
 // ====================== ВХІД ======================
-let regMode = false;
-function showOnly(id){ for (const x of ['auth','pending','app']) $('#'+x).classList.toggle('hidden', x!==id); }
+let regMode = false, recovering = false;
+function showOnly(id){ for (const x of ['auth','pending','recov','app']) $('#'+x).classList.toggle('hidden', x!==id); }
 function setAuthMode(reg){
   regMode = reg;
   $('#regFields').classList.toggle('hidden', !reg);
@@ -266,6 +284,7 @@ function setAuthMode(reg){
   $('#authBtn').textContent = reg ? 'Надіслати заявку' : 'Увійти';
   $('#fPass').autocomplete = reg ? 'new-password' : 'current-password';
   $('#authToggle').classList.toggle('hidden', EMBED);
+  $('#forgotBox').classList.toggle('hidden', EMBED || reg);
   $('#authToggle').innerHTML = reg ? 'Вже є акаунт? <a id="tg">Увійти</a>' : 'Вперше? <a id="tg">Зареєструватися як водій</a>';
   $('#tg').onclick = () => { $('#authMsg').innerHTML=''; setAuthMode(!regMode); };
 }
@@ -292,10 +311,27 @@ $('#authForm').addEventListener('submit', async e => {
   } catch (err) { authMsg(niceErr(err.message)); }
   $('#authBtn').disabled = false;
 });
+$('#forgot').onclick = async () => {
+  authMsg(''); const email = $('#fEmail').value.trim();
+  if (!email) { authMsg('Спочатку впишіть свій email у поле вище, потім натисніть «Забули пароль?»'); return; }
+  const {error} = await db.auth.resetPasswordForEmail(email, {redirectTo: location.origin + location.pathname});
+  if (error) { authMsg(/rate|seconds/i.test(error.message) ? 'Забагато спроб. Зачекайте хвилину і спробуйте ще раз.' : niceErr(error.message)); return; }
+  authMsg('Якщо такий email є в системі — на нього надіслано лист із посиланням для нового пароля. Перевірте також «Спам».', true);
+};
+$('#recForm').addEventListener('submit', async e => {
+  e.preventDefault(); const a=$('#rPass').value, b=$('#rPass2').value, m=$('#recMsg');
+  if (a!==b) { m.innerHTML='<div class="err">Паролі не збігаються</div>'; return; }
+  $('#recBtn').disabled = true;
+  const {error} = await db.auth.updateUser({password:a});
+  $('#recBtn').disabled = false;
+  if (error) { m.innerHTML='<div class="err">'+esc(error.message)+'</div>'; return; }
+  recovering = false; history.replaceState(null,'',location.pathname); await boot();
+});
 async function logout(){ await db.auth.signOut(); me = null; S = {}; showOnly('auth'); setAuthMode(false); }
 $('#outBtn').onclick = logout; $('#pendOut').onclick = logout; $('#pendRefresh').onclick = () => boot();
 
 async function boot(){
+  if (recovering) { showOnly('recov'); return; }
   // Усередині дашборда вхід один: беремо сесію дашборда (той самий сайт), окремого входу немає.
   if (EMBED) {
     try {
@@ -1063,7 +1099,8 @@ function incidentForm(el, driverId, list){
   db = EMBED ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
              : supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {auth:{storageKey:'sb-driver-cabinet-auth'}});
   setAuthMode(false);
-  db.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') { showOnly('auth'); } });
+  db.auth.onAuthStateChange((ev) => { if (ev === 'PASSWORD_RECOVERY') { recovering = true; showOnly('recov'); } if (ev === 'SIGNED_OUT') { showOnly('auth'); } });
+  if (/type=recovery/.test(location.hash)) recovering = true;
   boot().catch(e => { showOnly('auth'); authMsg('Помилка: '+e.message); });
 })();
 </script>
