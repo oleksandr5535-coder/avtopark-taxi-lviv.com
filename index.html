@@ -3579,7 +3579,50 @@ async function publishWeekCore(mon){
       var up=await supa.from('api_days').upsert(rows.slice(i,i+200),{onConflict:'driver_id,day'});
       if(up.error){return {err:'Помилка запису: '+up.error.message};}
     }
-    return {n:rows.length,unm:Object.keys(unm)};
+    /* --- Брендування: частка водія за тиждень (правило: отримує той, хто їздив на авто останнім) --- */
+    var brandInfo={n:0,unm:[],err:null};
+    try{
+      var _bb=window._boltBrand&&window._boltBrand[mon]?Object.keys(window._boltBrand[mon]):[];
+      var _ub=window._uklonBrand&&window._uklonBrand[mon]?Object.keys(window._uklonBrand[mon]):[];
+      if(_bb.length||_ub.length){
+        var bpct=(typeof brandSplitPct==='function')?brandSplitPct():50;
+        var lastOn={};
+        keys.forEach(function(k){
+          if(!DAYS||!DAYS[k])return;
+          var H2=(typeof rptHy==='function')?rptHy(k):DAYS[k];
+          ((H2&&H2.drivers)||[]).forEach(function(o){
+            if(!o||!o.name||!o.plate_norm)return;
+            if(!((+o.b_net||0)+(+o.u_net||0)>0||(o.orders||0)>0))return;
+            lastOn[o.plate_norm]={name:o.name};
+          });
+        });
+        var bacc={};var seenP={};
+        _bb.concat(_ub).forEach(function(pn){
+          if(seenP[pn])return;seenP[pn]=1;
+          var bolt=boltBrandReal(mon,pn)||0,ukl=uklonBrandReal(mon,pn)||0;
+          if(!(bolt>0||ukl>0))return;
+          var ld=lastOn[pn];
+          var did2=ld?(byName[rpt_toks(ld.name).join('|')]||byPlate[NPL2(pn)]):byPlate[NPL2(pn)];
+          if(!did2){brandInfo.unm.push(pn+(ld?' ('+nameFor(ld.name)+')':''));return;}
+          var tok=ld?rpt_toks(ld.name).join('|'):'';
+          var f=(tok&&typeof brandFixGet==='function')?brandFixGet(mon,tok):{};
+          var amt=0;
+          if(!(f&&f.excluded)){var bb=(f&&f.boltPaid===false)?0:bolt;amt=(bb+ukl)*bpct/100;}
+          var e2=bacc[did2]||(bacc[did2]={amount:0,plates:[]});e2.amount+=amt;e2.plates.push(pn);
+        });
+        var brows={};
+        Object.keys(bacc).forEach(function(d){brows[d]=bacc[d];});
+        rows.forEach(function(r){if(!brows[r.driver_id])brows[r.driver_id]={amount:0,plates:[]};});
+        var nowIso=new Date().toISOString();
+        var bl=Object.keys(brows).map(function(d){return {driver_id:d,week_start:mon,auto_amount:Math.round(brows[d].amount*100)/100,pct:bpct,plate:brows[d].plates.join(', ')||null,updated_at:nowIso};});
+        for(var bi=0;bi<bl.length;bi+=200){
+          var bu=await supa.from('brand_weeks').upsert(bl.slice(bi,bi+200),{onConflict:'driver_id,week_start'});
+          if(bu.error){brandInfo.err=(bu.error.message||'')+' (чи запущено brand_weeks.sql?)';break;}
+        }
+        if(!brandInfo.err)brandInfo.n=bl.length;
+      }
+    }catch(be){brandInfo.err='Брендування: '+(be&&be.message||be);}
+    return {n:rows.length,unm:Object.keys(unm),brand:brandInfo};
   }catch(e){return {err:'Помилка: '+(e&&e.message||e)};}
 }
 async function publishWeek(){
@@ -3599,9 +3642,9 @@ function autoPublish(dateOrMon){
   try{if(!dateOrMon)return;var m=weekStartOf(String(dateOrMon).slice(0,10));_autoPubWeeks[m]=1;
   clearTimeout(_autoPubT);_autoPubT=setTimeout(async function(){
     var ws=Object.keys(_autoPubWeeks);_autoPubWeeks={};
-    var unm={},err=null;
-    for(var i=0;i<ws.length;i++){var R=await publishWeekCore(ws[i]);if(R&&R.err){err=R.err;console.warn('autoPublish',R.err);}else if(R){R.unm.forEach(function(n){unm[n]=1;});}}
-    var st=document.getElementById('pubStatus');if(st&&ws.length){var u=Object.keys(unm);st.style.color=err?'var(--bad,#c0392b)':'var(--muted)';st.innerHTML=err?('⚠ Водіям не оновилось: '+err):('🔄 Водіям оновлюється автоматично'+(u.length?'<br>⚠ Не знайдено в кабінеті: <b>'+u.map(rpt_esc).join(', ')+'</b> — закріпіть за ними авто в «Кабінет водіїв → Водії/Парк»':''));}
+    var unm={},bunm={},err=null;
+    for(var i=0;i<ws.length;i++){var R=await publishWeekCore(ws[i]);if(R&&R.err){err=R.err;console.warn('autoPublish',R.err);}else if(R){R.unm.forEach(function(n){unm[n]=1;});if(R.brand){if(R.brand.err)err=R.brand.err;(R.brand.unm||[]).forEach(function(n){bunm[n]=1;});}}}
+    var st=document.getElementById('pubStatus');if(st&&ws.length){var u=Object.keys(unm);st.style.color=err?'var(--bad,#c0392b)':'var(--muted)';st.innerHTML=err?('⚠ Водіям не оновилось: '+err):('🔄 Водіям оновлюється автоматично'+(u.length?'<br>⚠ Не знайдено в кабінеті: <b>'+u.map(rpt_esc).join(', ')+'</b> — закріпіть за ними авто в «Кабінет водіїв → Водії/Парк»':'')+(Object.keys(bunm).length?'<br>⚠ Брендування без водія (не потрапило в кабінет): <b>'+Object.keys(bunm).map(rpt_esc).join(', ')+'</b>':''));}
   },2500);}catch(e){console.warn(e);}
 }
 function renderWeek(){var el=document.getElementById('week');if(!el)return;
@@ -4319,6 +4362,7 @@ async function uklonRefresh(btn){
     uklonBrandSaveLocal(raw);
     window._uklonBrand=uklonBrandBuildIndex(raw);
     window._uklonBrandMeta=raw._meta;
+    try{wkList.forEach(function(wk){if(typeof autoPublish==='function')autoPublish(wk);});}catch(e){}
     var saved=false;try{if(typeof supa!=='undefined'&&supa){await supa.from('app_data').upsert({key:'uklonbrand:all',value:JSON.stringify(raw)});saved=true;}}catch(e){console.error('uklonbrand save',e);}
     show('<span style="color:#0a7d33;font-weight:700">✓ Uklon: '+wkList.length+' тижнів · '+Math.round(grand).toLocaleString('uk-UA')+' ₴'+(saved?' — збережено в памʼять':' — лише локально')+'</span>');
     if(typeof view!=='undefined'){if(view==='branding'&&typeof renderBranding==='function')renderBranding();else if(view==='coverage'&&typeof renderCoverage==='function')renderCoverage();}
@@ -4333,7 +4377,7 @@ function _brandMonday(dstr){var m=String(dstr).match(/(\d{4})-(\d{2})-(\d{2})/);
 function _brandDate(s){var m=String(s||'').match(/(\d{4})-(\d{2})-(\d{2})/);return m?(m[1]+'-'+m[2]+'-'+m[3]):null;}
 function _brandFmtD(iso){if(!iso)return '';var m=String(iso).match(/(\d{4})-(\d{2})-(\d{2})/);return m?(m[3]+'.'+m[2]+'.'+m[1]):String(iso);}
 function brandParseCampaignCsv(text){var rows=_csvRows(text);if(!rows.length)return {ok:false,err:'Порожній файл'};var head=rows[0].map(function(x){return String(x).trim().toLowerCase();});function col(names){for(var i=0;i<head.length;i++){for(var j=0;j<names.length;j++){if(head[i].indexOf(names[j])>-1)return i;}}return -1;}var cType=col(['застосов']),cStart=col(['початок']),cEnd=col(['кінець','кинець']),cPlate=col(['номер']),cMoney=col(['зароблен','гріш','грош','сума']);if(cType<0||cStart<0||cPlate<0||cMoney<0)return {ok:false,err:'Не розпізнано колонки. Потрібен файл «Звіт про кампанії».'};var weeks={},info={},used=0,plates={};for(var r=1;r<rows.length;r++){var row=rows[r];if(!row||row.length<=Math.max(cType,cStart,cPlate,cMoney))continue;var typ=String(row[cType]||'').trim().toLowerCase();if(typ.indexOf('авто')===-1)continue;var plate=String(row[cPlate]||'').trim();if(!plate||plate==='—'||plate==='-')continue;var wk=_brandMonday(row[cStart]);if(!wk)continue;var money=_brandParseMoney(row[cMoney]);if(!weeks[wk]){weeks[wk]={};info[wk]={from:null,to:null,total:0,plates:{}};}weeks[wk][plate]=(weeks[wk][plate]||0)+money;var ds=_brandDate(row[cStart]),de=cEnd>=0?_brandDate(row[cEnd]):null;if(ds&&(!info[wk].from||ds<info[wk].from))info[wk].from=ds;if(de&&(!info[wk].to||de>info[wk].to))info[wk].to=de;info[wk].total+=money;info[wk].plates[plate]=1;used++;plates[plate]=1;}var wlist=Object.keys(weeks).sort();wlist.forEach(function(wk){info[wk].plateCount=Object.keys(info[wk].plates).length;});return {ok:true,weeks:weeks,info:info,rowsUsed:used,plates:Object.keys(plates).length,weekList:wlist};}
-async function brandApplyUploaded(p){var raw=null;try{raw=await boltBrandCloudLoad();}catch(e){}if(!raw||typeof raw!=='object')raw=boltBrandLocal()||{};if(!raw._meta||typeof raw._meta!=='object')raw._meta={};var now=new Date().toISOString();Object.keys(p.weeks).forEach(function(wk){if(!raw[wk]||typeof raw[wk]!=='object')raw[wk]={};Object.keys(p.weeks[wk]).forEach(function(pl){var cur=raw[wk][pl];var inc=p.weeks[wk][pl];if(cur&&typeof cur==='object'){cur.income=inc;cur.src='file';}else{raw[wk][pl]={income:inc,src:'file'};}});var wi=(p.info&&p.info[wk])||{};raw._meta[wk]={uploadedAt:now,from:wi.from||null,to:wi.to||null,total:wi.total||0,plates:wi.plateCount||Object.keys(p.weeks[wk]).length,src:'file'};});raw._updatedAt=now;boltBrandSaveLocal(raw);window._boltBrand=boltBrandBuildIndex(raw);window._boltBrandMeta=raw._meta;try{if(typeof supa!=='undefined'&&supa){await supa.from('app_data').upsert({key:'boltbrand:all',value:JSON.stringify(raw)});}else{return {saved:false};}}catch(e){console.error('boltbrand save',e);return {saved:false};}return {saved:true};}
+async function brandApplyUploaded(p){var raw=null;try{raw=await boltBrandCloudLoad();}catch(e){}if(!raw||typeof raw!=='object')raw=boltBrandLocal()||{};if(!raw._meta||typeof raw._meta!=='object')raw._meta={};var now=new Date().toISOString();Object.keys(p.weeks).forEach(function(wk){if(!raw[wk]||typeof raw[wk]!=='object')raw[wk]={};Object.keys(p.weeks[wk]).forEach(function(pl){var cur=raw[wk][pl];var inc=p.weeks[wk][pl];if(cur&&typeof cur==='object'){cur.income=inc;cur.src='file';}else{raw[wk][pl]={income:inc,src:'file'};}});var wi=(p.info&&p.info[wk])||{};raw._meta[wk]={uploadedAt:now,from:wi.from||null,to:wi.to||null,total:wi.total||0,plates:wi.plateCount||Object.keys(p.weeks[wk]).length,src:'file'};});raw._updatedAt=now;boltBrandSaveLocal(raw);window._boltBrand=boltBrandBuildIndex(raw);window._boltBrandMeta=raw._meta;try{Object.keys(p.weeks).forEach(function(wk){if(typeof autoPublish==='function')autoPublish(wk);});}catch(e){}try{if(typeof supa!=='undefined'&&supa){await supa.from('app_data').upsert({key:'boltbrand:all',value:JSON.stringify(raw)});}else{return {saved:false};}}catch(e){console.error('boltbrand save',e);return {saved:false};}return {saved:true};}
 function brandWeekBadge(wk){var idx=(window._boltBrand||{})[wk];var meta=(window._boltBrandMeta||{})[wk];var cnt=0,sum=0;if(idx){Object.keys(idx).forEach(function(pl){var o=idx[pl];var inc=(o&&o.income!=null)?o.income:0;if(inc>0){cnt++;sum+=inc;}});}var has=cnt>0||(meta&&meta.total>0);if(has){var per=(meta&&meta.from)?(' · період '+_brandFmtD(meta.from)+'–'+_brandFmtD(meta.to)):'';var upl=(meta&&meta.uploadedAt)?(' · завантажено '+_brandFmtD(meta.uploadedAt)):'';var src=(meta&&meta.src==='file')?' з файлу':'';return '<div style="background:#eaf7ee;border:1px solid #bfe6c9;color:#0a7d33;border-radius:10px;padding:9px 12px;margin:8px 0;font-size:13px;font-weight:700">✓ Брендування за цей тиждень завантажено'+src+': '+cnt+' авто · '+_bf(sum||(meta&&meta.total)||0)+' ₴'+per+upl+'</div>';}return '<div style="background:#fff6e6;border:1px solid #f0d9a8;color:#8a6100;border-radius:10px;padding:9px 12px;margin:8px 0;font-size:13px;font-weight:700">— За цей тиждень брендування ще не завантажено. Завантаж файл кнопкою вище.</div>';}
 function brandFilePick(input){var f=input&&input.files&&input.files[0];if(!f)return;var st=document.getElementById('brand-upl-status');function show(h){window._brandLastUpload=h;var e=document.getElementById('brand-upl-status');if(e)e.innerHTML=h;}show('<span style="color:var(--ink2)">Читаю файл…</span>');var rd=new FileReader();rd.onload=function(){var res;try{res=brandParseCampaignCsv(String(rd.result||''));}catch(e){show('<span style="color:#c0392b">✕ Помилка розбору файлу</span>');return;}input.value='';if(!res.ok){show('<span style="color:#c0392b">✕ '+res.err+'</span>');return;}if(!res.rowsUsed){show('<span style="color:#c0392b">✕ У файлі нема рядків «Кампанія авто». Перевір, що це саме «Звіт про кампанії».</span>');return;}show('<span style="color:var(--ink2)">Зберігаю…</span>');brandApplyUploaded(res).then(function(r){var lines=res.weekList.map(function(wk){var wi=res.info[wk]||{};var rng=wi.from?(_brandFmtD(wi.from)+'–'+_brandFmtD(wi.to)):wk;return '<div style="margin-top:3px">• Тиждень <b>'+rng+'</b> <span style="color:var(--muted)">(пн '+wk+')</span>: <b>'+(wi.plateCount||0)+' авто</b> · <b>'+_bf(wi.total||0)+' ₴</b></div>';}).join('');var okmark=(r&&r.saved)?'✓ Завантажено та збережено в памʼять':'⚠ Завантажено (лише локально — хмара недоступна)';var col=(r&&r.saved)?'#0a7d33':'#b7791f';var html='<div style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px"><div style="color:'+col+';font-weight:800">'+okmark+'</div><div style="color:var(--ink);font-weight:700;margin-top:4px">Разом: '+res.rowsUsed+' авто-кампаній · '+res.plates+' авто</div>'+lines+'</div>';show(html);if(typeof view!=='undefined'&&view==='branding'){if(window._brPeriod==='month'&&typeof renderBrandingMonth==='function'){var el=document.getElementById('branding');if(el)renderBrandingMonth(el);}else if(typeof renderBranding==='function'){renderBranding();}}});};rd.onerror=function(){show('<span style="color:#c0392b">✕ Помилка читання файлу</span>');};rd.readAsText(f,'utf-8');}
 function brandUploadBox(){return '<div style="background:var(--panel);border:1px dashed var(--line);border-radius:12px;padding:12px 14px;margin:10px 0">'+'<label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;background:var(--ink);color:#fff;border-radius:9px;padding:9px 14px;font-size:14px;font-weight:700"><input type="file" accept=".csv,text/csv" style="display:none" onchange="brandFilePick(this)">⬆️ Завантажити файл брендування</label>'+'<div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.45">Файл «Звіт про кампанії» з порталу Bolt. Беремо лише авто-брендування («Кампанія авто»), сумуємо по номеру авто й пишемо в памʼять (Supabase). Тиждень визначається автоматично.</div>'+'<div id="brand-upl-status" style="font-size:13px;font-weight:600;margin-top:8px">'+(window._brandLastUpload||'')+'</div>'+'<div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)"><button type="button" onclick="uklonRefresh(this)" style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;background:#127a3e;color:#fff;border:none;border-radius:9px;padding:9px 14px;font-size:14px;font-weight:700;font-family:inherit">🔄 Підтягнути брендування Uklon</button><div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.45">Тягне брендування Uklon напряму з API (усі тижні) і пише в памʼять. Токени не потрібні.</div><div id="uklon-upl-status" style="font-size:13px;font-weight:600;margin-top:6px">'+(window._uklonLastMsg||'')+'</div></div>'+'</div>';}
