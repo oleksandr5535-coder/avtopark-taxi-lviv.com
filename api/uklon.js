@@ -237,7 +237,9 @@ async function fetchAllReport(fleetId, from, to, H) {
   return all;
 }
 
+import { requireStaff } from './_auth.js';
 export default async function handler(req, res) {
+  if (!(await requireStaff(req, res))) return;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   try {
     const id = process.env.UKLON_CLIENT_ID, secret = process.env.UKLON_CLIENT_SECRET, fleetId = process.env.UKLON_FLEET_ID;

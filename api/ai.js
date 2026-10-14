@@ -388,7 +388,9 @@ ${JSON.stringify(p, null, 1)}`,
   },
 };
 
+import { requireStaff } from './_auth.js';
 export default async function handler(req, res) {
+  if (!(await requireStaff(req, res))) return;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
   if (req.method !== 'POST') {

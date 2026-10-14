@@ -18,7 +18,9 @@ async function getJSON(path, token){
   }catch(e){ return {error:e.message}; }
 }
 
-export default async function handler(req, res){
+import { requireStaff } from './_auth.js';
+export default async function handler(req, res) {
+  if (!(await requireStaff(req, res))) return;
   res.setHeader('Content-Type','application/json; charset=utf-8');
   const out={};
   try{

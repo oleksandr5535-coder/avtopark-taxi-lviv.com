@@ -149,7 +149,9 @@ function htmlTable(dateStr, sum, totalOrders) {
     + '</table>';
 }
 
+import { requireStaff } from './_auth.js';
 export default async function handler(req, res) {
+  if (!(await requireStaff(req, res))) return;
   try {
     // ===== ДІАГНОСТИКА: ?probe=1 — перебирає ймовірні методи Fleet API =====
     if (req.query && req.query.probe) {

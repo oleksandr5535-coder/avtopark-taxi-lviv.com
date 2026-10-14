@@ -29,7 +29,9 @@ const STATE = {
   Inactive:       { label: 'Офлайн', group: 'offline', dot: '⚪' },
 };
 
+import { requireStaff } from './_auth.js';
 export default async function handler(req, res) {
+  if (!(await requireStaff(req, res))) return;
   try {
     const id = process.env.UKLON_CLIENT_ID, secret = process.env.UKLON_CLIENT_SECRET;
     const fleetId = process.env.UKLON_FLEET_ID;

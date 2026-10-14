@@ -94,7 +94,9 @@ const STATE = {
   inactive:       { label: 'Офлайн', group: 'offline', dot: '⚪' },
 };
 
+import { requireStaff } from './_auth.js';
 export default async function handler(req, res) {
+  if (!(await requireStaff(req, res))) return;
   try {
     const hours = Math.max(1, Math.min(48, parseInt((req.query && req.query.hours) || '6', 10) || 6));
     const now = Math.floor(Date.now() / 1000);

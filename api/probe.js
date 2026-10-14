@@ -40,7 +40,9 @@ async function getToken() {
   return j.access_token;
 }
 
+import { requireStaff } from './_auth.js';
 export default async function handler(req, res) {
+  if (!(await requireStaff(req, res))) return;
   try {
     const token = await getToken();
     const now = Math.floor(Date.now() / 1000);

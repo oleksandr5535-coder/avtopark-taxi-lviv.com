@@ -40,7 +40,9 @@ function kyivOffsetSec(date) {
   return (asUTC - date.getTime()) / 1000;
 }
 
+import { requireStaff } from './_auth.js';
 export default async function handler(req, res) {
+  if (!(await requireStaff(req, res))) return;
   try {
     const token = process.env.WIALON_TOKEN;
     if (!token) throw new Error('Немає WIALON_TOKEN');
