@@ -370,11 +370,11 @@ async function boot(){
 }
 function buildTabs(){
   const t = S.staff
-    ? [['m_today','☀️ Сьогодні'],['m_pay','💳 Виплати'],['m_rep','📋 Звіти'],['m_drv','👥 Водії'],['m_cars','🚗 Парк'],['m_docs','📅 Документи'],['m_inc','⚠️ ДТП'],['m_set','⚙️ Умови']]
+    ? [['m_today','☀️ Сьогодні'],['m_drv','👥 Водії'],['m_cars','🚗 Парк'],['m_rep','📋 Звіти'],['m_pay','💳 Виплати'],['m_inc','⚠️ ДТП'],['m_docs','📅 Документи'],['m_set','⚙️ Умови']]
     : [['d_week','💰 Тиждень'],['d_rep','📝 Звіт'],['d_car','🚗 Авто'],['d_inc','⚠️ ДТП']];
   $('#tabs').innerHTML = (EMBED ? '<button class="exitdash" id="exitDash" title="Повернутись до дашборду парку">← До дашборду</button>' : '') + t.map(([k,l])=>`<button data-k="${k}">${l}</button>`).join('');
   const ex = $('#exitDash'); if (ex) ex.onclick = () => { try { window.parent.postMessage({cabinetExit:true}, '*'); } catch(e){} };
-  $('#tabs').onclick = e => { const k = e.target.dataset.k; if (k) { S.tab = k; if (k!=='d_rep') S.repFor = null; if (k==='m_drv') S.drvOpen = null; render(); window.scrollTo(0,0); } };
+  $('#tabs').onclick = e => { const bt = e.target.closest('button[data-k]'); const k = bt && bt.dataset.k; if (k) { S.tab = k; if (k!=='d_rep') S.repFor = null; if (k==='m_drv') S.drvOpen = null; render(); window.scrollTo(0,0); } };
 }
 
 // ====================== ЗАВАНТАЖЕННЯ ======================
@@ -461,7 +461,8 @@ const TITLES = {
   d_rep:['Звіт за водія','']
 };
 function render(){
-  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.k === S.tab));
+  document.querySelectorAll('#tabs button').forEach(b => { b.classList.toggle('on', b.dataset.k === S.tab);
+    if (b.dataset.k==='m_drv') { const n = S.staff ? pendingApps().length : 0; b.innerHTML = '👥 Водії' + (n ? ` <span class="pill y">${n}</span>` : ''); } });
   const t = S.staff && TITLES[S.tab]; const hide = S.tab==='m_drv' && S.drvOpen;
   $('#pghead').innerHTML = (t && !hide) ? `<div class="pagehead noprint"><div><h1 class="pt">${t[0]}</h1><div class="sub">${typeof t[1]==='function'?t[1]():t[1]}</div></div></div>` : '';
   const fn = VIEWS[S.tab]; $('#view').innerHTML = ''; $('#view').onclick = null; $('#view').onchange = null; fn($('#view'));
@@ -494,6 +495,40 @@ function brandOf(did, ws){
   return {row:r, auto, manual, skip, eff: skip ? 0 : (manual!=null ? manual : auto), note:r.note||'', plate:r.plate||'', paid:!!r.paid_at, pct:r.pct};
 }
 const brandPill = b => b.skip ? '<span class="pill y">не платимо</span>' : (b.manual!=null ? '<span class="pill">вручну</span>' : (b.eff>0 ? '<span class="pill g">авто</span>' : ''));
+
+
+// ---- Нові заявки водіїв: підтвердження = літера + авто в одній формі ----
+const pendingApps = () => (S.profiles||[]).filter(p=>p.role==='driver' && p.status==='pending');
+function appsCard(){
+  const pend = pendingApps(); if (!pend.length) return '';
+  const freeCars = S.cars.filter(c=>!c.driver_id);
+  const unlinked = S.drivers.filter(d=>!S.profiles.some(x=>x.driver_id===d.id));
+  return `<div class="card" id="apps" style="border:2px solid var(--amber,#f59e0b)"><h2>🆕 Нові заявки на доступ <span class="pill y">${pend.length}</span></h2>
+   <div class="muted" style="margin-bottom:10px">Водій зареєструвався сам. Щоб він побачив кабінет, оберіть літеру і авто та натисніть «Підтвердити».</div>
+   ${pend.map(p=>`<div class="card" style="margin:0 0 10px;background:var(--soft,#f8fafc)">
+    <div class="row"><div><b>${esc(p.full_name||'—')}</b><div class="muted">${esc(p.phone||'без телефону')} · заявка ${esc((p.created_at||'').slice(0,10))}</div></div></div>
+    <div class="two"><div><label>Літера (план виплат) *</label><select data-apl="${p.id}"><option value="">— оберіть —</option>${plansList().map(x=>`<option value="${esc(x.code)}">${esc(x.code)} · ${esc(x.name||'')}</option>`).join('')}</select></div>
+     <div><label>Авто</label><select data-apc="${p.id}"><option value="">— без авто —</option>${freeCars.map(c=>`<option value="${c.id}">${esc(c.plate)} ${esc(c.model||'')}</option>`).join('')}</select></div></div>
+    <div class="two"><div><label>Ім'я в дашборді (як у Bolt/Uklon)</label><input list="dnames" data-apd="${p.id}" placeholder="за замовч. — з заявки"></div>
+     <div><label>Вже є картка цього водія?</label><select data-apk="${p.id}"><option value="">Ні, створити нову</option>${unlinked.map(d=>`<option value="${d.id}">${esc(d.full_name)}</option>`).join('')}</select></div></div>
+    <div style="display:flex;gap:8px;margin-top:8px"><button class="btn sm grn" data-ap="${p.id}">✓ Підтвердити</button><button class="btn sm sec" data-rj="${p.id}">Відхилити</button></div></div>`).join('')}
+   <datalist id="dnames">${(S.dashNames||[]).map(n=>`<option value="${esc(n)}">`).join('')}</datalist></div>`;
+}
+async function appsClick(e, say){
+  const a = e.target.dataset.ap, r = e.target.dataset.rj, q = (k,id)=>(document.querySelector(`[data-${k}="${id}"]`)||{}).value||'';
+  if (a) {
+    const letter = q('apl',a), car = q('apc',a), dn = q('apd',a).trim(), lk = q('apk',a);
+    if (!letter && !lk) return say('Оберіть літеру: за нею рахуватиметься виплата водія');
+    if (!car && !confirm('Авто не вибрано. Підтвердити водія без авто? (авто можна призначити пізніше в картці водія)')) return;
+    e.target.disabled = true;
+    const {data:did, error} = await db.rpc('approve_driver',{p_profile:a,p_dash_name:dn||null,p_driver_id:lk||null});
+    if (error) { e.target.disabled=false; return say(error.message); }
+    if (letter) { const u = await db.from('drivers').update({plan_letter:letter}).eq('id',did); if (u.error) return say('Підтверджено, але літеру не збережено: '+u.error.message); }
+    if (car) { const u = await db.from('cars').update({driver_id:did}).eq('id',car); if (u.error) return say('Підтверджено, але авто не призначено: '+u.error.message); }
+    await load(); S.drvOpen = did; render(); window.scrollTo(0,0); return true;
+  }
+  if (r) { if(!confirm('Відхилити заявку?')) return; const {error} = await db.from('profiles').update({status:'rejected'}).eq('id',r); if (error) return say(error.message); await load(); render(); return true; }
+}
 
 // Картка водія: усе про одного водія в одному місці
 function drvCard(el, dr){
@@ -694,7 +729,7 @@ m_today(el){
   const att = [];
   const noPlanDrv = S.drivers.filter(d=>d.status==='active' && !d.plan_letter);
   if (noPlanDrv.length) att.push(['bad','🔤',`Водії без плану виплат (літери): ${noPlanDrv.length}`, noPlanDrv.slice(0,5).map(d=>d.full_name).join(', ')+'. Виплата не рахується, поки ви не оберете літеру в картці водія','m_drv']);
-  if (pend.length) att.push(['warn','🆕',`Нових заявок водіїв: ${pend.length}`,'Підтвердіть їх нижче','#apps']);
+  if (pend.length) att.push(['warn','🆕',`Нових заявок водіїв: ${pend.length}`,'Відкрийте «Водії»: там призначите літеру й авто','m_drv']);
   if (missingY.length) att.push(['bad','📋',`Не подали звіт за вчора (${dm(y)}): ${missingY.length}`, missingY.slice(0,5).map(d=>d.full_name).join(', ')+(missingY.length>5?'…':''),'m_rep']);
   if (diffs) att.push(['warn','⚖️',`Розбіжності з Bolt/Uklon: ${diffs}`,'Водії вказали інші суми, ніж у системі. Перевірте у «Звітах»','m_rep']);
   if (docBad.length) att.push([docBad.some(x=>x.left<0)?'bad':'warn','📅',`Документи: ${docBad.length} прострочено або спливають за 30 днів`, docBad.slice(0,4).map(x=>`${x.car.plate} ${x.label.toLowerCase()}`).join(', '),'m_docs']);
@@ -704,7 +739,7 @@ m_today(el){
   const step = (ok,t,tab,hint) => `<div class="row" style="align-items:flex-start"><span><b>${ok?'✅':'⬜'} ${t}</b><div class="muted">${hint}</div></span><a data-go="${tab}" class="pill y" style="cursor:pointer;white-space:nowrap">відкрити</a></div>`;
   const guide = setup.every(Boolean) ? '' : `<div class="card"><h2>З чого почати</h2>
    ${step(S.cars.length>0,`Авто в парку: ${S.cars.length}`,'m_cars','«Парк»: додайте авто або імпортуйте номери з дашборду.')}
-   ${step(S.drivers.length>0,`Водії в базі: ${S.drivers.length}`,'m_drv','«Водії»: додайте водія або підтвердіть заявку нижче.')}
+   ${step(S.drivers.length>0,`Водії в базі: ${S.drivers.length}`,'m_drv','«Водії»: додайте водія або підтвердіть заявку.')}
    ${step(S.drivers.some(d=>carOf(d.id)),`Водіїв з авто: ${S.drivers.filter(d=>carOf(d.id)).length}`,'m_drv','У картці водія виберіть авто зі списку.')}
    ${step(Object.keys(S.apiMap||{}).length>0,'Дані Bolt/Uklon у кабінеті','m_pay','У дашборді: «Аналіз за тиждень» → «Опублікувати тиждень водіям».')}</div>`;
   el.innerHTML = `
@@ -718,10 +753,6 @@ m_today(el){
    <div class="cols"><div>
     <div class="card"><h2>Потрібна увага</h2>${att.length ? att.map(a=>`<div class="attn ${a[0]}" data-go="${a[4]}"><span class="ic">${a[1]}</span><div style="pointer-events:none"><b>${a[2]}</b><span>${esc(a[3])}</span></div></div>`).join('') : '<div class="muted">Усе спокійно 👍</div>'}</div>
     ${guide}
-    <datalist id="dnames">${(S.dashNames||[]).map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
-    <div class="card" id="apps"><h2>Нові заявки водіїв ${pend.length?`<span class="pill y">${pend.length}</span>`:''}</h2>
-    ${pend.map(p=>`<div class="row" style="flex-wrap:wrap"><div><b>${esc(p.full_name||'—')}</b><div class="muted">${esc(p.phone||'')}</div></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><select data-link="${p.id}" style="width:150px;margin:0;padding:8px 10px;font-size:13px"><option value="">нова картка</option>${S.drivers.filter(d=>!S.profiles.some(x=>x.driver_id===d.id)).map(d=>`<option value="${d.id}">${esc(d.full_name)}</option>`).join('')}</select><input list="dnames" data-dn="${p.id}" placeholder="Ім'я в дашборді" style="width:150px;margin:0;padding:8px 10px;font-size:13px"><button class="btn sm grn" data-ap="${p.id}">Підтвердити</button><button class="btn sm sec" data-rj="${p.id}">Відхилити</button></div></div>`).join('') || '<div class="muted">Нових заявок немає</div>'}</div>
    </div><div>
     <div class="card tblwrap"><h2>Водії: сьогодні і тиждень</h2>
      <table class="tbl"><thead><tr><th>Водій</th><th class="r">Сьогодні</th><th class="r">Тиждень</th><th class="r">Нараховано</th><th>Звіт</th></tr></thead><tbody>
@@ -733,10 +764,7 @@ m_today(el){
   el.onclick = async e => {
     const open = e.target.closest('[data-open]'); if (open) { S.drvOpen = open.dataset.open; S.tab = 'm_drv'; render(); window.scrollTo(0,0); return; }
     const go = e.target.closest('[data-go]');
-    if (go) { const g = go.dataset.go; if (g==='#apps') { $('#apps').scrollIntoView({behavior:'smooth'}); return; } S.tab = g; render(); window.scrollTo(0,0); return; }
-    const a = e.target.dataset.ap, r = e.target.dataset.rj;
-    if (a) { e.target.disabled=true; const dn = (document.querySelector(`[data-dn="${a}"]`)||{}).value||null; const lk = (document.querySelector(`[data-link="${a}"]`)||{}).value||null; const {error} = await db.rpc('approve_driver',{p_profile:a,p_dash_name:dn&&dn.trim()||null,p_driver_id:lk}); if (error) return alert(error.message); await load(); render(); }
-    if (r) { if(!confirm('Відхилити заявку?')) return; const {error} = await db.from('profiles').update({status:'rejected'}).eq('id',r); if (error) return alert(error.message); await load(); render(); }
+    if (go) { const g = go.dataset.go; S.tab = g; render(); window.scrollTo(0,0); return; }
   };
 },
 
@@ -871,7 +899,7 @@ m_drv(el){
   if (S.drvOpen) { const dr = S.drivers.find(d=>d.id===S.drvOpen); if (dr) return drvCard(el, dr); S.drvOpen = null; }
   const filt = S.drvFilter || 'active';
   const hasAcc = id => S.profiles.find(x=>x.driver_id===id);
-  el.innerHTML = `<div id="dmsg"></div>
+  el.innerHTML = `<div id="dmsg"></div>${appsCard()}
    <div class="toolbar noprint" style="margin-bottom:12px"><input id="dq" placeholder="Пошук: ім'я, телефон, номер авто" value="${esc(S.drvQ||'')}" style="min-width:260px">
     ${[['active','Активні'],['archived','Архів'],['all','Усі']].map(([k,l])=>`<span class="chip ${filt===k?'on':''}" data-f="${k}">${l}</span>`).join('')}<span style="flex:1"></span><button class="btn sm amb" id="dAddToggle">＋ Додати водія</button></div>
    <div class="card ${S.drvAdd?'':'hidden'}" id="addbox"><h2>Додати водія в базу</h2>
@@ -879,7 +907,7 @@ m_drv(el){
     <div class="two"><div><label>Ім'я в дашборді</label><input id="nDash" list="dnames"></div><div><label>План (літера)</label><select id="nLet"><option value="">— оберіть —</option>${plansList().map(p=>`<option>${esc(p.code)}</option>`).join('')}</select></div></div>
     <datalist id="dnames">${(S.dashNames||[]).map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
     <button class="btn" id="nAdd">Додати водія</button>
-    <div class="muted" style="margin-top:6px">Картка створюється одразу. Коли водій сам зареєструється, у «Сьогодні» вкажіть цю картку у списку «нова картка» і підтвердьте: акаунт прив'яжеться до неї.</div></div>
+    <div class="muted" style="margin-top:6px">Картка створюється одразу. Коли водій сам зареєструється, його заявка з'явиться вгорі цієї сторінки: у ній можна вказати цю картку, і акаунт прив'яжеться до неї.</div></div>
    ${S.cars.length?'':'<div class="err">Спершу додайте авто у вкладці «Парк» (є кнопка імпорту з дашборду).</div>'}
    <div id="dlist"></div>`;
   const days = weekDays(0);
@@ -891,7 +919,7 @@ m_drv(el){
      ${list.map(dr=>{ const {w} = weekRow(dr,days); const bal = debtBalance(S.debts.filter(x=>x.driver_id===dr.id)); const acc = hasAcc(dr.id);
        return `<tr class="clk" data-open="${dr.id}" style="${dr.status==='archived'?'opacity:.55':''}"><td><b>${esc(dr.full_name)}</b><div class="muted">${esc(dr.phone||'')}${dr.dash_name?` · ${esc(dr.dash_name)}`:''}</div></td>
        <td>${esc(carOf(dr.id)?.plate||'—')}</td><td>${esc(planLabel(dr))}</td><td class="r num">${money(w.gross)}</td><td class="r num" style="${bal>0?'color:var(--bad)':''}">${bal?money(bal):'—'}</td>
-       <td><span class="pill ${acc?'g':'y'}">${acc?'є':'нема'}</span></td></tr>`; }).join('') || '<tr><td colspan="6" class="muted">Нікого не знайдено. Додайте водія кнопкою вгорі або підтвердіть заявку у «Сьогодні».</td></tr>'}
+       <td><span class="pill ${acc?'g':'y'}">${acc?'є':'нема'}</span></td></tr>`; }).join('') || '<tr><td colspan="6" class="muted">Нікого не знайдено. Додайте водія кнопкою вгорі або підтвердіть заявку вгорі цієї сторінки.</td></tr>'}
      </tbody></table></div>`;
   };
   draw();
@@ -903,7 +931,8 @@ m_drv(el){
     const r = await db.from('drivers').insert({full_name, phone:$('#nPhone').value.trim()||null, dash_name:$('#nDash').value.trim()||null, plan_letter:$('#nLet').value||null});
     if (r.error) return msg(r.error.message); S.drvAdd = false; await load(); render();
   };
-  el.onclick = e => {
+  el.onclick = async e => {
+    if (e.target.dataset.ap || e.target.dataset.rj) { await appsClick(e, msg); return; }
     const f = e.target.dataset.f; if (f) { S.drvFilter = f; render(); return; }
     const open = e.target.closest('[data-open]'); if (open) { S.drvOpen = open.dataset.open; render(); window.scrollTo(0,0); }
   };
