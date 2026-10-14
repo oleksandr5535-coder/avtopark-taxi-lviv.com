@@ -5880,6 +5880,8 @@ document.getElementById('upBack').onclick=()=>{if(!DATA)return;document.getEleme
 const SUPA_URL="https://lriixtvefevxindyiuck.supabase.co";
 const SUPA_KEY="sb_publishable_NydeHBpAcKE5M6y8G8hwSg_qkEn7XwC";
 let supa=null;
+/* Захист /api: до кожного запиту на /api/... додаємо токен входу (сервер пускає лише співробітників) */
+(function(){var _of=window.fetch;window.fetch=async function(u,o){try{var s=typeof u==='string'?u:(u&&u.url);if(s&&s.indexOf('/api/')===0&&s.indexOf('/api/rate')!==0&&typeof supa!=='undefined'&&supa){var ss=await supa.auth.getSession();var t=ss&&ss.data&&ss.data.session&&ss.data.session.access_token;if(t){o=Object.assign({},o);var h=o.headers;if(h&&typeof h.set==='function'){h.set('Authorization','Bearer '+t);}else{o.headers=Object.assign({},h||{},{Authorization:'Bearer '+t});}}}}catch(e){}return _of.call(this,u,o);};})();
 try{if(window.supabase&&window.supabase.createClient){supa=window.supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});}}catch(e){console.error("supa init",e);}
 try{window.__dashSupa=supa;}catch(e){}
 function showUploaderOnly(){var up=document.getElementById("uploader"),ap=document.getElementById("app");if(up)up.classList.remove("hide");if(ap)ap.classList.add("hide");showLogin(false);}
