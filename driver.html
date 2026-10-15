@@ -330,6 +330,7 @@ function effDay(did, date){
 }
 const effReps = (did, days) => days.map(d => effDay(did,d)).filter(Boolean);
 const SRC = { api:['з системи','g'], driver:['ваші дані, чекають перевірки','y'], accepted:['прийнято менеджером','g'] };
+const drvPill = e => e.diff ? '<span class="pill y">суми відрізняються — менеджер перевірить</span>' : (e.src==='driver' ? '<span class="pill y">чекає перевірки</span>' : '<span class="pill g">підтверджено</span>');
 const srcPill = e => e.diff ? '<span class="pill r">розбіжність: враховано дані системи</span>' : `<span class="pill ${SRC[e.src][1]}">${SRC[e.src][0]}</span>`;
 const debtBalance = list => (list||[]).reduce((a,d)=>a+(d.kind==='charge'?+d.amount:-d.amount),0);
 
@@ -748,19 +749,19 @@ d_week(el){
   let prog = '';
   if (PL.period==='week' && w.gross>0) { const nx = tierNext(PL,w.gross);
     if (nx) { const t=(PL.tiers||[]).slice().sort((x,y)=>x.from-y.from); const cur=t.filter(x=>x.from<=w.gross).pop(); const from=cur?cur.from:0, to=w.gross+nx.need; const pc=Math.max(0,Math.min(100,Math.round((w.gross-from)/(to-from)*100)));
-      prog = `<div class="card"><div class="row" style="border:none;padding:0"><b>До ${nx.pct}% залишилось ${money(nx.need)}</b><span class="muted">${pc}%</span></div><div class="bar"><i style="width:${pc}%"></i></div><div class="muted">Якщо оборот за тиждень досягне ${money(to)}, відсоток зросте з ${w.pct}% до ${nx.pct}%.</div></div>`; } }
+      prog = `<div class="card"><div class="row" style="border:none;padding:0"><b>До ${nx.pct}% залишилось ${money(nx.need)}</b><span class="muted">${pc}%</span></div><div class="bar"><i style="width:${pc}%"></i></div><div class="muted">Досягнете ${money(to)} обороту за тиждень — ваша частка зросте до ${nx.pct}%.</div></div>`; } }
   el.insertAdjacentHTML('beforeend', `
    <div class="hero"><div class="lb">Ваш заробіток за тиждень</div>
     <div class="amt">${w.noPlan?'—':money(total)}</div>
     ${status}
-    ${w.noPlan?'<div class="sub">Менеджер ще не призначив вам умови виплат, тому відсоток поки не рахується. Це не помилка: оборот нижче вже враховано.</div>':''}
+    ${w.noPlan?'<div class="sub">Умови виплат для вас ще налаштовуються. Оборот нижче вже враховано, а суму заробітку побачите, коли менеджер завершить налаштування.</div>':''}
     ${(!w.days && !w.noPlan)?'<div class="sub">Даних за цей тиждень ще немає</div>':''}
     ${(!S.brandMissing && !bl && ended && w.days) ? '<div class="sub">Брендування за цей тиждень додасться після завантаження даних менеджером.</div>' : ''}</div>
    <div class="stats">
     <div class="st"><div class="l">Оборот</div><div class="v">${money(w.gross)}</div><div class="s">Bolt ${money(w.bolt)} · Uklon ${money(w.uklon)}</div></div>
-    <div class="st"><div class="l">Поїздки</div><div class="v">${w.trips||'—'}</div><div class="s">${w.trips? (w.km?`${Math.round(w.km)} км за тиждень`:tw(w.trips)) : 'з’являться з даних системи'}</div></div>
-    <div class="st"><div class="l">Ваш відсоток</div><div class="v">${w.days&&!w.noPlan?w.pct+'%':'—'}</div><div class="s">${w.noPlan?'план не призначено':(PL.period==='week'?'за тиждень, літера '+LET:'в середньому, літера '+LET)}</div></div>
-    <div class="st"><div class="l">Змін з даними</div><div class="v">${w.days}</div><div class="s">${w.trips&&w.days?`≈ ${Math.round(w.trips/w.days)} ${tw(Math.round(w.trips/w.days))} за зміну`:'із 7 днів'}</div></div>
+    <div class="st"><div class="l">Поїздки</div><div class="v">${w.trips||'—'}</div><div class="s">${w.trips? (w.km?`${Math.round(w.km)} км за тиждень`:tw(w.trips)) : 'з’являться пізніше'}</div></div>
+    <div class="st"><div class="l">Ваша частка</div><div class="v">${w.days&&!w.noPlan?w.pct+'%':'—'}</div><div class="s">від обороту за тиждень</div></div>
+    <div class="st"><div class="l">Відпрацьовано</div><div class="v">${w.days}</div><div class="s">${w.trips&&w.days?`≈ ${Math.round(w.trips/w.days)} ${tw(Math.round(w.trips/w.days))} за зміну`:'змін за тиждень'}</div></div>
    </div>
    ${prog}
    ${w.days && !w.noPlan ? `<div class="card"><h2>З чого складається виплата</h2>
@@ -772,11 +773,11 @@ d_week(el){
      const e = infos[i]; const isFuture = d>todayStr(); const hasRep = e && e.rep;
      const pct = e ? (PL.period==='week'?w.pct:dayPct(LET,repGross(e))) : 0;
      return `<div class="day ${isFuture?'future':(e?'':'empty')}"><div class="dt"><b>${dayName(d)}</b><span>${dm(d)}</span></div>
-      <div class="mid">${e?`Bolt ${money(e.bolt)} · Uklon ${money(e.uklon)}${e.other?` · Інше ${money(e.other)}`:''}${e.trips?`<br><b style="color:var(--ink)">${e.trips}</b> ${tw(e.trips)}${e.km?` · ${Math.round(e.km)} км`:''}`:''}<div>${srcPill(e)}</div>`:(isFuture?'':'<span class="muted">даних немає</span>')}
+      <div class="mid">${e?`Bolt ${money(e.bolt)} · Uklon ${money(e.uklon)}${e.other?` · Інше ${money(e.other)}`:''}${e.trips?`<br><b style="color:var(--ink)">${e.trips}</b> ${tw(e.trips)}${e.km?` · ${Math.round(e.km)} км`:''}`:''}<div>${drvPill(e)}</div>`:(isFuture?'':'<span class="muted">даних немає</span>')}
        ${(!isFuture && !hasRep)?`<div><a class="pill y" style="cursor:pointer" data-fill="${d}">${e?'+ доповнити звіт':'+ подати звіт'}</a></div>`:''}</div>
-      <div class="amt">${e?`<b>${money(repGross(e)*pct/100)}</b><div class="muted">${pct}% від ${money(repGross(e))}</div>${(PL.period!=='week' && i===lastI && tierNext(PL,repGross(e)))?`<div class="muted">до ${tierNext(PL,repGross(e)).pct}%: ще ${money(tierNext(PL,repGross(e)).need)}</div>`:''}`:''}</div></div>`;}).join('')}
+      <div class="amt">${e?`<b>${money(repGross(e)*pct/100)}</b><div class="muted">${pct}% від ${money(repGross(e))}</div>${(PL.period!=='week' && i===lastI && tierNext(PL,repGross(e)))?`<div class="muted">ще ${money(tierNext(PL,repGross(e)).need)} до ${tierNext(PL,repGross(e)).pct}%</div>`:''}`:''}</div></div>`;}).join('')}
    </div>
-   <div class="muted" style="padding:0 4px">${hasApi?'«З системи» — дані Bolt і Uklon, які надійшли до парку. Якщо цифри не збігаються з вашими, подайте свій варіант у «Звіт»: менеджер перевірить.':'Дані з Bolt і Uklon з’являються тут після того, як парк їх завантажить. До того рахується за вашим звітом.'}</div>`);
+   <div class="muted" style="padding:0 4px">Усі суми підтягуються автоматично з Bolt і Uklon. Якщо ваші цифри відрізняються, подайте свій варіант у «Звіт»: менеджер перевірить.</div>`);
   el.onclick = e => { const d = e.target.dataset.fill; if (d) { S.repDate = d; S.tab='d_rep'; render(); } };
 },
 
@@ -791,7 +792,7 @@ d_rep(el){
    <div id="repMsg"></div>
    <label>Дата зміни</label><select id="rDate">${opts.map(d=>`<option value="${d}" ${d===cur?'selected':''}>${dayName(d)} ${dm(d)}${d===todayStr()?' (сьогодні)':(d===ymd(addDays(new Date(),-1))?' (вчора)':'')}</option>`).join('')}</select>
    ${r.id?'<div class="ok">За цей день звіт уже є — можна виправити.</div>':''}
-   ${apiRow?`<div class="card" style="background:var(--good-bg);box-shadow:none"><b>Дані з системи за цей день</b><div class="row"><span>Bolt</span><b>${money(apiRow.bolt_net)}</b></div><div class="row"><span>Uklon</span><b>${money(apiRow.uklon_net)}</b></div><div class="muted">Якщо ваші цифри такі самі, поля нижче можна не заповнювати. Якщо інші — впишіть свої, менеджер перевірить.</div></div>`:''}
+   ${apiRow?`<div class="card" style="background:var(--good-bg);box-shadow:none"><b>Дані Bolt і Uklon за цей день</b><div class="row"><span>Bolt</span><b>${money(apiRow.bolt_net)}</b></div><div class="row"><span>Uklon</span><b>${money(apiRow.uklon_net)}</b></div><div class="muted">Якщо ваші цифри такі самі, поля нижче можна не заповнювати. Якщо інші — впишіть свої, менеджер перевірить.</div></div>`:''}
    <div class="two"><div><label>Bolt, ₴ ${apiRow?'(якщо відрізняється)':''}</label><input id="rBolt" inputmode="decimal" placeholder="${apiRow?Math.round(apiRow.bolt_net):'0'}" value="${r.bolt||''}"></div>
    <div><label>Uklon, ₴ ${apiRow?'(якщо відрізняється)':''}</label><input id="rUklon" inputmode="decimal" placeholder="${apiRow?Math.round(apiRow.uklon_net):'0'}" value="${r.uklon||''}"></div></div>
    <label>Бордюри та інше, ₴</label><input id="rOther" inputmode="decimal" placeholder="0" value="${r.other??''}">
