@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AVTO PARK">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" href="/pwa/icon-192.png">
+<link rel="apple-touch-icon" href="/pwa/apple-touch-icon.png">
 <meta name="theme-color" content="#15171C">
 <title>AVTO PARK — кабінет водія</title>
 <script>
@@ -1363,6 +1368,7 @@ function incidentForm(el, driverId, list){
 
 // ====================== СТАРТ ======================
 (function init(){
+  if ('serviceWorker' in navigator && !EMBED) navigator.serviceWorker.register('/sw.js').catch(()=>{});
   if (!window.supabase) { document.body.innerHTML = '<p style="padding:24px">Не вдалося завантажити додаток. Перевірте інтернет і оновіть сторінку.</p>'; return; }
   // Всередині дашборда — спільна сесія з дашбордом (менеджер).
   // Окрема сторінка driver.html (водії) — власне сховище, щоб вхід водія НЕ підміняв сесію менеджера.
