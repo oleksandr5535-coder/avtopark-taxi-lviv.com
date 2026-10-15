@@ -307,7 +307,11 @@ function weekCalc(reps, st, letter){
   const pct = gross > 0 ? Math.round(share/gross*1000)/10 : 0;   // середній відсоток за тиждень
   const washSpent = reps.reduce((a,r)=>a+(+r.wash||0),0);
   const washBack = Math.min(washSpent, st.wash_week);
+  const platNet = reps.reduce((a,r)=>a+(+r.bolt||0)+(+r.uklon||0),0);
+  const cashPlat = reps.reduce((a,r)=>a+(+r.cashPlat||0),0), cashOther = reps.reduce((a,r)=>a+(+r.other||0),0);
+  const cashKnown = reps.every(r => r.cashKnown || !((+r.bolt||0)+(+r.uklon||0) > 0));
   return {noPlan, gross, pct, share, washBack, total: noPlan ? 0 : share+washBack, days: reps.length,
+          cashPlat, cashOther, cashHand: cashPlat+cashOther, toPark: Math.max(0, platNet-cashPlat), cashKnown,
           trips: reps.reduce((a,r)=>a+(+r.trips||0),0), km: reps.reduce((a,r)=>a+(+r.km||0),0),
           bolt: reps.reduce((a,r)=>a+(+r.bolt||0),0), uklon: reps.reduce((a,r)=>a+(+r.uklon||0),0),
           other: reps.reduce((a,r)=>a+(+r.other||0),0)};
@@ -326,7 +330,9 @@ function effDay(did, date){
   const diff = !!(a && r && !r.accepted && (((+r.bolt||0)>0 && Math.abs((+r.bolt||0)-(+a.bolt_net||0))>DIFF) || ((+r.uklon||0)>0 && Math.abs((+r.uklon||0)-(+a.uklon_net||0))>DIFF)));
   const trips = (a && a.orders!=null) ? (+a.orders||0) : (r && r.trips!=null ? (+r.trips||0) : null);
   const km = (a && a.km!=null && +a.km>0) ? (+a.km||0) : (r && r.km!=null ? (+r.km||0) : null);
-  return { report_date:date, bolt, uklon, other: r?(+r.other||0):0, wash: r?(+r.wash||0):0, trips, km, src, diff, api:a||null, rep:r||null };
+  const cashPlat = a ? (+a.bolt_cash||0)+(+a.uklon_cash||0) : 0;
+  const cashKnown = !!(a && ('bolt_cash' in a));
+  return { report_date:date, bolt, uklon, other: r?(+r.other||0):0, wash: r?(+r.wash||0):0, trips, km, cashPlat, cashKnown, src, diff, api:a||null, rep:r||null };
 }
 const effReps = (did, days) => days.map(d => effDay(did,d)).filter(Boolean);
 const SRC = { api:['з системи','g'], driver:['ваші дані, чекають перевірки','y'], accepted:['прийнято менеджером','g'] };
@@ -761,14 +767,22 @@ d_week(el){
     <div class="st"><div class="l">Оборот</div><div class="v">${money(w.gross)}</div><div class="s">Bolt ${money(w.bolt)} · Uklon ${money(w.uklon)}</div></div>
     <div class="st"><div class="l">Поїздки</div><div class="v">${w.trips||'—'}</div><div class="s">${w.trips? (w.km?`${Math.round(w.km)} км за тиждень`:tw(w.trips)) : 'з’являться пізніше'}</div></div>
     <div class="st"><div class="l">Ваша частка</div><div class="v">${w.days&&!w.noPlan?w.pct+'%':'—'}</div><div class="s">від обороту за тиждень</div></div>
+    <div class="st"><div class="l">Готівка на руках</div><div class="v">${w.cashKnown||w.cashHand>0?money(w.cashHand):'—'}</div><div class="s">отримано від пасажирів</div></div>
+    <div class="st"><div class="l">На рахунок парку</div><div class="v">${w.cashKnown?money(w.toPark):'—'}</div><div class="s">безготівкові поїздки</div></div>
     <div class="st"><div class="l">Відпрацьовано</div><div class="v">${w.days}</div><div class="s">${w.trips&&w.days?`≈ ${Math.round(w.trips/w.days)} ${tw(Math.round(w.trips/w.days))} за зміну`:'змін за тиждень'}</div></div>
    </div>
+   ${(()=>{ if (!w.days || w.noPlan) return ''; const rest = Math.round(total - w.cashHand);
+     const verdict = rest>0 ? `<span class="pill g" style="font-size:12px">Парк доплачує вам</span>` : (rest<0 ? `<span class="pill r" style="font-size:12px">Ви повертаєте парку</span>` : `<span class="pill">Розрахунок закрито</span>`);
+     return `<div class="card" style="border:2px solid var(--${rest<0?'bad':'good'})"><h2>Розрахунок за тиждень</h2>
+      <div class="sumrow"><span>Ваш заробіток <span class="muted">(${w.pct}% від ${money(w.gross)})</span></span><b class="num">${money(w.share)}</b></div>
+      ${w.washBack?`<div class="sumrow"><span>Мийка <span class="muted">(повернення)</span></span><b class="num">+${money(w.washBack)}</b></div>`:''}
+      ${B && B.eff>0 ? `<div class="sumrow"><span>Брендування</span><b class="num">+${money(B.eff)}</b></div>`:''}
+      <div class="sumrow"><span><b>Разом вам належить</b></span><b class="num">${money(total)}</b></div>
+      <div class="sumrow"><span>Готівка, яку ви вже отримали</span><b class="num">−${money(w.cashHand)}</b></div>
+      <div class="sumrow tot"><span>${verdict}</span><b class="num" style="color:var(--${rest<0?'bad':'good'})">${money(Math.abs(rest))}</b></div>
+      ${(!w.cashKnown)?'<div class="muted" style="margin-top:6px">За деякі дні готівка ще не надійшла з Bolt і Uklon, тому цей розрахунок попередній.</div>':''}
+      ${(!S.brandMissing && !bl && ended)?'<div class="muted" style="margin-top:6px">Брендування буде додано до виплати після завантаження даних.</div>':''}</div>`; })()}
    ${prog}
-   ${w.days && !w.noPlan ? `<div class="card"><h2>З чого складається виплата</h2>
-    <div class="sumrow"><span>За відсотками <span class="muted">(${w.pct}% від ${money(w.gross)})</span></span><b class="num">${money(w.share)}</b></div>
-    ${w.washBack?`<div class="sumrow"><span>Мийка <span class="muted">(повернення)</span></span><b class="num">+${money(w.washBack)}</b></div>`:''}
-    ${B && B.eff>0 ? `<div class="sumrow"><span>Брендування <span class="muted">${B.pct?`(${B.pct}% від суми)`:''}</span></span><b class="num">+${money(B.eff)}</b></div>`:''}
-    <div class="sumrow tot"><span>Разом</span><b class="num">${money(total)}</b></div></div>` : ''}
    <div class="card"><h2>Дні тижня</h2>${days.map((d,i)=>{
      const e = infos[i]; const isFuture = d>todayStr(); const hasRep = e && e.rep;
      const pct = e ? (PL.period==='week'?w.pct:dayPct(LET,repGross(e))) : 0;
@@ -926,9 +940,9 @@ m_pay(el){
   const act = S.drivers.filter(d=>d.status==='active');
   const useBrand = !S.brandMissing, loaded = brandLoaded(ws);
   const data = act.map(dr => { const {w} = weekRow(dr,days); const br = brandOf(dr.id, ws); const bAdd = (useBrand && loaded) ? br.eff : 0;
-    return {dr, w, br, bAdd, tot: Math.round(w.total + bAdd), po:payoutOf(dr.id,ws), bal:debtBalance(S.debts.filter(x=>x.driver_id===dr.id)), car:carOf(dr.id)}; }).sort((a,b)=>b.tot-a.tot);
+    const _tot = Math.round(w.total + bAdd); return {dr, w, br, bAdd, tot: _tot, cash: Math.round(w.cashHand), due: Math.max(0, Math.round(_tot - w.cashHand)), owe: (w.noPlan?0:Math.max(0, Math.round(w.cashHand - _tot))), po:payoutOf(dr.id,ws), bal:debtBalance(S.debts.filter(x=>x.driver_id===dr.id)), car:carOf(dr.id)}; }).sort((a,b)=>b.tot-a.tot);
   const sum = f => data.reduce((a,x)=>a+f(x),0);
-  const todo = data.filter(x=>!x.po && x.tot>0 && !x.w.noPlan);
+  const todo = data.filter(x=>!x.po && x.due>0 && !x.w.noPlan);
   const waitBrand = useBrand && !loaded;
   const ed = S.brandEdit && data.find(x=>x.dr.id===S.brandEdit);
   el.insertAdjacentHTML('beforeend', `<div id="pmsg"></div>
@@ -944,19 +958,21 @@ m_pay(el){
     <div class="kpi"><div class="l">Оборот</div><div class="v">${money(sum(x=>x.w.gross))}</div></div>
     <div class="kpi good"><div class="l">Нараховано</div><div class="v">${money(sum(x=>x.tot))}</div><div class="s">${useBrand?(loaded?'з мийкою і брендуванням':'з мийкою, без брендування'):'з урахуванням мийки'}</div></div>
     <div class="kpi"><div class="l">Виплачено</div><div class="v">${money(sum(x=>x.po?+x.po.amount:0))}</div><div class="s">${data.filter(x=>x.po).length} з ${data.length}</div></div>
-    <div class="kpi ${todo.length?'warn':'good'}"><div class="l">Лишилось виплатити</div><div class="v">${money(todo.reduce((a,x)=>a+x.tot,0))}</div><div class="s">${todo.length} водіїв</div></div>
+    <div class="kpi ${todo.length?'warn':'good'}"><div class="l">Лишилось видати</div><div class="v">${money(todo.reduce((a,x)=>a+x.due,0))}</div><div class="s">${todo.length} водіїв, за вирахуванням готівки</div></div>
+    <div class="kpi"><div class="l">Готівка у водіїв</div><div class="v">${money(sum(x=>x.cash))}</div></div>
+    ${sum(x=>x.owe)>0?`<div class="kpi bad"><div class="l">Водії мають повернути</div><div class="v">${money(sum(x=>x.owe))}</div></div>`:''}
    </div>
    <div class="toolbar noprint" style="margin-bottom:12px"><button class="btn sm sec" id="pCsv">⬇ Excel (CSV)</button><button class="btn sm sec" id="pPrint">🖨 Друк</button><span style="flex:1"></span>${todo.length?`<button class="btn sm grn" id="pAll">${waitBrand?'Позначити виплаченими без брендування':'Позначити виплаченими всіх'} (${todo.length})</button>`:''}</div>
-   <div class="card tblwrap"><table class="tbl"><thead><tr><th>Водій</th><th>План</th><th class="r">Оборот</th><th class="r">%</th><th class="r">За відсотки</th><th class="r">Мийка</th>${useBrand?'<th class="r">Брендування</th>':''}<th class="r">Нараховано</th><th class="r">Борг</th><th>Виплата</th></tr></thead><tbody>
-   ${data.map(x=>{ const tot=x.tot, po=x.po; const needBrandPay = po && useBrand && loaded && x.br.eff>0 && !x.br.paid && po.amount < tot - 1;
+   <div class="card tblwrap"><table class="tbl"><thead><tr><th>Водій</th><th>План</th><th class="r">Оборот</th><th class="r">%</th><th class="r">За відсотки</th><th class="r">Мийка</th>${useBrand?'<th class="r">Брендування</th>':''}<th class="r">Нараховано</th><th class="r">Готівка</th><th class="r">До видачі</th><th class="r">Борг</th><th>Виплата</th></tr></thead><tbody>
+   ${data.map(x=>{ const tot=x.tot, due=x.due, po=x.po; const needBrandPay = po && useBrand && loaded && x.br.eff>0 && !x.br.paid && po.amount < due - 1;
      return `<tr class="clk${x.w.days?'':' muted'}" data-open="${x.dr.id}">
      <td><b>${esc(x.dr.full_name)}</b><div class="muted">${esc(x.car?.plate||'без авто')}</div></td><td>${esc(planLabel(x.dr))}</td>
      <td class="r num">${money(x.w.gross)}</td><td class="r num">${x.w.noPlan?'—':x.w.pct+'%'}</td><td class="r num">${money(x.w.share)}</td><td class="r num">${x.w.washBack?money(x.w.washBack):'—'}</td>
      ${useBrand?`<td class="r num">${loaded?`<a class="lnk noprint" data-brand="${x.dr.id}" title="Змінити або не платити">${x.br.eff>0||x.br.skip||x.br.manual!=null?money(x.br.eff):'—'}</a><div>${brandPill(x.br)}</div>${x.br.plate?`<div class="muted">${esc(x.br.plate)}</div>`:''}`:'<span class="muted" title="Ще не завантажено">⏳</span>'}</td>`:''}
-     <td class="r num"><b>${money(tot)}</b></td><td class="r num" style="${x.bal>0?'color:var(--bad)':''}">${x.bal?money(x.bal):'—'}</td>
-     <td>${po?`<span class="pill g">✓ ${fmtDate((po.paid_at||po.created_at||ws).slice(0,10))}</span> <span class="num">${money(po.amount)}</span>${needBrandPay?` <button class="btn sm noprint" data-paybrand="${x.dr.id}">＋ брендування ${money(x.br.eff)}</button>`:(Math.abs(po.amount-tot)>1?` <span class="pill y" title="Після виплати цифри змінились">тепер ${money(tot)}</span>`:'')} <a class="lnk noprint" data-unpay="${x.dr.id}">скасувати</a>`:(x.w.noPlan?'<span class="pill r">оберіть літеру</span>':(tot>0?`<button class="btn sm noprint" data-pay="${x.dr.id}">${waitBrand?'Без брендування':'Виплатити'}</button>`:'<span class="muted">—</span>'))}</td></tr>`; }).join('') || '<tr><td colspan="10" class="muted">Активних водіїв немає</td></tr>'}
-   </tbody><tfoot><tr><td colspan="2">Разом</td><td class="r num">${money(sum(x=>x.w.gross))}</td><td></td><td class="r num">${money(sum(x=>x.w.share))}</td><td class="r num">${money(sum(x=>x.w.washBack))}</td>${useBrand?`<td class="r num">${loaded?money(sum(x=>x.bAdd)):'—'}</td>`:''}<td class="r num">${money(sum(x=>x.tot))}</td><td class="r num">${money(sum(x=>Math.max(0,x.bal)))}</td><td></td></tr></tfoot></table></div>
-   <div class="muted">Виплата рахується за планом (літерою) кожного водія з вкладки «Умови». Брендування на відсоток не впливає: водій отримує свою частку (зазвичай 50%) від отриманої суми окремим рядком. Натисніть на суму брендування, щоб виправити її вручну або не платити. «Борг» окремо, з виплати він автоматично не віднімається.</div>`);
+     <td class="r num"><b>${money(tot)}</b></td><td class="r num">${x.cash?'−'+money(x.cash):'—'}</td><td class="r num">${x.w.noPlan?'—':(x.owe>0?`<b style="color:var(--bad)" title="Готівки більше, ніж належить водієві">винен ${money(x.owe)}</b>`:`<b>${money(x.due)}</b>`)}</td><td class="r num" style="${x.bal>0?'color:var(--bad)':''}">${x.bal?money(x.bal):'—'}</td>
+     <td>${po?`<span class="pill g">✓ ${fmtDate((po.paid_at||po.created_at||ws).slice(0,10))}</span> <span class="num">${money(po.amount)}</span>${needBrandPay?` <button class="btn sm noprint" data-paybrand="${x.dr.id}">＋ брендування ${money(x.br.eff)}</button>`:(Math.abs(po.amount-due)>1?` <span class="pill y" title="Після виплати цифри змінились">тепер ${money(due)}</span>`:'')} <a class="lnk noprint" data-unpay="${x.dr.id}">скасувати</a>`:(x.w.noPlan?'<span class="pill r">оберіть літеру</span>':(due>0?`<button class="btn sm noprint" data-pay="${x.dr.id}">${waitBrand?'Без брендування':'Виплатити'}</button>`:'<span class="muted">—</span>'))}</td></tr>`; }).join('') || '<tr><td colspan="12" class="muted">Активних водіїв немає</td></tr>'}
+   </tbody><tfoot><tr><td colspan="2">Разом</td><td class="r num">${money(sum(x=>x.w.gross))}</td><td></td><td class="r num">${money(sum(x=>x.w.share))}</td><td class="r num">${money(sum(x=>x.w.washBack))}</td>${useBrand?`<td class="r num">${loaded?money(sum(x=>x.bAdd)):'—'}</td>`:''}<td class="r num">${money(sum(x=>x.tot))}</td><td class="r num">${money(sum(x=>x.cash))}</td><td class="r num">${money(sum(x=>x.due))}</td><td class="r num">${money(sum(x=>Math.max(0,x.bal)))}</td><td></td></tr></tfoot></table></div>
+   <div class="muted">Виплата рахується за планом (літерою) кожного водія з вкладки «Умови». Брендування на відсоток не впливає: водій отримує свою частку (зазвичай 50%) від отриманої суми окремим рядком. Натисніть на суму брендування, щоб виправити її вручну або не платити. «Борг» окремо, з виплати він автоматично не віднімається. «До видачі» = нараховано − готівка, яку водій уже отримав від пасажирів; якщо готівки більше, водій винен різницю парку.</div>`);
   const msg = (t,ok) => { $('#pmsg').innerHTML = `<div class="${ok?'ok':'err'}">${esc(t)}</div>`; };
   const markBrandPaid = async (ids, paid) => { if (!useBrand || !loaded) return; for (const id of ids) await db.from('brand_weeks').update({paid_at: paid ? new Date().toISOString() : null}).eq('driver_id',id).eq('week_start',ws); };
   if (ed) { $('#bCancel').onclick = () => { S.brandEdit = null; render(); };
@@ -966,22 +982,22 @@ m_pay(el){
   el.onclick = async e => {
     const t = e.target;
     if (t.id==='pCsv') {
-      const head = ['Водій','Авто','План','Оборот','Відсоток','За відсотки','Мийка','Брендування','Нараховано','Борг','Виплачено','Дата виплати'];
-      const lines = [head].concat(data.map(x=>[x.dr.full_name, x.car?.plate||'', planLabel(x.dr), Math.round(x.w.gross), x.w.pct, Math.round(x.w.share), Math.round(x.w.washBack), Math.round(x.bAdd), x.tot, Math.round(x.bal), x.po?Math.round(x.po.amount):'', x.po?fmtDate((x.po.paid_at||x.po.created_at||ws).slice(0,10)):'']));
+      const head = ['Водій','Авто','План','Оборот','Відсоток','За відсотки','Мийка','Брендування','Нараховано','Готівка на руках','До видачі','Борг','Виплачено','Дата виплати'];
+      const lines = [head].concat(data.map(x=>[x.dr.full_name, x.car?.plate||'', planLabel(x.dr), Math.round(x.w.gross), x.w.pct, Math.round(x.w.share), Math.round(x.w.washBack), Math.round(x.bAdd), x.tot, x.cash, x.due, Math.round(x.bal), x.po?Math.round(x.po.amount):'', x.po?fmtDate((x.po.paid_at||x.po.created_at||ws).slice(0,10)):'']));
       const csv = '﻿' + lines.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(';')).join('\r\n');
       const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download = `vidomist_${ws}.csv`; document.body.appendChild(a); a.click(); a.remove(); return; }
     if (t.id==='pPrint') { window.print(); return; }
-    if (t.id==='pAll') { if (!confirm(`Позначити виплаченими ${todo.length} водіїв на суму ${money(todo.reduce((a,x)=>a+x.tot,0))}?${waitBrand?'\nБрендування ще не завантажено, воно буде виплачено окремо.':''}`)) return;
-      const r = await db.from('payouts').upsert(todo.map(x=>({driver_id:x.dr.id, week_start:ws, amount:x.tot})),{onConflict:'driver_id,week_start'}); if (r.error) return msg(r.error.message);
+    if (t.id==='pAll') { if (!confirm(`Позначити виплаченими ${todo.length} водіїв на суму ${money(todo.reduce((a,x)=>a+x.due,0))}?${waitBrand?'\nБрендування ще не завантажено, воно буде виплачено окремо.':''}`)) return;
+      const r = await db.from('payouts').upsert(todo.map(x=>({driver_id:x.dr.id, week_start:ws, amount:x.due})),{onConflict:'driver_id,week_start'}); if (r.error) return msg(r.error.message);
       await markBrandPaid(todo.filter(x=>x.br.eff>0).map(x=>x.dr.id), true); await load(); render(); return; }
     const brandId = t.dataset.brand;
     if (brandId) { S.brandEdit = brandId; render(); window.scrollTo(0,0); return; }
     const pay = t.dataset.pay, unpay = t.dataset.unpay, payBrand = t.dataset.paybrand;
-    if (pay) { const x = data.find(y=>y.dr.id===pay); const note = prompt(`Виплата: ${x.dr.full_name}, ${money(x.tot)}${waitBrand?' (без брендування)':''}.\nКоментар (необов'язково):`, ''); if (note===null) return;
-      const r = await db.from('payouts').upsert({driver_id:pay, week_start:ws, amount:x.tot, note:note||null},{onConflict:'driver_id,week_start'}); if (r.error) return msg(r.error.message);
+    if (pay) { const x = data.find(y=>y.dr.id===pay); const note = prompt(`Виплата: ${x.dr.full_name}, ${money(x.due)}${waitBrand?' (без брендування)':''}${x.cash?` (заробіток ${money(x.tot)} − готівка ${money(x.cash)})`:''}.\nКоментар (необов'язково):`, ''); if (note===null) return;
+      const r = await db.from('payouts').upsert({driver_id:pay, week_start:ws, amount:x.due, note:note||null},{onConflict:'driver_id,week_start'}); if (r.error) return msg(r.error.message);
       if (x.br.eff>0) await markBrandPaid([pay], true); await load(); render(); return; }
     if (payBrand) { const x = data.find(y=>y.dr.id===payBrand); if (!confirm(`Виплатити брендування ${money(x.br.eff)} водієві ${x.dr.full_name}?`)) return;
-      const r = await db.from('payouts').upsert({driver_id:payBrand, week_start:ws, amount:x.tot, note:'+ брендування'},{onConflict:'driver_id,week_start'}); if (r.error) return msg(r.error.message);
+      const r = await db.from('payouts').upsert({driver_id:payBrand, week_start:ws, amount:x.due, note:'+ брендування'},{onConflict:'driver_id,week_start'}); if (r.error) return msg(r.error.message);
       await markBrandPaid([payBrand], true); await load(); render(); return; }
     if (unpay) { if (!confirm('Скасувати позначку «Виплачено»?')) return; const r = await db.from('payouts').delete().eq('driver_id',unpay).eq('week_start',ws); if (r.error) return msg(r.error.message); await markBrandPaid([unpay], false); await load(); render(); return; }
     const open = t.closest('[data-open]'); if (open) { S.drvOpen = open.dataset.open; S.tab = 'm_drv'; render(); window.scrollTo(0,0); }
