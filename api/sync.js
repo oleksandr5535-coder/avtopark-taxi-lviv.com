@@ -84,13 +84,15 @@ export function uklonByDriver(agg, trips, carsByPlate) {
 
 /* ---------- збирання по водіях бази ---------- */
 export function buildRows(day, bolt, uklon, ctx) {
-  const { drivers, carsByPlate, carsByDriver } = ctx;
+  const { drivers, carsByPlate, carsByDriver } = ctx; const plateByName = ctx.plateByName || {};
   const byName = {};
   drivers.forEach(d => [d.dash_name, d.full_name].forEach(n => { if (n && n.trim()) byName[rptToks(n).join('|')] = d.id; }));
   const findByName = name => {
     if (!name) return null;
     if (name.indexOf('#car:') === 0) return name.slice(5);
-    const k = rptToks(name).join('|'); if (byName[k]) return byName[k];
+    const k = rptToks(name).join('|');
+    const pl = plateByName[k]; if (pl && carsByPlate[NPL(pl)]) return carsByPlate[NPL(pl)];   // як у дашборді: спершу за авто
+    if (byName[k]) return byName[k];
     const tk = TOKS(name); let best = null, bs = 0;       // той самий запас, що в дашборді: ≥2 спільні слова
     drivers.forEach(d => [d.dash_name, d.full_name].forEach(n => {
       if (!n) return; let sh = 0; TOKS(n).forEach(t => { if (tk.has(t)) sh++; });
@@ -157,7 +159,19 @@ async function loadCtx() {
   const drivers = await dr.json(), cars = await cr.json();
   const carsByPlate = {}, carsByDriver = {};
   cars.forEach(c => { if (c.driver_id && c.plate) { carsByPlate[NPL(c.plate)] = c.driver_id; carsByDriver[c.driver_id] = c.plate; } });
-  return { drivers, carsByPlate, carsByDriver };
+  // Uklon віддає лише ім'я водія; «ім'я → авто» дашборд тримає в своїх налаштуваннях (app_data: kv:drvpass, kv:notes)
+  const plateByName = {};
+  try {
+    const ar = await sb('app_data?select=key,value&key=in.(kv:drvpass,kv:notes)');
+    if (ar.ok) {
+      const rows = await ar.json(); const val = k => { const x = rows.find(r => r.key === k); if (!x) return {}; try { return typeof x.value === 'string' ? JSON.parse(x.value) : (x.value || {}); } catch (e) { return {}; } };
+      const dp = val('kv:drvpass'), nt = val('kv:notes');
+      Object.keys(dp).forEach(n => { if (dp[n] && dp[n].plate) plateByName[rptToks(n).join('|')] = dp[n].plate; });
+      Object.keys(nt).forEach(pl => { const dv = nt[pl] && nt[pl].driver; if (!dv || dv === '__none__') return; let dn = dv; try { dn = decodeURIComponent(dv); } catch (e) {}
+        const k = rptToks(dn).join('|'); if (!plateByName[k]) plateByName[k] = pl; });
+    }
+  } catch (e) { /* без цього працює зіставлення лише за іменем */ }
+  return { drivers, carsByPlate, carsByDriver, plateByName };
 }
 async function writeRows(rows) {
   if (!rows.length) return { ok: true, n: 0 };
@@ -187,6 +201,7 @@ async function syncDay(date, ctx, dry) {
   const uklon = uklonByDriver(uj.uklon_agg, uj.uklon_trips, ctx.carsByPlate);
   const { rows, unmatched } = buildRows(date, bolt, uklon, ctx);
   res.rows = rows.length; res.unmatched = unmatched;
+  if (dry) res.unmatched_why = unmatched.map(n => { const pl = (ctx.plateByName || {})[rptToks(n).join('|')]; return n + (pl ? ' — авто ' + pl + (ctx.carsByPlate[NPL(pl)] ? '' : ': у «Авто» цей номер не закріплений за водієм у кабінеті') : ' — авто в налаштуваннях дашборду не знайдено; водія немає в кабінеті за таким іменем'); });
   if (dry) res.preview = rows.map(r => ({ ...r, driver: (ctx.drivers.find(d => d.id === r.driver_id) || {}).full_name }));
   else res.write = await writeRows(rows);
   return res;
