@@ -11,6 +11,8 @@ export async function requireStaff(req, res) {
   try {
     const h = String(req.headers['authorization'] || '');
     const token = h.startsWith('Bearer ') ? h.slice(7).trim() : '';
+    // Виклик за розкладом (api/sync.js): секретний код з Vercel замість входу менеджера
+    if (token && process.env.CRON_SECRET && token === process.env.CRON_SECRET) return true;
     if (token) {
       const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 6000);
       const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/is_staff', {
