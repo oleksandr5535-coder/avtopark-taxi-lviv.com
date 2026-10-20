@@ -436,7 +436,8 @@ async function boot(){
   }
   $('#whoName').textContent = p.full_name || session.user.email;
   showOnly('app');
-  S.staff = staff; $('#dashLink').classList.toggle('hidden', !staff); S.week = 0; S.tab = staff ? 'm_today' : 'd_week'; $('#app').classList.toggle('staff', staff);
+  S.staff = staff; $('#dashLink').classList.toggle('hidden', !staff); S.week = 0; S.tab = staff ? 'm_today' : 'd_week';
+  try{ const _t = localStorage.getItem('cab_tab'); if (_t && VIEWS[_t] && _t.startsWith(staff?'m_':'d_')) S.tab = _t; }catch(e){} $('#app').classList.toggle('staff', staff);
   S.repDate = defaultRepDate();
   $('#mainBox').className = staff ? 'wide' : '';
   buildTabs(); await load(); render();
@@ -537,6 +538,7 @@ const TITLES = {
   d_rep:['Звіт за водія','']
 };
 function render(){
+  try{ if (S.tab) localStorage.setItem('cab_tab', S.tab); }catch(e){}
   document.querySelectorAll('#tabs button').forEach(b => { b.classList.toggle('on', b.dataset.k === S.tab);
     if (b.dataset.k==='m_drv') { const n = S.staff ? pendingApps().length : 0; b.innerHTML = '👥 Водії' + (n ? ` <span class="pill y">${n}</span>` : ''); } });
   const t = S.staff && TITLES[S.tab]; const hide = S.tab==='m_drv' && S.drvOpen;
@@ -756,6 +758,12 @@ d_week(el){
   const tw = n => { const m=n%100, k=n%10; return (m>10&&m<20)||k===0||k>4 ? 'поїздок' : (k===1 ? 'поїздка' : 'поїздки'); };
   const status = po ? `<span class="pill g">✓ Виплачено ${fmtDate((po.paid_at||po.created_at||ws).slice(0,10))}: ${money(po.amount)}</span>`
     : (!w.days ? '' : (ended ? (bl||S.brandMissing ? '<span class="pill y">Нараховано · очікує виплати</span>' : '<span class="pill y">Нараховано · чекаємо дані брендування</span>') : '<span class="pill">Тиждень триває</span>'));
+  // коли востаннє оновились дані з платформ (щоб водій бачив, що все живе)
+  let updLine = '';
+  try { const ts = days.map(d => (S.apiMap[did+'|'+d]||{}).updated_at).filter(Boolean).sort().pop();
+    if (ts) { const dt = new Date(ts), now = new Date(); const same = dt.toDateString()===now.toDateString();
+      const tm = dt.toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'});
+      updLine = `<div class="sub" style="margin-top:8px">Дані з платформ оновлено ${same?'сьогодні о '+tm:fmtDate(dt.toISOString().slice(0,10))+' о '+tm}</div>`; } } catch(e){}
   // прогрес до наступного відсотка (для планів «за тиждень»)
   let prog = '';
   if (PL.period==='week' && w.gross>0) { const nx = tierNext(PL,w.gross);
@@ -765,6 +773,7 @@ d_week(el){
    <div class="hero"><div class="lb">Ваш заробіток за тиждень</div>
     <div class="amt">${w.noPlan?'—':money(total)}</div>
     ${status}
+    ${updLine}
     ${w.noPlan?'<div class="sub">Умови виплат для вас ще налаштовуються. Оборот нижче вже враховано, а суму заробітку побачите, коли менеджер завершить налаштування.</div>':''}
     ${(!w.days && !w.noPlan)?'<div class="sub">Даних за цей тиждень ще немає</div>':''}
     ${(!S.brandMissing && !bl && ended && w.days) ? '<div class="sub">Брендування за цей тиждень додасться після завантаження даних менеджером.</div>' : ''}</div>
