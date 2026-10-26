@@ -41,6 +41,7 @@ function kyivOffsetSec(date) {
 }
 
 import { requireStaff } from './_auth.js';
+import { kyivDayRange } from './_day.js';
 export default async function handler(req, res) {
   if (!(await requireStaff(req, res))) return;
   try {
@@ -55,9 +56,7 @@ export default async function handler(req, res) {
       dateStr = g('year')+'-'+g('month')+'-'+g('day');
     }
     // точна київська доба [00:00, 24:00)
-    const off = kyivOffsetSec(new Date(dateStr + 'T12:00:00Z'));
-    const from = Math.floor(Date.parse(dateStr + 'T00:00:00Z') / 1000) - off;
-    const to = from + 86400;
+    const { from, to } = kyivDayRange(dateStr);   // з урахуванням переходу на зимовий/літній час
 
     // 1) вхід
     const login = await call('token/login', { token });

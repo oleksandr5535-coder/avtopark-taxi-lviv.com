@@ -150,6 +150,7 @@ function htmlTable(dateStr, sum, totalOrders) {
 }
 
 import { requireStaff } from './_auth.js';
+import { kyivDayRange } from './_day.js';
 export default async function handler(req, res) {
   if (!(await requireStaff(req, res))) return;
   try {
@@ -208,9 +209,7 @@ export default async function handler(req, res) {
       const g = t => p.find(x => x.type === t).value;
       dateStr = g('year')+'-'+g('month')+'-'+g('day');
     }
-    const off = kyivOffsetSec(new Date(dateStr + 'T12:00:00Z'));
-    const start_ts = Math.floor(Date.parse(dateStr + 'T00:00:00Z') / 1000) - off;
-    const end_ts = start_ts + 86400;
+    const { from: start_ts, to: end_ts } = kyivDayRange(dateStr);   // з урахуванням переходу на зимовий/літній час
 
     const token = await getToken();
 

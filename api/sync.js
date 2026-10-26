@@ -145,6 +145,33 @@ function extractOrders(j) {
   return found[0] || [];
 }
 
+
+/* ---------- ДІАГНОСТИКА: як різні правила «до якого дня належить поїздка» міняють суму Bolt ---------- */
+// none = за часом створення замовлення; price_review = за часом підтвердження ціни (як порожній портал);
+// merge = як зараз у дашборді (завершені за price_review, скасування за створенням).
+export async function diagCore(dates, getOrders) {
+  const out = { days: [], week: { none: 0, price_review: 0, merge: 0, late_created_paid_next_day: 0, early_created_prev_day_paid_today: 0 }, drivers: {} };
+  for (const date of dates) {
+    const [none, pr] = await Promise.all([getOrders(date, 'none'), getOrders(date, 'price_review')]);
+    const prRef = new Set(pr.map(o => o.order_reference)), noneRef = new Set(none.map(o => o.order_reference));
+    const merge = pr.concat(none.filter(o => !prRef.has(o.order_reference) && o.order_status !== 'finished'));
+    const sum = list => Object.values(boltByDriver(list)).reduce((a, d) => a + d.net, 0);
+    const netOf = o => (o.order_price && o.order_price.net_earnings != null) ? o.order_price.net_earnings : 0;
+    const late = none.filter(o => !prRef.has(o.order_reference) && o.order_status === 'finished');   // створені цього дня, але гроші підтверджені вже після півночі
+    const early = pr.filter(o => !noneRef.has(o.order_reference) && o.order_status === 'finished');  // створені вчора, гроші підтверджені цього дня
+    const row = { date, none: r2(sum(none)), price_review: r2(sum(pr)), merge: r2(sum(merge)),
+      late_created_paid_next_day: r2(late.reduce((a, o) => a + netOf(o), 0)), late_orders: late.length,
+      early_created_prev_day_paid_today: r2(early.reduce((a, o) => a + netOf(o), 0)), early_orders: early.length };
+    out.days.push(row);
+    ['none', 'price_review', 'merge', 'late_created_paid_next_day', 'early_created_prev_day_paid_today'].forEach(k => { out.week[k] = r2(out.week[k] + row[k]); });
+    [['none', none], ['price_review', pr], ['merge', merge]].forEach(([mode, list]) => {
+      const by = boltByDriver(list);
+      Object.values(by).forEach(d => { if (!d.name) return; const x = out.drivers[d.name] || (out.drivers[d.name] = { none: 0, price_review: 0, merge: 0 }); x[mode] = r2(x[mode] + d.net); });
+    });
+  }
+  return out;
+}
+
 /* ---------- Supabase (REST, від імені сервера) ---------- */
 function sb(path, opt) {
   const key = process.env.SUPABASE_SERVICE_KEY;
@@ -215,6 +242,14 @@ export default async function handler(req, res) {
   if (!process.env.CRON_SECRET || given !== process.env.CRON_SECRET) return res.status(401).send(JSON.stringify({ ok: false, error: 'Немає доступу' }));
   if (!process.env.SUPABASE_SERVICE_KEY) return res.status(500).send(JSON.stringify({ ok: false, error: 'Немає SUPABASE_SERVICE_KEY у Vercel' }));
   try {
+    if (q.diag === '1') {
+      const n = Math.max(1, Math.min(7, parseInt(q.days || '1', 10) || 1));
+      const start = String(q.date || kyivNow().date);
+      const dates = []; for (let i = 0; i < n; i++) dates.push(new Date(Date.parse(start + 'T12:00:00Z') + i * 86400000).toISOString().slice(0, 10));
+      const d = await diagCore(dates, async (date, trt) => { const j = await callHandler(boltHandler, { date, trt }); if (j.ok === false) throw new Error('Bolt ' + date + ' ' + trt + ': ' + j.error); return extractOrders(j); });
+      const drv = Object.entries(d.drivers).map(([name, x]) => ({ name, ...x, merge_minus_none: r2(x.merge - x.none) })).sort((a, b) => Math.abs(b.merge_minus_none) - Math.abs(a.merge_minus_none)).slice(0, 15);
+      return res.status(200).send(JSON.stringify({ ok: true, diag: true, from: dates[0], to: dates[dates.length - 1], week: d.week, days: d.days, top_driver_differences: drv }));
+    }
     const dry = q.dry === '1' || q.dry === 'true';
     const now = kyivNow();
     let days = [];

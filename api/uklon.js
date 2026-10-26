@@ -238,6 +238,7 @@ async function fetchAllReport(fleetId, from, to, H) {
 }
 
 import { requireStaff } from './_auth.js';
+import { kyivDayRange } from './_day.js';
 export default async function handler(req, res) {
   if (!(await requireStaff(req, res))) return;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -252,9 +253,7 @@ export default async function handler(req, res) {
       const g = t => p.find(x => x.type === t).value;
       dateStr = g('year')+'-'+g('month')+'-'+g('day');
     }
-    const off = kyivOffsetSec(new Date(dateStr + 'T12:00:00Z'));
-    const from = Math.floor(Date.parse(dateStr + 'T00:00:00Z') / 1000) - off;
-    const to = from + 86400;
+    const { from, to } = kyivDayRange(dateStr);   // з урахуванням переходу на зимовий/літній час
 
     const token = await auth(id, secret);
     const H = { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json' };
