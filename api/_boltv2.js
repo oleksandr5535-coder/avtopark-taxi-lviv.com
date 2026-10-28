@@ -58,17 +58,24 @@ function schemaProps(spec, schema, depth, seen) {
   return out;
 }
 async function specPage() {
-  let r = await fetchT(SPEC_URL, { headers: { Accept: 'application/json' } }, 15000);
-  let how = 'без токена';
-  let txt = await r.text(), spec = null;
-  try { spec = JSON.parse(txt); } catch (e) { spec = null; }
-  if (!spec || !spec.paths) {                              // якщо специфікація закрита — пробуємо з токеном
-    const token = await getToken();
-    r = await fetchT(SPEC_URL, { headers: { Accept: 'application/json', Authorization: 'Bearer ' + token } }, 15000);
-    how = 'з токеном'; txt = await r.text();
-    try { spec = JSON.parse(txt); } catch (e) { spec = null; }
+  const B = 'https://node.bolt.eu/fleet-integration-gateway-v2/';
+  const cands = [SPEC_URL, B + 'openapi.json', B + 'swagger.json', B + 'docs/json', B + 'documentation/json', B + 'docs-json', B + 'api-json', B + 'swagger/json', B + 'fleetIntegration/v2/open-api.json', B + 'fleetIntegration/v2/openapi.json', B + 'fleetIntegration/open-api.json', B + 'v2/api-docs', B + 'docs', B + 'documentation'];
+  const tried = []; let r = null, txt = '', spec = null, how = '', token = null;
+  for (const u of cands) {
+    for (const withTok of [false, true]) {
+      try {
+        const h = { Accept: 'application/json' };
+        if (withTok) { token = token || await getToken(); h.Authorization = 'Bearer ' + token; }
+        r = await fetchT(u, { headers: h }, 4000); txt = await r.text(); spec = null;
+        try { spec = JSON.parse(txt); } catch (e) { spec = null; }
+        tried.push(r.status + (withTok ? ' (токен) ' : ' ') + u.replace(B, '…/'));
+        if (spec && spec.paths) { how = (withTok ? 'з токеном' : 'без токена') + ', ' + u; break; }
+      } catch (e) { tried.push('помилка ' + u.replace(B, '…/')); }
+      if (r && r.status === 404) break;      // з токеном той самий 404 — далі не пробуємо
+    }
+    if (spec && spec.paths) break;
   }
-  if (!spec || !spec.paths) return page('Bolt v2 spec', '<h2>Специфікацію не вдалося прочитати</h2><p>HTTP ' + r.status + ' (' + how + '). Початок відповіді:</p><pre class="mono">' + esc(txt.slice(0, 1200)) + '</pre>');
+  if (!spec || !spec.paths) return page('Bolt v2 spec', '<h2>Специфікацію не вдалося прочитати</h2><p>HTTP ' + r.status + ' (' + how + '). Початок відповіді:</p><pre class="mono">' + esc(txt.slice(0, 600)) + '</pre><p>Що пробували:</p><pre class="mono">' + esc(tried.join('\n')) + '</pre>');
   const rows = [];
   Object.keys(spec.paths).forEach(path => Object.keys(spec.paths[path] || {}).forEach(m => {
     if (!['get', 'post', 'put', 'patch', 'delete'].includes(m)) return;
