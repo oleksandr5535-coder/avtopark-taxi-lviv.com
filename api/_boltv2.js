@@ -117,6 +117,39 @@ async function probePage() {
     + rows.map(r => '<tr class="' + (String(r.status) === '200' ? 'ok' : 'no') + '"><td class="mono">' + esc(r.m) + '</td><td>' + esc(r.status) + '</td><td class="mono">' + esc(r.snippet) + '</td></tr>').join('') + '</tbody></table>');
 }
 
+// ?shape=1 — які поля віддає кожен метод (без персональних даних: імена, телефони, пошта, координати, коди маскуються)
+const SECRET_KEY = /email|phone|name|lat|lng|location|vin|code|uuid|reference|plate|registration|licen[cs]e|address|photo|url|token|iban|card/i;
+function flat(o, pre, out, depth) {
+  if (o === null || typeof o !== 'object') { out.push([pre, o]); return; }
+  if (Array.isArray(o)) { out.push([pre + '[]', o.length ? (typeof o[0] === 'object' ? '(обʼєкти)' : o[0]) : '(порожньо)']); if (o[0] && typeof o[0] === 'object' && depth < 4) flat(o[0], pre + '[]', out, depth + 1); return; }
+  Object.keys(o).forEach(k => { if (depth < 5) flat(o[k], pre ? pre + '.' + k : k, out, depth + 1); });
+}
+async function shapePage() {
+  const token = await getToken();
+  const now = Math.floor(Date.now() / 1000);
+  const iso = t => new Date(t * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z');
+  const body = { company_id: COMPANY_ID, company_ids: [COMPANY_ID], start_ts: now - 86400, end_ts: now, start_datetime: iso(now - 86400), end_datetime: iso(now), offset: 0, limit: 50 };
+  const methods = ['getCompanies', 'getDrivers', 'getOnlineDrivers', 'getVehicles', 'getRideHistory'];
+  const blocks = await Promise.all(methods.map(async m => {
+    let out = '';
+    try {
+      const r = await fetchT(BASE + m, { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 20000);
+      const j = await r.json(); const d = j && j.data || {};
+      const tops = Object.keys(d).map(k => k + (Array.isArray(d[k]) ? ' [' + d[k].length + ' шт.]' : ' = ' + esc(JSON.stringify(d[k]).slice(0, 80)))).join(', ');
+      const arrKey = Object.keys(d).find(k => Array.isArray(d[k])); const arr = arrKey ? d[arrKey] : [];
+      const seen = new Map();
+      arr.forEach(rec => { const f = []; flat(rec, '', f, 0); f.forEach(([k, v]) => { if (!seen.has(k) || (seen.get(k) == null && v != null)) seen.set(k, v); }); });
+      const cnt = {};
+      if (m === 'getRideHistory') arr.forEach(o => { const k = (o.status || '?') + ' / ' + (o.payment_method || '?'); cnt[k] = (cnt[k] || 0) + 1; });
+      out += '<h3>' + m + ' <span class="mono">(код ' + esc(j.code) + ', ' + esc(j.message) + ')</span></h3><p>data: ' + (tops || '—') + '</p>';
+      if (Object.keys(cnt).length) out += '<p>Статус / оплата (за добу, до 50): ' + Object.keys(cnt).map(k => esc(k) + ' × ' + cnt[k]).join('; ') + '</p>';
+      out += '<table><thead><tr><th>Поле</th><th>Приклад</th></tr></thead><tbody>' + [...seen.entries()].map(([k, v]) => '<tr><td class="mono">' + esc(k) + '</td><td class="mono">' + (SECRET_KEY.test(k) && v != null ? '•••' : esc(String(v).slice(0, 60))) + '</td></tr>').join('') + '</tbody></table>';
+    } catch (e) { out += '<h3>' + m + '</h3><pre class="mono">' + esc(e && e.message) + '</pre>'; }
+    return out;
+  }));
+  return page('Bolt v2 поля', '<h2>Bolt Fleet API v2 · які поля віддає</h2><p>Персональні дані замасковані (•••). Приклад береться з перших записів.</p>' + blocks.join(''));
+}
+
 export async function probeV2(req, res) {
   const q = req.query || {};
   const h = String(req.headers['authorization'] || '');
@@ -129,7 +162,7 @@ export async function probeV2(req, res) {
     if (q.token) { res.setHeader('Content-Type', 'text/plain; charset=utf-8'); return res.status(200).send(await getToken()); }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');
-    return res.status(200).send(q.spec ? await specPage() : await probePage());
+    return res.status(200).send(q.shape ? await shapePage() : q.spec ? await specPage() : await probePage());
   } catch (e) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.status(200).send(page('Помилка', '<h2>Помилка</h2><pre class="mono">' + esc(e && e.message) + '</pre>'));
