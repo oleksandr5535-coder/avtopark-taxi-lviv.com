@@ -7,6 +7,8 @@
 // Доступ: лише з секретним кодом CRON_SECRET (?key=... або заголовок Authorization: Bearer ...),
 // бо адреса віддає токен Bolt.
 
+import { kyivDayRange } from './_day.js';
+import { boltByDriver } from './sync.js';
 const COMPANY_ID = 25859;
 const BASE = 'https://node.bolt.eu/fleet-integration-gateway-v2/fleetIntegration/v2/';
 const SPEC_URL = 'https://node.bolt.eu/fleet-integration-gateway-v2/open-api.json';
@@ -187,6 +189,45 @@ async function v1ShapePage() {
     + '<table><thead><tr><th>Поле</th><th>Є у записів</th><th>Не нульове</th><th>Приклад (не нульове)</th></tr></thead><tbody>' + rows + '</tbody></table>');
 }
 
+// ?week=YYYY-MM-DD (понеділок) — звірка по водіях: наше чисте (merge, як у дашборді) проти складових, з яких може складатись «Чистий дохід» Bolt
+async function v1Orders(token, date, trt) {
+  const { from, to } = kyivDayRange(date);
+  let offset = 0, all = [];
+  for (let g = 0; g < 20; g++) {
+    const body = { company_ids: [COMPANY_ID], company_id: COMPANY_ID, start_ts: from, end_ts: to, offset, limit: 1000 };
+    if (trt) body.time_range_filter_type = trt;
+    const r = await fetchT('https://node.bolt.eu/fleet-integration-gateway/fleetIntegration/v1/getFleetOrders', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 25000);
+    const j = await r.json(); if (j.code !== 0) throw new Error('Bolt ' + date + ': ' + j.code + ' ' + j.message);
+    const arr = (j.data && j.data.orders) || []; all = all.concat(arr);
+    if (arr.length < 1000) break; offset += 1000;
+  }
+  return all;
+}
+async function weekPage(monday) {
+  const token = await getToken(true);
+  const days = []; const d0 = new Date(monday + 'T12:00:00Z');
+  for (let i = 0; i < 7; i++) days.push(new Date(d0.getTime() + i * 86400000).toISOString().slice(0, 10));
+  const perDay = await Promise.all(days.map(async d => { const [none, pr] = await Promise.all([v1Orders(token, d, null), v1Orders(token, d, 'price_review')]); const prRef = new Set(pr.map(o => o.order_reference)); return pr.concat(none.filter(o => !prRef.has(o.order_reference) && o.order_status !== 'finished')); }));
+  const merged = [].concat(...perDay);
+  const by = boltByDriver(merged);
+  const ex = {};
+  merged.forEach(o => {
+    const n = o.driver_name || ''; const pr = o.order_price || {}; const a = ex[n] || (ex[n] = { gross: 0, comm: 0, tip: 0, cancel: 0, cancelNF: 0, netNF: 0, inapp: 0, cashd: 0, book: 0 });
+    if (o.order_status === 'finished') { a.gross += pr.ride_price || 0; a.comm += pr.commission || 0; a.tip += pr.tip || 0; a.inapp += pr.in_app_discount || 0; a.cashd += pr.cash_discount || 0; a.book += pr.booking_fee || 0; }
+    a.cancel += pr.cancellation_fee || 0;
+    if (o.order_status !== 'finished') { a.cancelNF += pr.cancellation_fee || 0; a.netNF += pr.net_earnings || 0; }
+  });
+  const f = x => (Math.round(x * 100) / 100).toFixed(2);
+  const names = Object.keys(by).filter(n => n && (by[n].net || (ex[n] && (ex[n].cancel || ex[n].netNF)))).sort();
+  const tot = { net: 0, tip: 0, cancelNF: 0, netNF: 0 };
+  const rows = names.map(n => { const a = by[n], e = ex[n] || {}; tot.net += a.net; tot.tip += e.tip || 0; tot.cancelNF += e.cancelNF || 0; tot.netNF += e.netNF || 0;
+    return '<tr><td>' + esc(n) + '</td><td><b>' + f(a.net) + '</b></td><td>' + f(e.gross || 0) + '</td><td>' + f(e.comm || 0) + '</td><td>' + f(e.tip || 0) + '</td><td>' + f(e.cancelNF || 0) + '</td><td>' + f(e.netNF || 0) + '</td><td>' + f(e.inapp || 0) + '</td><td>' + f(e.cashd || 0) + '</td><td>' + f(e.book || 0) + '</td></tr>'; }).join('');
+  return page('Bolt тиждень', '<h2>Тиждень ' + esc(days[0]) + ' – ' + esc(days[6]) + ': що віддає v1 по водіях</h2>'
+    + '<p>«Наше чисте» = як у дашборді (merge). Далі складові, щоб порівняти зі звітом Bolt «Чистий дохід». «Скас. (не завершені)» = плата за скасування по незавершених поїздках; «net не завершених» = net_earnings по них (наш код їх не додає).</p>'
+    + '<table><thead><tr><th>Водій</th><th>Наше чисте</th><th>Валовий (заверш.)</th><th>Комісія</th><th>Чайові</th><th>Скас. (не заверш.)</th><th>net не заверш.</th><th>Знижка в застосунку</th><th>Знижка готівка</th><th>Booking fee</th></tr></thead><tbody>' + rows
+    + '<tr><td><b>РАЗОМ</b></td><td><b>' + f(tot.net) + '</b></td><td></td><td></td><td>' + f(tot.tip) + '</td><td>' + f(tot.cancelNF) + '</td><td>' + f(tot.netNF) + '</td><td></td><td></td><td></td></tr></tbody></table>');
+}
+
 export async function probeV2(req, res) {
   const q = req.query || {};
   const h = String(req.headers['authorization'] || '');
@@ -199,7 +240,7 @@ export async function probeV2(req, res) {
     if (q.token) { res.setHeader('Content-Type', 'text/plain; charset=utf-8'); return res.status(200).send(await getToken()); }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');
-    return res.status(200).send(q.v1shape ? await v1ShapePage() : q.guess ? await guessPage() : q.shape ? await shapePage() : q.spec ? await specPage() : await probePage());
+    return res.status(200).send(q.week ? await weekPage(String(q.week)) : q.v1shape ? await v1ShapePage() : q.guess ? await guessPage() : q.shape ? await shapePage() : q.spec ? await specPage() : await probePage());
   } catch (e) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.status(200).send(page('Помилка', '<h2>Помилка</h2><pre class="mono">' + esc(e && e.message) + '</pre>'));
