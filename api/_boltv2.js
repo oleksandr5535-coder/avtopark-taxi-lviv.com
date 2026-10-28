@@ -100,14 +100,16 @@ async function specPage() {
 async function probePage() {
   const token = await getToken();
   const now = Math.floor(Date.now() / 1000);
-  const body = { company_id: COMPANY_ID, company_ids: [COMPANY_ID], filter: {}, start_ts: now - 86400, end_ts: now, start_datetime: new Date((now - 86400) * 1000).toISOString(), end_datetime: new Date(now * 1000).toISOString(), offset: 0, limit: 50 };
-  const rows = await Promise.all(METHODS.map(async m => {
-    let status = '?', snippet = '';
+  const body = { company_id: COMPANY_ID, company_ids: [COMPANY_ID], filter: {}, start_ts: now - 86400, end_ts: now, start_datetime: new Date((now - 86400) * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z'), end_datetime: new Date(now * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z'), offset: 0, limit: 50 };
+  const jobs = METHODS.map(m => ({ m, label: m, b: body }));
+  ['getDriverUuids', 'getVehicleUuids'].forEach(m => ['all', 'zzz'].forEach(t => jobs.push({ m, label: m + ' [filter.type=' + t + ']', b: Object.assign({}, body, { filter: { type: t } }) })));
+  const rows = await Promise.all(jobs.map(async j => {
+    const m = j.m; let status = '?', snippet = '';
     try {
-      const r = await fetchT(BASE + m, { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 20000);
+      const r = await fetchT(BASE + m, { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(j.b) }, 20000);
       status = r.status; snippet = (await r.text()).slice(0, 400);
     } catch (e) { status = 'ERR'; snippet = (e && e.message || '').slice(0, 200); }
-    return { m, status, snippet };
+    return { m: j.label, status, snippet };
   }));
   return page('Bolt v2 перебір',
     '<h2>Bolt Fleet API v2 · перебір методів</h2><p>Тіло запиту: company_id=' + COMPANY_ID + ', company_ids, filter {}, start_ts/end_ts та start_datetime/end_datetime за останню добу, offset 0, limit 50. 200 = метод відповів. При 702 дивіться <code>validation_errors</code> — там видно, яких полів бракує.</p>'
