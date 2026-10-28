@@ -247,6 +247,49 @@ tb.innerHTML=names.map(n=>{const a=tot[n];T.net+=a.net;T.tip+=a.tip;T.cancelNF+=
     + '<p id="st"><b>Починаю…</b></p><table><thead><tr><th>Водій</th><th>Наше чисте</th><th>Валовий (заверш.)</th><th>Комісія</th><th>Чайові</th><th>Скас. (не заверш.)</th><th>net не заверш.</th><th>Знижка в застосунку</th><th>Знижка готівка</th><th>Booking fee</th></tr></thead><tbody id="tb"></tbody></table><script>' + script + '</script>');
 }
 
+// v2 getRideHistory за добу: суми по водіях (price.total, tip, cancellation_fee тощо)
+async function dayAgg2(date) {
+  const token = await getToken(false);
+  const { from, to } = kyivDayRange(date);
+  const iso = t => new Date(t * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z');
+  const out = {}; let offset = 0, total = null, n = 0; const LIM = 100;
+  for (let g = 0; g < 40; g++) {
+    const body = { company_id: COMPANY_ID, company_ids: [COMPANY_ID], start_datetime: iso(from), end_datetime: iso(to), offset, limit: LIM };
+    let j = null;
+    for (let t = 0; t < 5; t++) {
+      const r = await fetchT(BASE + 'getRideHistory', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 25000);
+      j = await r.json(); if (j.code === 1005) { await nap(2500 * (t + 1)); continue; } break;
+    }
+    if (!j || j.code !== 0) throw new Error('v2 ' + date + ': ' + (j && j.code) + ' ' + (j && j.message) + ' ' + JSON.stringify((j && j.validation_errors) || '').slice(0, 200));
+    const d = j.data || {}; const arr = d.orders || []; if (total == null) total = d.total;
+    arr.forEach(o => {
+      n++; const dr = o.driver || {}; const nm = ((dr.last_name || '') + ' ' + (dr.first_name || '')).trim() || '?'; const p = o.price || {};
+      const a = out[nm] || (out[nm] = { fin: 0, tot: 0, tip: 0, canc: 0, nfTot: 0, toll: 0, book: 0, st: {} });
+      a.st[o.status] = (a.st[o.status] || 0) + 1;
+      if (o.status === 'finished') { a.fin++; a.tot += p.total || 0; a.tip += p.tip || 0; a.toll += p.toll_fee || 0; a.book += p.booking_fee || 0; }
+      else { a.nfTot += p.total || 0; }
+      a.canc += p.cancellation_fee || 0;
+    });
+    if (arr.length < LIM) break; offset += LIM; await nap(800);
+  }
+  return { date, n, total, drivers: out };
+}
+function week2Page(monday) {
+  const script = `
+const key=new URLSearchParams(location.search).get('key');const mon=${JSON.stringify(monday)};
+const days=[];const d0=new Date(mon+'T12:00:00Z');for(let i=0;i<7;i++)days.push(new Date(d0.getTime()+i*864e5).toISOString().slice(0,10));
+const st=document.getElementById('st'),tb=document.getElementById('tb');const tot={};const f=x=>(Math.round(x*100)/100).toFixed(2);const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+(async()=>{let cnt=0;for(const d of days){let ok=false;for(let t=0;t<8&&!ok;t++){st.textContent='Вантажу '+d+(t?' (повтор '+t+')':'')+'…';
+try{const r=await fetch(location.pathname+'?v2=1&key='+encodeURIComponent(key)+'&dayagg2='+d);const j=await r.json();
+if(j.ok){ok=true;cnt+=j.n;Object.entries(j.drivers).forEach(([n,a])=>{const x=tot[n]||(tot[n]={fin:0,tot:0,tip:0,canc:0,nfTot:0,toll:0,book:0});Object.keys(x).forEach(k=>x[k]+=a[k]||0)});}
+else{st.textContent=d+': '+(j.error||'помилка')+' — повторюю';await sleep(4000)}}catch(e){st.textContent=d+': '+e.message;await sleep(4000)}}
+if(!ok){st.textContent='Не вдалося: '+d;return}await sleep(1200)}
+st.textContent='Готово. Записів: '+cnt;const names=Object.keys(tot).filter(n=>tot[n].fin||tot[n].canc).sort();let T={tot:0,tip:0,canc:0};
+tb.innerHTML=names.map(n=>{const a=tot[n];T.tot+=a.tot;T.tip+=a.tip;T.canc+=a.canc;return '<tr><td>'+n+'</td><td>'+a.fin+'</td><td><b>'+f(a.tot)+'</b></td><td>'+f(a.tip)+'</td><td>'+f(a.canc)+'</td><td>'+f(a.nfTot)+'</td><td>'+f(a.toll)+'</td><td>'+f(a.book)+'</td></tr>'}).join('')+'<tr><td><b>РАЗОМ</b></td><td></td><td><b>'+f(T.tot)+'</b></td><td>'+f(T.tip)+'</td><td>'+f(T.canc)+'</td><td></td><td></td><td></td></tr>';})();`;
+  return page('Bolt v2 тиждень', '<h2>v2 getRideHistory: тиждень від ' + esc(monday) + '</h2><p>Суми по водіях з нового API. Порівняйте з Bolt «Валовий дохід» / «Чистий дохід». У v2 немає комісії й net_earnings, тільки price.total, tip, fees.</p>'
+    + '<p id="st"><b>Починаю…</b></p><table><thead><tr><th>Водій</th><th>Завершених</th><th>price.total (заверш.)</th><th>Чайові</th><th>Плата за скасування</th><th>price.total (не заверш.)</th><th>toll</th><th>booking</th></tr></thead><tbody id="tb"></tbody></table><script>' + script + '</script>');
+}
+
 export async function probeV2(req, res) {
   const q = req.query || {};
   const h = String(req.headers['authorization'] || '');
@@ -257,10 +300,11 @@ export async function probeV2(req, res) {
   }
   try {
     if (q.token) { res.setHeader('Content-Type', 'text/plain; charset=utf-8'); return res.status(200).send(await getToken()); }
+    if (q.dayagg2) { res.setHeader('Content-Type', 'application/json; charset=utf-8'); try { return res.status(200).send(JSON.stringify(Object.assign({ ok: true }, await dayAgg2(String(q.dayagg2))))); } catch (e) { return res.status(200).send(JSON.stringify({ ok: false, error: String(e && e.message || e) })); } }
     if (q.dayagg) { res.setHeader('Content-Type', 'application/json; charset=utf-8'); try { return res.status(200).send(JSON.stringify(Object.assign({ ok: true }, await dayAgg(String(q.dayagg))))); } catch (e) { return res.status(200).send(JSON.stringify({ ok: false, error: String(e && e.message || e) })); } }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');
-    return res.status(200).send(q.dayagg ? null : q.week ? weekPage(String(q.week)) : q.v1shape ? await v1ShapePage() : q.guess ? await guessPage() : q.shape ? await shapePage() : q.spec ? await specPage() : await probePage());
+    return res.status(200).send(q.week2 ? week2Page(String(q.week2)) : q.dayagg ? null : q.week ? weekPage(String(q.week)) : q.v1shape ? await v1ShapePage() : q.guess ? await guessPage() : q.shape ? await shapePage() : q.spec ? await specPage() : await probePage());
   } catch (e) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.status(200).send(page('Помилка', '<h2>Помилка</h2><pre class="mono">' + esc(e && e.message) + '</pre>'));
