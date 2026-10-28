@@ -290,6 +290,36 @@ tb.innerHTML=names.map(n=>{const a=tot[n];T.tot+=a.tot;T.tip+=a.tip;T.canc+=a.ca
     + '<p id="st"><b>Починаю…</b></p><table><thead><tr><th>Водій</th><th>Завершених</th><th>price.total (заверш.)</th><th>Чайові</th><th>Плата за скасування</th><th>price.total (не заверш.)</th><th>toll</th><th>booking</th></tr></thead><tbody id="tb"></tbody></table><script>' + script + '</script>');
 }
 
+// ?nf=YYYY-MM-DD (понеділок): усі НЕзавершені записи, де є гроші (net_earnings != 0 або плата за скасування), по днях
+async function dayNF(date) {
+  const token = await getToken(true);
+  const none = await v1Orders(token, date, null); await nap(700);
+  const pr = await v1Orders(token, date, 'price_review');
+  const prRef = new Set(pr.map(o => o.order_reference));
+  const merged = pr.concat(none.filter(o => !prRef.has(o.order_reference) && o.order_status !== 'finished'));
+  const fin = merged.filter(o => o.order_status === 'finished');
+  const rows = [];
+  merged.forEach(o => {
+    if (o.order_status === 'finished') return; const p = o.order_price || {};
+    if (!(p.net_earnings) && !(p.cancellation_fee) && !(p.tip)) return;
+    const twin = fin.find(f => f.driver_name === o.driver_name && (f.order_price || {}).net_earnings === p.net_earnings && (f.payment_confirmed_timestamp === o.payment_confirmed_timestamp || (f.order_price || {}).ride_price === p.ride_price));
+    rows.push({ drv: o.driver_name, st: o.order_status, net: p.net_earnings, price: p.ride_price, comm: p.commission, canc: p.cancellation_fee, tip: p.tip, why: o.price_review_reason || o.driver_cancelled_reason || '', pay: o.payment_confirmed_timestamp ? new Date(o.payment_confirmed_timestamp * 1000).toISOString().slice(5, 16) : '', cr: new Date(o.order_created_timestamp * 1000).toISOString().slice(5, 16), twin: twin ? 'ТАК' : '' });
+  });
+  return { date, rows };
+}
+function nfPage(monday) {
+  const script = `
+const key=new URLSearchParams(location.search).get('key');const mon=${JSON.stringify(monday)};
+const days=[];const d0=new Date(mon+'T12:00:00Z');for(let i=0;i<7;i++)days.push(new Date(d0.getTime()+i*864e5).toISOString().slice(0,10));
+const st=document.getElementById('st'),tb=document.getElementById('tb');const sleep=ms=>new Promise(r=>setTimeout(r,ms));let all=[];
+(async()=>{for(const d of days){let ok=false;for(let t=0;t<8&&!ok;t++){st.textContent='Вантажу '+d+(t?' (повтор '+t+')':'')+'…';
+try{const r=await fetch(location.pathname+'?v2=1&key='+encodeURIComponent(key)+'&daynf='+d);const j=await r.json();if(j.ok){ok=true;j.rows.forEach(x=>{x.d=d;all.push(x)})}else{st.textContent=d+': '+(j.error||'помилка');await sleep(4000)}}catch(e){await sleep(4000)}}
+if(!ok){st.textContent='Не вдалося: '+d;return}await sleep(1200)}
+st.textContent='Готово. Записів: '+all.length;all.sort((a,b)=>(a.drv||'').localeCompare(b.drv||'')||a.d.localeCompare(b.d));
+tb.innerHTML=all.map(x=>'<tr><td>'+(x.drv||'')+'</td><td>'+x.d.slice(5)+'</td><td>'+x.st+'</td><td>'+(x.net==null?'':x.net)+'</td><td>'+(x.price==null?'':x.price)+'</td><td>'+(x.comm==null?'':x.comm)+'</td><td>'+(x.canc==null?'':x.canc)+'</td><td>'+(x.tip==null?'':x.tip)+'</td><td>'+x.why+'</td><td>'+x.cr+'</td><td>'+x.pay+'</td><td><b>'+x.twin+'</b></td></tr>').join('')})();`;
+  return page('Bolt незавершені', '<h2>Незавершені записи з грошима: тиждень від ' + esc(monday) + '</h2><p>«Двійник = ТАК» означає, що поруч є завершена поїздка того ж водія з тим самим net. Такі записи наш код навмисно не рахує.</p><p id="st"><b>Починаю…</b></p><table><thead><tr><th>Водій</th><th>День</th><th>Статус</th><th>net</th><th>ціна</th><th>комісія</th><th>скас.</th><th>чайові</th><th>причина</th><th>створено</th><th>оплата</th><th>Двійник</th></tr></thead><tbody id="tb"></tbody></table><script>' + script + '</script>');
+}
+
 export async function probeV2(req, res) {
   const q = req.query || {};
   const h = String(req.headers['authorization'] || '');
@@ -300,11 +330,12 @@ export async function probeV2(req, res) {
   }
   try {
     if (q.token) { res.setHeader('Content-Type', 'text/plain; charset=utf-8'); return res.status(200).send(await getToken()); }
+    if (q.daynf) { res.setHeader('Content-Type', 'application/json; charset=utf-8'); try { return res.status(200).send(JSON.stringify(Object.assign({ ok: true }, await dayNF(String(q.daynf))))); } catch (e) { return res.status(200).send(JSON.stringify({ ok: false, error: String(e && e.message || e) })); } }
     if (q.dayagg2) { res.setHeader('Content-Type', 'application/json; charset=utf-8'); try { return res.status(200).send(JSON.stringify(Object.assign({ ok: true }, await dayAgg2(String(q.dayagg2))))); } catch (e) { return res.status(200).send(JSON.stringify({ ok: false, error: String(e && e.message || e) })); } }
     if (q.dayagg) { res.setHeader('Content-Type', 'application/json; charset=utf-8'); try { return res.status(200).send(JSON.stringify(Object.assign({ ok: true }, await dayAgg(String(q.dayagg))))); } catch (e) { return res.status(200).send(JSON.stringify({ ok: false, error: String(e && e.message || e) })); } }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');
-    return res.status(200).send(q.week2 ? week2Page(String(q.week2)) : q.dayagg ? null : q.week ? weekPage(String(q.week)) : q.v1shape ? await v1ShapePage() : q.guess ? await guessPage() : q.shape ? await shapePage() : q.spec ? await specPage() : await probePage());
+    return res.status(200).send(q.nf ? nfPage(String(q.nf)) : q.week2 ? week2Page(String(q.week2)) : q.dayagg ? null : q.week ? weekPage(String(q.week)) : q.v1shape ? await v1ShapePage() : q.guess ? await guessPage() : q.shape ? await shapePage() : q.spec ? await specPage() : await probePage());
   } catch (e) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.status(200).send(page('Помилка', '<h2>Помилка</h2><pre class="mono">' + esc(e && e.message) + '</pre>'));
