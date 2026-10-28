@@ -31,7 +31,9 @@ async function getToken() {
 }
 
 import { requireStaff } from './_auth.js';
+import { probeV2 } from './_boltv2.js';
 export default async function handler(req, res) {
+  if (req.query && req.query.v2) return probeV2(req, res);   // нова діагностика Bolt API v2 (свій захист кодом); без ?v2=1 усе працює як раніше
   if (!(await requireStaff(req, res))) return;
   try {
     const token = await getToken();
