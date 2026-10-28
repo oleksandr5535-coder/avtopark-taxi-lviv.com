@@ -19,8 +19,8 @@ async function fetchT(url, opts, ms) {
   finally { clearTimeout(t); }
 }
 
-async function getToken() {
-  const id = process.env.BOLT_V2_CLIENT_ID || process.env.BOLT_CLIENT_ID, secret = process.env.BOLT_V2_CLIENT_SECRET || process.env.BOLT_CLIENT_SECRET;
+async function getToken(useOld) {
+  const id = useOld ? process.env.BOLT_CLIENT_ID : (process.env.BOLT_V2_CLIENT_ID || process.env.BOLT_CLIENT_ID), secret = useOld ? process.env.BOLT_CLIENT_SECRET : (process.env.BOLT_V2_CLIENT_SECRET || process.env.BOLT_CLIENT_SECRET);
   if (!id || !secret) throw new Error('Немає BOLT_CLIENT_ID або BOLT_CLIENT_SECRET');
   const body = new URLSearchParams({ client_id: id, client_secret: secret, grant_type: 'client_credentials', scope: 'fleet-integration:api' });
   const r = await fetchT('https://oidc.bolt.eu/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body }, 12000);
@@ -171,7 +171,7 @@ async function guessPage() {
 
 // ?v1shape=1 — усі поля відповіді v1 getFleetOrders (за останні 3 доби) і скільки разів вони заповнені
 async function v1ShapePage() {
-  const token = await getToken();
+  const token = await getToken(true);
   const now = Math.floor(Date.now() / 1000);
   const body = { company_ids: [COMPANY_ID], company_id: COMPANY_ID, start_ts: now - 3 * 86400, end_ts: now, offset: 0, limit: 500 };
   const r = await fetchT('https://node.bolt.eu/fleet-integration-gateway/fleetIntegration/v1/getFleetOrders', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 25000);
