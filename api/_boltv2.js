@@ -169,6 +169,24 @@ async function guessPage() {
     + rows.sort((a, b) => (a.status === 404) - (b.status === 404)).map(r => '<tr class="' + (r.status === 404 ? 'no' : 'ok') + '"><td class="mono">' + esc(r.m) + '</td><td>' + esc(r.status) + '</td><td class="mono">' + esc(r.status === 404 ? '' : r.snippet) + '</td></tr>').join('') + '</tbody></table>');
 }
 
+// ?v1shape=1 — усі поля відповіді v1 getFleetOrders (за останні 3 доби) і скільки разів вони заповнені
+async function v1ShapePage() {
+  const token = await getToken();
+  const now = Math.floor(Date.now() / 1000);
+  const body = { company_ids: [COMPANY_ID], company_id: COMPANY_ID, start_ts: now - 3 * 86400, end_ts: now, offset: 0, limit: 500 };
+  const r = await fetchT('https://node.bolt.eu/fleet-integration-gateway/fleetIntegration/v1/getFleetOrders', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 25000);
+  const txt = await r.text(); let j = null; try { j = JSON.parse(txt); } catch (e) { j = null; }
+  if (!j) return page('v1 shape', '<h2>Відповідь не JSON</h2><pre class="mono">' + esc(r.status + ' ' + txt.slice(0, 600)) + '</pre>');
+  const d = j.data || {}; const arr = Array.isArray(d.orders) ? d.orders : [];
+  const top = Object.keys(d).filter(k => !Array.isArray(d[k])).map(k => k + '=' + JSON.stringify(d[k]).slice(0, 60)).join(', ');
+  const st = {};
+  const stat = new Map();
+  arr.forEach(o => { st[o.order_status || '?'] = (st[o.order_status || '?'] || 0) + 1; const f = []; flat(o, '', f, 0); f.forEach(([k, v]) => { const e = stat.get(k) || { n: 0, nz: 0, ex: null }; e.n++; if (v !== null && v !== '' && v !== 0 && v !== false) { e.nz++; if (e.ex == null) e.ex = v; } stat.set(k, e); }); });
+  const rows = [...stat.entries()].map(([k, e]) => '<tr><td class="mono">' + esc(k) + '</td><td>' + e.n + '</td><td>' + e.nz + '</td><td class="mono">' + (SECRET_KEY.test(k) && e.ex != null ? '•••' : esc(String(e.ex == null ? '' : e.ex).slice(0, 50))) + '</td></tr>').join('');
+  return page('Bolt v1 поля', '<h2>Bolt v1 getFleetOrders · які поля віддає</h2><p>HTTP ' + r.status + ', код ' + esc(j.code) + ' ' + esc(j.message) + '. Записів: ' + arr.length + '. ' + esc(top) + '</p><p>Статуси: ' + Object.keys(st).map(k => esc(k) + ' × ' + st[k]).join('; ') + '</p>'
+    + '<table><thead><tr><th>Поле</th><th>Є у записів</th><th>Не нульове</th><th>Приклад (не нульове)</th></tr></thead><tbody>' + rows + '</tbody></table>');
+}
+
 export async function probeV2(req, res) {
   const q = req.query || {};
   const h = String(req.headers['authorization'] || '');
@@ -181,7 +199,7 @@ export async function probeV2(req, res) {
     if (q.token) { res.setHeader('Content-Type', 'text/plain; charset=utf-8'); return res.status(200).send(await getToken()); }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');
-    return res.status(200).send(q.guess ? await guessPage() : q.shape ? await shapePage() : q.spec ? await specPage() : await probePage());
+    return res.status(200).send(q.v1shape ? await v1ShapePage() : q.guess ? await guessPage() : q.shape ? await shapePage() : q.spec ? await specPage() : await probePage());
   } catch (e) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.status(200).send(page('Помилка', '<h2>Помилка</h2><pre class="mono">' + esc(e && e.message) + '</pre>'));
