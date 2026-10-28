@@ -20,7 +20,7 @@ async function fetchT(url, opts, ms) {
 }
 
 async function getToken() {
-  const id = process.env.BOLT_CLIENT_ID, secret = process.env.BOLT_CLIENT_SECRET;
+  const id = process.env.BOLT_V2_CLIENT_ID || process.env.BOLT_CLIENT_ID, secret = process.env.BOLT_V2_CLIENT_SECRET || process.env.BOLT_CLIENT_SECRET;
   if (!id || !secret) throw new Error('Немає BOLT_CLIENT_ID або BOLT_CLIENT_SECRET');
   const body = new URLSearchParams({ client_id: id, client_secret: secret, grant_type: 'client_credentials', scope: 'fleet-integration:api' });
   const r = await fetchT('https://oidc.bolt.eu/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body }, 12000);
