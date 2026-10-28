@@ -150,6 +150,25 @@ async function shapePage() {
   return page('Bolt v2 поля', '<h2>Bolt Fleet API v2 · які поля віддає</h2><p>Персональні дані замасковані (•••). Приклад береться з перших записів.</p>' + blocks.join(''));
 }
 
+// ?guess=1 — чи існують методи з правдоподібними назвами (404 = немає, інакше — є)
+async function guessPage() {
+  const token = await getToken();
+  const names = ['getEarnings', 'getDriverEarnings', 'getDriversEarnings', 'getFleetEarnings', 'getEarningsReport', 'getPayouts', 'getDriverPayouts', 'getPayments', 'getPaymentReport', 'getStatements', 'getWeeklyReport', 'getDailyReport', 'getReport', 'getReports', 'getBonuses', 'getDriverBonuses', 'getCampaigns', 'getIncentives', 'getPromotions', 'getDriverStats', 'getDriverStatistics', 'getFleetStats', 'getOrders', 'getFleetOrders', 'getOrderDetails', 'getOrder', 'getRideDetails', 'getDriverBalance', 'getBalance', 'getTransactions', 'getDriverTransactions', 'getFinancialReport', 'getDriverReport', 'getStateLogs', 'getFleetStateLogs', 'getDriverActivity', 'getVehicleReport'];
+  const now = Math.floor(Date.now() / 1000);
+  const iso = t => new Date(t * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z');
+  const body = { company_id: COMPANY_ID, company_ids: [COMPANY_ID], start_ts: now - 86400, end_ts: now, start_datetime: iso(now - 86400), end_datetime: iso(now), offset: 0, limit: 5 };
+  const rows = await Promise.all(names.map(async m => {
+    try {
+      const r = await fetchT(BASE + m, { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 8000);
+      return { m, status: r.status, snippet: (await r.text()).slice(0, 200) };
+    } catch (e) { return { m, status: 'ERR', snippet: (e && e.message || '').slice(0, 100) }; }
+  }));
+  const found = rows.filter(r => r.status !== 404);
+  return page('Bolt v2 guess', '<h2>Перебір назв методів</h2><p>404 = такого методу немає. Усе інше = метод існує. Знайдено: <b>' + found.length + '</b> з ' + rows.length + '.</p>'
+    + '<table><thead><tr><th>Метод</th><th>HTTP</th><th>Відповідь</th></tr></thead><tbody>'
+    + rows.sort((a, b) => (a.status === 404) - (b.status === 404)).map(r => '<tr class="' + (r.status === 404 ? 'no' : 'ok') + '"><td class="mono">' + esc(r.m) + '</td><td>' + esc(r.status) + '</td><td class="mono">' + esc(r.status === 404 ? '' : r.snippet) + '</td></tr>').join('') + '</tbody></table>');
+}
+
 export async function probeV2(req, res) {
   const q = req.query || {};
   const h = String(req.headers['authorization'] || '');
@@ -162,7 +181,7 @@ export async function probeV2(req, res) {
     if (q.token) { res.setHeader('Content-Type', 'text/plain; charset=utf-8'); return res.status(200).send(await getToken()); }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');
-    return res.status(200).send(q.shape ? await shapePage() : q.spec ? await specPage() : await probePage());
+    return res.status(200).send(q.guess ? await guessPage() : q.shape ? await shapePage() : q.spec ? await specPage() : await probePage());
   } catch (e) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.status(200).send(page('Помилка', '<h2>Помилка</h2><pre class="mono">' + esc(e && e.message) + '</pre>'));
