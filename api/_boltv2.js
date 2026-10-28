@@ -209,31 +209,42 @@ async function v1Orders(token, date, trt) {
   }
   return all;
 }
-async function weekPage(monday) {
+const nap = ms => new Promise(rs => setTimeout(rs, ms));
+// один день: JSON з агрегатами по водіях (merge, як у дашборді)
+async function dayAgg(date) {
   const token = await getToken(true);
-  const days = []; const d0 = new Date(monday + 'T12:00:00Z');
-  for (let i = 0; i < 7; i++) days.push(new Date(d0.getTime() + i * 86400000).toISOString().slice(0, 10));
-  const perDay = [];
-  const nap = ms => new Promise(rs => setTimeout(rs, ms));
-  for (const d of days) { const none = await v1Orders(token, d, null); await nap(1200); const pr = await v1Orders(token, d, 'price_review'); await nap(1200); const prRef = new Set(pr.map(o => o.order_reference)); perDay.push(pr.concat(none.filter(o => !prRef.has(o.order_reference) && o.order_status !== 'finished'))); }
-  const merged = [].concat(...perDay);
-  const by = boltByDriver(merged);
-  const ex = {};
+  const none = await v1Orders(token, date, null); await nap(700);
+  const pr = await v1Orders(token, date, 'price_review');
+  const prRef = new Set(pr.map(o => o.order_reference));
+  const merged = pr.concat(none.filter(o => !prRef.has(o.order_reference) && o.order_status !== 'finished'));
+  const by = boltByDriver(merged); const out = {};
   merged.forEach(o => {
-    const n = o.driver_name || ''; const pr = o.order_price || {}; const a = ex[n] || (ex[n] = { gross: 0, comm: 0, tip: 0, cancel: 0, cancelNF: 0, netNF: 0, inapp: 0, cashd: 0, book: 0 });
-    if (o.order_status === 'finished') { a.gross += pr.ride_price || 0; a.comm += pr.commission || 0; a.tip += pr.tip || 0; a.inapp += pr.in_app_discount || 0; a.cashd += pr.cash_discount || 0; a.book += pr.booking_fee || 0; }
-    a.cancel += pr.cancellation_fee || 0;
-    if (o.order_status !== 'finished') { a.cancelNF += pr.cancellation_fee || 0; a.netNF += pr.net_earnings || 0; }
+    const n = o.driver_name || ''; if (!n) return; const p = o.order_price || {};
+    const a = out[n] || (out[n] = { net: 0, gross: 0, comm: 0, tip: 0, cancelNF: 0, netNF: 0, inapp: 0, cashd: 0, book: 0 });
+    if (o.order_status === 'finished') { a.gross += p.ride_price || 0; a.comm += p.commission || 0; a.tip += p.tip || 0; a.inapp += p.in_app_discount || 0; a.cashd += p.cash_discount || 0; a.book += p.booking_fee || 0; }
+    else { a.cancelNF += p.cancellation_fee || 0; a.netNF += p.net_earnings || 0; }
   });
-  const f = x => (Math.round(x * 100) / 100).toFixed(2);
-  const names = Object.keys(by).filter(n => n && (by[n].net || (ex[n] && (ex[n].cancel || ex[n].netNF)))).sort();
-  const tot = { net: 0, tip: 0, cancelNF: 0, netNF: 0 };
-  const rows = names.map(n => { const a = by[n], e = ex[n] || {}; tot.net += a.net; tot.tip += e.tip || 0; tot.cancelNF += e.cancelNF || 0; tot.netNF += e.netNF || 0;
-    return '<tr><td>' + esc(n) + '</td><td><b>' + f(a.net) + '</b></td><td>' + f(e.gross || 0) + '</td><td>' + f(e.comm || 0) + '</td><td>' + f(e.tip || 0) + '</td><td>' + f(e.cancelNF || 0) + '</td><td>' + f(e.netNF || 0) + '</td><td>' + f(e.inapp || 0) + '</td><td>' + f(e.cashd || 0) + '</td><td>' + f(e.book || 0) + '</td></tr>'; }).join('');
-  return page('Bolt тиждень', '<h2>Тиждень ' + esc(days[0]) + ' – ' + esc(days[6]) + ': що віддає v1 по водіях</h2>'
-    + '<p>«Наше чисте» = як у дашборді (merge). Далі складові, щоб порівняти зі звітом Bolt «Чистий дохід». «Скас. (не завершені)» = плата за скасування по незавершених поїздках; «net не завершених» = net_earnings по них (наш код їх не додає).</p>'
-    + '<table><thead><tr><th>Водій</th><th>Наше чисте</th><th>Валовий (заверш.)</th><th>Комісія</th><th>Чайові</th><th>Скас. (не заверш.)</th><th>net не заверш.</th><th>Знижка в застосунку</th><th>Знижка готівка</th><th>Booking fee</th></tr></thead><tbody>' + rows
-    + '<tr><td><b>РАЗОМ</b></td><td><b>' + f(tot.net) + '</b></td><td></td><td></td><td>' + f(tot.tip) + '</td><td>' + f(tot.cancelNF) + '</td><td>' + f(tot.netNF) + '</td><td></td><td></td><td></td></tr></tbody></table>');
+  Object.keys(by).forEach(n => { if (out[n]) out[n].net = by[n].net; });
+  return { date, n: merged.length, drivers: out };
+}
+// сторінка тижня: сама по черзі питає день за днем (щоб не впиратись у ліміти часу й запитів)
+function weekPage(monday) {
+  const script = `
+const key=new URLSearchParams(location.search).get('key');const mon=${JSON.stringify(monday)};
+const days=[];const d0=new Date(mon+'T12:00:00Z');for(let i=0;i<7;i++)days.push(new Date(d0.getTime()+i*864e5).toISOString().slice(0,10));
+const st=document.getElementById('st'),tb=document.getElementById('tb');const tot={};const f=x=>(Math.round(x*100)/100).toFixed(2);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+(async()=>{for(const d of days){let ok=false;for(let t=0;t<8&&!ok;t++){st.textContent='Вантажу '+d+(t?' (повтор '+t+')':'')+'…';
+try{const r=await fetch(location.pathname+'?v2=1&key='+encodeURIComponent(key)+'&dayagg='+d);const j=await r.json();
+if(j.ok){ok=true;Object.entries(j.drivers).forEach(([n,a])=>{const x=tot[n]||(tot[n]={net:0,gross:0,comm:0,tip:0,cancelNF:0,netNF:0,inapp:0,cashd:0,book:0});Object.keys(x).forEach(k=>x[k]+=a[k]||0)});}
+else{st.textContent=d+': '+(j.error||'помилка')+' — чекаю і повторюю';await sleep(4000)}}catch(e){st.textContent=d+': '+e.message;await sleep(4000)}}
+if(!ok){st.textContent='Не вдалося завантажити '+d+'. Оновіть сторінку трохи пізніше.';return}await sleep(1500)}
+st.textContent='Готово.';const names=Object.keys(tot).filter(n=>tot[n].net||tot[n].cancelNF||tot[n].netNF).sort();
+let T={net:0,tip:0,cancelNF:0,netNF:0};
+tb.innerHTML=names.map(n=>{const a=tot[n];T.net+=a.net;T.tip+=a.tip;T.cancelNF+=a.cancelNF;T.netNF+=a.netNF;return '<tr><td>'+n+'</td><td><b>'+f(a.net)+'</b></td><td>'+f(a.gross)+'</td><td>'+f(a.comm)+'</td><td>'+f(a.tip)+'</td><td>'+f(a.cancelNF)+'</td><td>'+f(a.netNF)+'</td><td>'+f(a.inapp)+'</td><td>'+f(a.cashd)+'</td><td>'+f(a.book)+'</td></tr>'}).join('')+'<tr><td><b>РАЗОМ</b></td><td><b>'+f(T.net)+'</b></td><td></td><td></td><td>'+f(T.tip)+'</td><td>'+f(T.cancelNF)+'</td><td>'+f(T.netNF)+'</td><td></td><td></td><td></td></tr>';})();`;
+  return page('Bolt тиждень', '<h2>Тиждень від ' + esc(monday) + ': що віддає v1 по водіях</h2>'
+    + '<p>«Наше чисте» = як у дашборді (merge). Далі складові, щоб порівняти зі звітом Bolt «Чистий дохід». «Скас. (не заверш.)» = плата за скасування по незавершених поїздках; «net не заверш.» = net_earnings по них (наш код їх не додає).</p>'
+    + '<p id="st"><b>Починаю…</b></p><table><thead><tr><th>Водій</th><th>Наше чисте</th><th>Валовий (заверш.)</th><th>Комісія</th><th>Чайові</th><th>Скас. (не заверш.)</th><th>net не заверш.</th><th>Знижка в застосунку</th><th>Знижка готівка</th><th>Booking fee</th></tr></thead><tbody id="tb"></tbody></table><script>' + script + '</script>');
 }
 
 export async function probeV2(req, res) {
@@ -246,9 +257,10 @@ export async function probeV2(req, res) {
   }
   try {
     if (q.token) { res.setHeader('Content-Type', 'text/plain; charset=utf-8'); return res.status(200).send(await getToken()); }
+    if (q.dayagg) { res.setHeader('Content-Type', 'application/json; charset=utf-8'); try { return res.status(200).send(JSON.stringify(Object.assign({ ok: true }, await dayAgg(String(q.dayagg))))); } catch (e) { return res.status(200).send(JSON.stringify({ ok: false, error: String(e && e.message || e) })); } }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');
-    return res.status(200).send(q.week ? await weekPage(String(q.week)) : q.v1shape ? await v1ShapePage() : q.guess ? await guessPage() : q.shape ? await shapePage() : q.spec ? await specPage() : await probePage());
+    return res.status(200).send(q.dayagg ? null : q.week ? weekPage(String(q.week)) : q.v1shape ? await v1ShapePage() : q.guess ? await guessPage() : q.shape ? await shapePage() : q.spec ? await specPage() : await probePage());
   } catch (e) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.status(200).send(page('Помилка', '<h2>Помилка</h2><pre class="mono">' + esc(e && e.message) + '</pre>'));
