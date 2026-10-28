@@ -198,8 +198,8 @@ async function v1Orders(token, date, trt) {
     if (trt) body.time_range_filter_type = trt;
     const r = await fetchT('https://node.bolt.eu/fleet-integration-gateway/fleetIntegration/v1/getFleetOrders', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 25000);
     let j = await r.json();
-    for (let t = 0; t < 4 && j.code === 1005; t++) {            // TOO_MANY_REQUESTS — зачекати й повторити
-      await new Promise(rs => setTimeout(rs, 1500 * (t + 1)));
+    for (let t = 0; t < 6 && j.code === 1005; t++) {            // TOO_MANY_REQUESTS — зачекати й повторити
+      await new Promise(rs => setTimeout(rs, 2500 * (t + 1)));
       const r2_ = await fetchT('https://node.bolt.eu/fleet-integration-gateway/fleetIntegration/v1/getFleetOrders', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 25000);
       j = await r2_.json();
     }
@@ -214,7 +214,8 @@ async function weekPage(monday) {
   const days = []; const d0 = new Date(monday + 'T12:00:00Z');
   for (let i = 0; i < 7; i++) days.push(new Date(d0.getTime() + i * 86400000).toISOString().slice(0, 10));
   const perDay = [];
-  for (const d of days) { const none = await v1Orders(token, d, null); const pr = await v1Orders(token, d, 'price_review'); const prRef = new Set(pr.map(o => o.order_reference)); perDay.push(pr.concat(none.filter(o => !prRef.has(o.order_reference) && o.order_status !== 'finished'))); }
+  const nap = ms => new Promise(rs => setTimeout(rs, ms));
+  for (const d of days) { const none = await v1Orders(token, d, null); await nap(1200); const pr = await v1Orders(token, d, 'price_review'); await nap(1200); const prRef = new Set(pr.map(o => o.order_reference)); perDay.push(pr.concat(none.filter(o => !prRef.has(o.order_reference) && o.order_status !== 'finished'))); }
   const merged = [].concat(...perDay);
   const by = boltByDriver(merged);
   const ex = {};
