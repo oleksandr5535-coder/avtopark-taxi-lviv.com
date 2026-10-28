@@ -197,7 +197,13 @@ async function v1Orders(token, date, trt) {
     const body = { company_ids: [COMPANY_ID], company_id: COMPANY_ID, start_ts: from, end_ts: to, offset, limit: 1000 };
     if (trt) body.time_range_filter_type = trt;
     const r = await fetchT('https://node.bolt.eu/fleet-integration-gateway/fleetIntegration/v1/getFleetOrders', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 25000);
-    const j = await r.json(); if (j.code !== 0) throw new Error('Bolt ' + date + ': ' + j.code + ' ' + j.message);
+    let j = await r.json();
+    for (let t = 0; t < 4 && j.code === 1005; t++) {            // TOO_MANY_REQUESTS — зачекати й повторити
+      await new Promise(rs => setTimeout(rs, 1500 * (t + 1)));
+      const r2_ = await fetchT('https://node.bolt.eu/fleet-integration-gateway/fleetIntegration/v1/getFleetOrders', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, 25000);
+      j = await r2_.json();
+    }
+    if (j.code !== 0) throw new Error('Bolt ' + date + ': ' + j.code + ' ' + j.message);
     const arr = (j.data && j.data.orders) || []; all = all.concat(arr);
     if (arr.length < 1000) break; offset += 1000;
   }
@@ -207,7 +213,8 @@ async function weekPage(monday) {
   const token = await getToken(true);
   const days = []; const d0 = new Date(monday + 'T12:00:00Z');
   for (let i = 0; i < 7; i++) days.push(new Date(d0.getTime() + i * 86400000).toISOString().slice(0, 10));
-  const perDay = await Promise.all(days.map(async d => { const [none, pr] = await Promise.all([v1Orders(token, d, null), v1Orders(token, d, 'price_review')]); const prRef = new Set(pr.map(o => o.order_reference)); return pr.concat(none.filter(o => !prRef.has(o.order_reference) && o.order_status !== 'finished')); }));
+  const perDay = [];
+  for (const d of days) { const none = await v1Orders(token, d, null); const pr = await v1Orders(token, d, 'price_review'); const prRef = new Set(pr.map(o => o.order_reference)); perDay.push(pr.concat(none.filter(o => !prRef.has(o.order_reference) && o.order_status !== 'finished'))); }
   const merged = [].concat(...perDay);
   const by = boltByDriver(merged);
   const ex = {};
