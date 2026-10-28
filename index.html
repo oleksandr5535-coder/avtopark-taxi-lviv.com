@@ -5827,6 +5827,11 @@ function boltOrdersToParts(orders){
     var pr=o.order_price||{};var st=stMap[o.order_status]||o.order_status||'';var pay=payMap[o.payment_method]||'Через додаток';
     hist.push({'Дата':fmtDate(o.payment_confirmed_timestamp||o.order_created_timestamp),'Водій':o.driver_name||'','Номерний знак':o.vehicle_license_plate||'','Модель авто':o.vehicle_model||'','Категорія':(o.category_info&&o.category_info.name)||'','Статус':st,'Відстань|км':(o.ride_distance!=null)?(o.ride_distance/1000).toFixed(2):'','Ціна поїздки|₴':(pr.ride_price!=null)?String(pr.ride_price):'','Спосіб оплати':pay,'Тривалість поїздки (мінімум)':(o.order_pickup_timestamp&&o.order_drop_off_timestamp)?String(Math.round((o.order_drop_off_timestamp-o.order_pickup_timestamp)/60)):''});
     if(pr.net_earnings!=null&&countsMoney(o)){var n=o.driver_name||'';var a=inc[n]||(inc[n]={n:n,g:0,gfin:0,net:0,cash:0,tip:0,cdisc:0});a.g+=(pr.ride_price||0);if(o.order_status==='finished'&&(pr.ride_price||0)>0)a.gfin+=(pr.ride_price||0);a.net+=(pr.net_earnings||0);if(o.payment_method==='cash'&&(pr.ride_price||0)>0)a.cash+=(pr.ride_price||0);a.cdisc+=(pr.cash_discount||0);a.tip+=(pr.tip||0);}
+    else if(pr.net_earnings&&(o.order_status==='client_cancelled'||o.order_status==='client_did_not_show')){
+      /* Плата за скасування й компенсації Bolt (як у звіті «Дохід водіїв»): у чистий дохід додаємо лише net.
+         Валовий, готівку й поїздки не чіпаємо. driver_did_not_respond та інші дублікати не рахуємо. */
+      var n2=o.driver_name||'';var a2=inc[n2]||(inc[n2]={n:n2,g:0,gfin:0,net:0,cash:0,tip:0,cdisc:0});a2.net+=pr.net_earnings;
+    }
   });
   var income=Object.keys(inc).map(function(k){var a=inc[k];return {'Водій':a.n,'Валовий дохід (всього)|₴':a.g.toFixed(2),'Валове виконаних|₴':(a.gfin||0).toFixed(2),'Отримано готівкою|₴':(a.cash-a.cdisc).toFixed(2),'Чистий дохід|₴':a.net.toFixed(2),'Чайові від пасажирів|₴':a.tip.toFixed(2)};});
   return {bolt_income:income,bolt_hist:hist,uklon_agg:[],uklon_trips:[],wialon_trips_rows:[],wialon_stops_rows:[]};

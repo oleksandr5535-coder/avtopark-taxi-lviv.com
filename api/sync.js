@@ -43,6 +43,8 @@ export function boltByDriver(orders) {
       a.net += (pr.net_earnings || 0);
       if (o.payment_method === 'cash' && (pr.ride_price || 0) > 0) a.cash += (pr.ride_price || 0);
       a.cdisc += (pr.cash_discount || 0);
+    } else if (pr.net_earnings && (o.order_status === 'client_cancelled' || o.order_status === 'client_did_not_show')) {
+      a.net += pr.net_earnings;   // плата за скасування / компенсації Bolt — як у звіті «Дохід водіїв» (як у дашборді)
     }
     if (o.order_status === 'finished') {
       a.comp++;
