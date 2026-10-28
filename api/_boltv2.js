@@ -100,7 +100,7 @@ async function specPage() {
 async function probePage() {
   const token = await getToken();
   const now = Math.floor(Date.now() / 1000);
-  const body = { company_id: COMPANY_ID, company_ids: [COMPANY_ID], start_ts: now - 86400, end_ts: now, offset: 0, limit: 50 };
+  const body = { company_id: COMPANY_ID, company_ids: [COMPANY_ID], filter: {}, start_ts: now - 86400, end_ts: now, start_datetime: new Date((now - 86400) * 1000).toISOString(), end_datetime: new Date(now * 1000).toISOString(), offset: 0, limit: 50 };
   const rows = await Promise.all(METHODS.map(async m => {
     let status = '?', snippet = '';
     try {
@@ -110,7 +110,7 @@ async function probePage() {
     return { m, status, snippet };
   }));
   return page('Bolt v2 перебір',
-    '<h2>Bolt Fleet API v2 · перебір методів</h2><p>Тіло запиту: company_id=' + COMPANY_ID + ', company_ids, start_ts/end_ts за останню добу, offset 0, limit 50. 200 = метод відповів. При 702 дивіться <code>validation_errors</code> — там видно, яких полів бракує.</p>'
+    '<h2>Bolt Fleet API v2 · перебір методів</h2><p>Тіло запиту: company_id=' + COMPANY_ID + ', company_ids, filter {}, start_ts/end_ts та start_datetime/end_datetime за останню добу, offset 0, limit 50. 200 = метод відповів. При 702 дивіться <code>validation_errors</code> — там видно, яких полів бракує.</p>'
     + '<table><thead><tr><th>Метод</th><th>HTTP</th><th>Початок відповіді (~400 симв.)</th></tr></thead><tbody>'
     + rows.map(r => '<tr class="' + (String(r.status) === '200' ? 'ok' : 'no') + '"><td class="mono">' + esc(r.m) + '</td><td>' + esc(r.status) + '</td><td class="mono">' + esc(r.snippet) + '</td></tr>').join('') + '</tbody></table>');
 }
