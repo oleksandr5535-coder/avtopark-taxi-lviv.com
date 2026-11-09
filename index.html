@@ -3017,7 +3017,10 @@ function rpt_name(name,fl,lastFirst){var k=rpt_toks(name).join('|');var _ov=drvN
 // ===== ЗВІТ: стан і кеш =====
 var rptMode='day', rptDayKey=null, rptDrvKey=null, rptDrvKeys=[], rptFrom='', rptTo='';
 var _rptHy={};
-function rptHy(k){ if(_rptHy[k])return _rptHy[k]; var d=(typeof DAYS!=='undefined')?DAYS[k]:null; if(!d)return null; var H=(d&&d._parts)?hydrate(d):d; _rptHy[k]=H; return H; }
+/* Кеш перерахованих днів. Запис дійсний, лише поки DAYS[k] — той самий обʼєкт:
+   після «Оновити все» чи підвантаження з хмари день стає новим обʼєктом,
+   і звіт/тиждень перераховують його, а не показують стару копію. */
+function rptHy(k){ var d=(typeof DAYS!=='undefined')?DAYS[k]:null; if(!d)return null; var c=_rptHy[k]; if(c&&c.src===d)return c.H; var H=(d&&d._parts)?hydrate(d):d; _rptHy[k]={src:d,H:H}; return H; }
 function rptDates(){ return (typeof DAYS!=='undefined')?Object.keys(DAYS).sort():[]; }
 function rptLabel(k){ var d=(typeof DAYS!=='undefined')?DAYS[k]:null; return (d&&d.date_label)||k; }
 function rptGlobalFl(){ var m={}; rptDates().forEach(function(k){ var H=rptHy(k); if(!H||!H._parts)return; var src=[].concat(H._parts.bolt_income||[],H._parts.bolt_hist||[]); src.forEach(function(r){var v=r&&r['Водій'];if(v)m[rpt_toks(v).join('|')]=v;}); }); return m; }
@@ -3105,6 +3108,13 @@ function reportDayRender(out){
   out.innerHTML=html;
   rptWireCopy(out,[null,{h:gH,r:gpsRows},{h:uH,r:uklonRows}]);
   rptWireBoltPromo(out,dateKey);
+  /* GPS у звіті будується із сирих рядків трекера. Якщо день у браузері
+     полегшений — дотягуємо повний із хмари й перемальовуємо (лише якщо
+     сирі дані справді прийшли, тож зациклення немає). */
+  var _rk=rptDayKey;
+  if(_rk&&DAYS[_rk]&&!DAYS[_rk]._parts&&typeof ensureParts==='function'){
+    ensureParts(_rk).then(function(d){if(d&&d._parts&&rptMode==='day'&&rptDayKey===_rk&&document.getElementById('rptOut'))renderReportOut();}).catch(function(){});
+  }
 }
 // BOLT-секція з ручним промо: чистий дохід = дохід + промо; промо-колонка НЕ копіюється
 function rptBoltSection(bolt,dateKey){
@@ -3976,14 +3986,30 @@ function _daysForLocal(){
   }catch(e){return DAYS;}
 }
 /* Якщо день лежить локально без сирих даних, а вони потрібні —
-   тягнемо його з хмари. */
+   тягнемо його з хмари. Хмарну копію беремо, лише якщо в ній є сирі дані
+   і вона не старша за локальну (_ts) — новіші локальні цифри не затираються. */
+var _ensurePartsQ={};
 async function ensureParts(ymd){
   if(!ymd)return null;
   var d=DAYS[ymd];
   if(d&&d._parts)return d;
-  if(typeof cloudLoadDay!=='function')return d||null;
-  var full=await cloudLoadDay(ymd);
-  return full||d||null;
+  if(typeof supa==='undefined'||!supa)return d||null;
+  if(_ensurePartsQ[ymd])return _ensurePartsQ[ymd];
+  _ensurePartsQ[ymd]=(async function(){
+    try{
+      var r=await supa.from("app_data").select("value").eq("key","day:"+ymd).maybeSingle();
+      var c=(r&&!r.error&&r.data)?r.data.value:null;
+      if(typeof c==='string'){try{c=JSON.parse(c);}catch(e){c=null;}}
+      var cur=DAYS[ymd];
+      if(cur&&cur._parts)return cur;
+      if(c&&typeof c==='object'&&c._parts&&(!cur||((c._ts||0)>=(cur._ts||0)))){
+        c.date=ymd;c.date_label=isoDateLabel(ymd);DAYS[ymd]=c;return c;
+      }
+      return cur||null;
+    }catch(e){console.error('ensureParts',e);return DAYS[ymd]||null;}
+    finally{delete _ensurePartsQ[ymd];}
+  })();
+  return _ensurePartsQ[ymd];
 }
 function saveDays(){
   try{localStorage.setItem('days_store',JSON.stringify(_daysForLocal()));}
@@ -4002,7 +4028,10 @@ function saveDays(){
     }
   }
 }
-function loadDays(){try{var _ls=JSON.parse(localStorage.getItem('days_store')||'{}');Object.keys(_ls).forEach(function(k){var d=_ls[k];var ex=DAYS[k];if(!ex||(((d&&d._ts)||0)>=((ex&&ex._ts)||0)))DAYS[k]=d;});}catch(e){} cleanDays(); }
+/* Локальна полегшена копія (_light, без сирих даних) НЕ замінює повну хмарну
+   з тим самим _ts — інакше після входу дні старші за кілька останніх втрачали
+   GPS у звіті й на головній. Новіша локальна копія, як і раніше, перемагає. */
+function loadDays(){try{var _ls=JSON.parse(localStorage.getItem('days_store')||'{}');Object.keys(_ls).forEach(function(k){var d=_ls[k];var ex=DAYS[k];var lt=(d&&d._ts)||0,et=(ex&&ex._ts)||0;if(!ex||lt>et||(lt===et&&!(d&&d._light&&!d._parts&&ex._parts)))DAYS[k]=d;});}catch(e){} cleanDays(); }
 function isoDateLabel(date){if(!/^\d{4}-\d{2}-\d{2}$/.test(date||''))return date||'';var _M=['\u0441\u0456\u0447\u043d\u044f','\u043b\u044e\u0442\u043e\u0433\u043e','\u0431\u0435\u0440\u0435\u0437\u043d\u044f','\u043a\u0432\u0456\u0442\u043d\u044f','\u0442\u0440\u0430\u0432\u043d\u044f','\u0447\u0435\u0440\u0432\u043d\u044f','\u043b\u0438\u043f\u043d\u044f','\u0441\u0435\u0440\u043f\u043d\u044f','\u0432\u0435\u0440\u0435\u0441\u043d\u044f','\u0436\u043e\u0432\u0442\u043d\u044f','\u043b\u0438\u0441\u0442\u043e\u043f\u0430\u0434\u0430','\u0433\u0440\u0443\u0434\u043d\u044f'];var mo=+date.slice(5,7)-1,dy=+date.slice(8,10);return _M[mo]?(dy+' '+_M[mo]):date;}
 function buildWin(date,nowMin){var m=nowMin||0;try{var np=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());var g=function(t){return np.find(function(x){return x.type===t}).value};var today=g('year')+'-'+g('month')+'-'+g('day');var cur=(+g('hour'))*60+(+g('minute'));if(date===today&&m>cur)m=cur;}catch(e){}var h=Math.floor(m/60),mm=m%60;var hhmm=(h<10?'0':'')+h+':'+(mm<10?'0':'')+mm;var lbl=isoDateLabel(date);return (lbl?lbl+' \u00b7 ':'')+'\u0441\u0442\u0430\u043d\u043e\u043c \u043d\u0430 ~'+hhmm;}
 async function cloudDeleteDay(k){if(typeof supa==='undefined'||!supa)return;try{await supa.from("app_data").delete().eq("key","day:"+k);}catch(e){console.error('cloudDeleteDay',e);}}
@@ -4046,7 +4075,7 @@ function renderDayCal(){var cal=document.getElementById('dayCal');if(!cal)return
   try{(CLOUD_DAY_KEYS||[]).forEach(function(k){has[k]=1;});}catch(e){}var cur=(DATA&&DATA.date)||'';var first=new Date(Date.UTC(y,m-1,1));var startWd=(first.getUTCDay()+6)%7;var dim=new Date(Date.UTC(y,m,0)).getUTCDate();var DL=['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];var head='<div class="dcal-h"><button type="button" class="dcal-nav" onclick="dayCalStep(-1,event)">\u2039</button><b class="dcal-t">'+MONF[m-1]+' '+y+'</b><button type="button" class="dcal-nav" onclick="dayCalStep(1,event)">\u203a</button></div>';var wd='<div class="dcal-wd">'+DL.map(function(d){return '<div>'+d+'</div>';}).join('')+'</div>';var cells='';for(var i=0;i<startWd;i++)cells+='<div></div>';for(var day=1;day<=dim;day++){var k=y+'-'+String(m).padStart(2,'0')+'-'+String(day).padStart(2,'0');var h=!!has[k];var sel=(k===cur);var cl='dcal-c '+(sel?'sel':(h?'has':'off'));if(h||sel){cells+='<div role="button" class="'+cl+'" onclick="pickDay(&quot;'+k+'&quot;,event)">'+day+'</div>';}else{cells+='<div class="'+cl+'">'+day+'</div>';}}var grid='<div class="dcal-g">'+cells+'</div>';var hint='<div class="dcal-hint">Зелені дні \u2014 є дані. Стрілками \u2039 \u203a \u2014 інші місяці.</div>';cal.innerHTML='<div class="dcal">'+head+wd+grid+hint+'</div>';}
 function dayCutMin(){return Math.round((typeof DAYSTART!=='undefined'&&DAYSTART!=null?DAYSTART:5)*60);}
 function hydrate(day){if(!day||!day._parts||typeof PROC==='undefined'||!PROC.buildData)return day;try{var D=PROC.buildData(day._parts,dayCutMin());D._parts=day._parts;D.date=day.date||D.date;D.date_label=day.date_label||D.date_label;D.window=buildWin(D.date,D.now_min);if(D.demand===undefined&&day.demand!==undefined)D.demand=day.demand;return D;}catch(e){console.error('hydrate',e);return day;}}
-function setDay(date){if(DAYS[date]){DATA=hydrate(DAYS[date]);boot();}}const rank={nowork:0,low:1,behind:2,ontrack:3,done:4};
+function setDay(date){if(DAYS[date]){DATA=hydrate(DAYS[date]);boot();if(!DAYS[date]._parts&&typeof ensureParts==='function'){ensureParts(date).then(function(d){if(d&&d._parts&&DATA&&DATA.date===date){DATA=hydrate(d);boot();}}).catch(function(){});}}}const rank={nowork:0,low:1,behind:2,ontrack:3,done:4};
 function renderList(){if(typeof A==='undefined'||!Array.isArray(A)){var _le=document.getElementById('list');if(_le)_le.innerHTML='<p class="sub">Ще немає даних за цей день.</p>';return;}
 let L=A.filter(o=>inScope(o)&&o.name.toLowerCase().includes(q)&&(selDrivers.size===0||selDrivers.has(o.name))&&(statusF=='all'||statusOf(o)==statusF||(statusF=='nowork'&&statusOf(o)=='low')));
 const key={attn:o=>[rank[statusOf(o)],-(o.idle||0)],start:o=>[o.start_h==null?99:o.start_h],plan:o=>{const p=plan(o);return p.done?[0,-(o.net||0)]:(p.hLeft!=null?[1,p.hLeft]:[2,0]);},gross:o=>[-(o.gross||0)],unacc:o=>[-(o.unacc_km||0)]}[sort];
@@ -4776,8 +4805,8 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=111;
-var APP_BUILD='збірка 21.08 · v'+APP_BUILD_N;
+var APP_BUILD_N=112;
+var APP_BUILD='збірка 09.11 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
   var cv=(r&&r.data&&r.data.value!=null)?r.data.value:0;var cloudN=parseInt((typeof cv==='object'&&cv)?(cv.n||0):cv)||0;
