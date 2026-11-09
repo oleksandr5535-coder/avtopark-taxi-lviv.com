@@ -3982,6 +3982,8 @@ function _daysForLocal(){
     keep.slice(-LOCAL_PARTS_KEEP).forEach(function(k){fresh[k]=1;});
     var o={};
     keep.forEach(function(k){o[k]=fresh[k]?DAYS[k]:_stripDay(DAYS[k]);});
+    /* дні, які ще не дійшли до хмари, тримаємо повністю — інакше сирі дані зникнуть */
+    try{var _u=_unsyncedGet();Object.keys(_u).forEach(function(k){if(DAYS[k])o[k]=DAYS[k];});}catch(e){}
     return o;
   }catch(e){return DAYS;}
 }
@@ -4011,6 +4013,27 @@ async function ensureParts(ymd){
   })();
   return _ensurePartsQ[ymd];
 }
+/* Повний день, до якого кнопки Bolt/Uklon/GPS дописують свіже.
+   Якщо в браузері дня немає або він полегшений — беремо повний із хмари.
+   {ok:false}, коли хмара не відповіла: тоді оновлення зупиняється,
+   щоб не записати в хмару день лише з Bolt поверх повного. */
+async function dayBaseForUpdate(date){
+  var ex=DAYS[date];
+  if(ex&&ex._parts)return {ok:true,day:ex};
+  if(typeof supa==='undefined'||!supa)return {ok:!(ex&&ex._light),day:ex||null};
+  try{
+    var r=await supa.from("app_data").select("value").eq("key","day:"+date).maybeSingle();
+    if(!r||r.error)return {ok:false};
+    var c=r.data?r.data.value:null;
+    if(typeof c==='string'){try{c=JSON.parse(c);}catch(e){return {ok:false};}}
+    var cur=DAYS[date];
+    if(cur&&cur._parts)return {ok:true,day:cur};
+    if(c&&typeof c==='object'&&c._parts&&(!cur||((c._ts||0)>=(cur._ts||0)))){c.date=date;c.date_label=isoDateLabel(date);DAYS[date]=c;return {ok:true,day:c};}
+    if(cur)return {ok:false};          /* локально полегшений, а повного в хмарі немає — не ризикуємо */
+    if(c)return {ok:false};            /* у хмарі щось є, але без сирих даних — не затираємо */
+    return {ok:true,day:null};         /* дня ніде немає — це новий день */
+  }catch(e){console.error('dayBaseForUpdate',e);return {ok:false};}
+}
 function saveDays(){
   try{localStorage.setItem('days_store',JSON.stringify(_daysForLocal()));}
   catch(e){
@@ -4021,8 +4044,19 @@ function saveDays(){
       var keep=ks.slice(-14),o={};
       var fr={};keep.slice(-3).forEach(function(k){fr[k]=1;});
       keep.forEach(function(k){o[k]=fr[k]?DAYS[k]:_stripDay(DAYS[k]);});
+      try{var _u2=_unsyncedGet();Object.keys(_u2).forEach(function(k){if(DAYS[k])o[k]=DAYS[k];});}catch(e){}
       localStorage.setItem('days_store',JSON.stringify(o));
     }catch(e2){
+      /* Ще тісніше: повністю лишаємо ЛИШЕ дні, яких немає в хмарі (не збережені);
+         решта — полегшені, їхні сирі дані в хмарі. Лише якщо й так не влазить — чистимо. */
+      try{
+        var _u3=_unsyncedGet(),ks3=Object.keys(DAYS).filter(function(k){return /^\d{4}-\d{2}-\d{2}$/.test(k);}).sort().slice(-14),o3={};
+        ks3.forEach(function(k){o3[k]=_stripDay(DAYS[k]);});
+        Object.keys(_u3).forEach(function(k){if(DAYS[k])o3[k]=DAYS[k];});
+        if(!Object.keys(_u3).length)throw e2;
+        localStorage.setItem('days_store',JSON.stringify(o3));
+        return;
+      }catch(e4){}
       try{localStorage.removeItem('days_store');}catch(e3){}
       console.warn('Сховище браузера переповнене — дні беруться з хмари.');
     }
@@ -4805,7 +4839,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=112;
+var APP_BUILD_N=113;
 var APP_BUILD='збірка 09.11 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
@@ -5878,7 +5912,8 @@ async function updateBolt(){
     var orders=extractOrders(j);
     if(!orders.length){stat.textContent='За '+date+' замовлень не знайдено';stat.className='bb-stat bad';btn.textContent=old;btn.disabled=false;return;}
     var bp=boltOrdersToParts(orders);
-    var ex=DAYS[date];var base=(ex&&ex._parts)?Object.assign({},ex._parts):{bolt_income:[],bolt_hist:[],uklon_agg:[],uklon_trips:[],wialon_trips_rows:[],wialon_stops_rows:[]};
+    var _fb=await dayBaseForUpdate(date);if(!_fb.ok)throw new Error('не вдалося взяти повний день '+date+' з хмари. Спробуй ще раз (так Uklon і GPS не затруться)');
+    var ex=_fb.day;var base=(ex&&ex._parts)?Object.assign({},ex._parts):{bolt_income:[],bolt_hist:[],uklon_agg:[],uklon_trips:[],wialon_trips_rows:[],wialon_stops_rows:[]};
     base.bolt_income=bp.bolt_income;base.bolt_hist=bp.bolt_hist;
     var D=PROC.buildData(base,dayCutMin());if(!D.drivers.length)throw new Error('немає водіїв у відповіді');
     D._parts=base;D.date=date;D.date_label=isoDateLabel(date);D.window=buildWin(date,D.now_min);
@@ -5913,6 +5948,7 @@ async function updateUklon(){
   var di=document.getElementById('boltDate');var date=(di&&di.value)||kyivToday();
   var old=btn.textContent;btn.disabled=true;btn.textContent='Тягну Uklon…';stat.textContent='';stat.className='bb-stat';
   try{
+    if(DAYS[date]&&!DAYS[date]._parts){try{await dayBaseForUpdate(date);}catch(e){}}  /* полегшений день — спершу повний із хмари */
     var ex=DAYS[date];
     if(!ex||!ex._parts){stat.textContent='Спершу натисни «Оновити Bolt» за '+date+', тоді Uklon';stat.className='bb-stat bad';btn.textContent=old;btn.disabled=false;return;}
     var res=await fetch('/api/uklon?date='+encodeURIComponent(date));
@@ -5948,6 +5984,7 @@ async function updateGPS(){
   var di=document.getElementById('boltDate');var date=(di&&di.value)||kyivToday();
   var old=btn.textContent;btn.disabled=true;btn.textContent='Тягну GPS…';stat.textContent='';stat.className='bb-stat';
   try{
+    if(DAYS[date]&&!DAYS[date]._parts){try{await dayBaseForUpdate(date);}catch(e){}}  /* полегшений день — спершу повний із хмари */
     var ex=DAYS[date];
     if(!ex||!ex._parts){stat.textContent='Спершу натисни «Оновити Bolt» за '+date+', тоді GPS';stat.className='bb-stat bad';btn.textContent=old;btn.disabled=false;return;}
     var res=await fetch('/api/wialon?date='+encodeURIComponent(date));
@@ -6042,7 +6079,48 @@ async function cloudLoadDay(ymd){
   }catch(e){console.error(e);}
   return null;
 }
-async function cloudSaveDay(d){if(!supa||!d||!d.date)return;try{await supa.from("app_data").upsert({key:"day:"+d.date,value:d});autoPublish(d.date);}catch(e){console.error(e);}}
+/* Збереження дня в хмару з перевіркою.
+   Supabase не кидає помилку, а повертає {error} — раніше її не дивились, і
+   при простроченому вході чи збої день лишався лише в браузері, а екран писав «✓».
+   Тепер: перевіряємо відповідь, повторюємо раз через 2 с; якщо не вдалось —
+   день записується в список «не збережено» (days_unsynced). Такий день браузер
+   не полегшує (сирі дані лишаються), і збереження повторюється при наступному
+   вході або кнопкою на плашці. Полегшену копію (без сирих) у хмару не пишемо
+   ніколи — вона затерла б повну. */
+function _unsyncedGet(){try{var o=JSON.parse(localStorage.getItem('days_unsynced')||'{}');return (o&&typeof o==='object')?o:{};}catch(e){return {};}}
+function _unsyncedPut(o){try{if(Object.keys(o).length)localStorage.setItem('days_unsynced',JSON.stringify(o));else localStorage.removeItem('days_unsynced');}catch(e){}try{_unsyncedBanner();}catch(e){}}
+function _unsyncedBanner(){
+  var ks=Object.keys(_unsyncedGet()).sort();var el=document.getElementById('unsyncBanner');
+  if(!ks.length){if(el)el.remove();return;}
+  if(!el){el=document.createElement('div');el.id='unsyncBanner';el.style.cssText='position:fixed;left:12px;right:12px;bottom:12px;z-index:450;max-width:560px;margin:0 auto;background:#fdecea;border:1px solid #f1b0a8;color:#a52a1a;border-radius:12px;padding:10px 12px;font-size:13px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.12);display:flex;gap:10px;align-items:center;justify-content:space-between';document.body.appendChild(el);}
+  var lbl=ks.map(function(k){return k.slice(8,10)+'.'+k.slice(5,7);}).join(', ');
+  el.innerHTML='<span>⚠ Не збережено в хмару: '+lbl+'. Перевір інтернет або вийди й зайди знову.</span><button type="button" style="flex:none;border:none;border-radius:8px;background:#a52a1a;color:#fff;font:inherit;padding:6px 10px;cursor:pointer">Повторити</button>';
+  var b=el.querySelector('button');if(b)b.onclick=function(){b.disabled=true;b.textContent='Зберігаю…';cloudRetryUnsynced();};
+}
+async function cloudSaveDay(d){
+  if(!supa||!d||!d.date)return false;
+  if(!d._parts&&d._light)return false;            /* полегшену копію в хмару не пишемо */
+  var k=d.date,ok=false;
+  for(var a=0;a<2&&!ok;a++){
+    try{var r=await supa.from("app_data").upsert({key:"day:"+k,value:d});if(r&&!r.error)ok=true;else console.error('cloudSaveDay',k,r&&r.error);}
+    catch(e){console.error('cloudSaveDay',k,e);}
+    if(!ok&&a===0)await new Promise(function(res){setTimeout(res,2000);});
+  }
+  var u=_unsyncedGet();
+  if(ok){if(u[k]&&DAYS[k]===d){delete u[k];_unsyncedPut(u);}}
+  else{u[k]=Date.now();_unsyncedPut(u);try{saveDays();}catch(e){}}   /* перезаписати браузер: цей день тепер тримаємо повністю */
+  try{autoPublish(k);}catch(e){}
+  return ok;
+}
+/* Повторити збереження днів, які не дійшли до хмари. */
+async function cloudRetryUnsynced(){
+  var u=_unsyncedGet(),ks=Object.keys(u);
+  for(var i=0;i<ks.length;i++){var k=ks[i],d=DAYS[k];
+    if(d&&d._parts){await cloudSaveDay(d);}
+    else if(!d){delete u[k];_unsyncedPut(u);}   /* дня вже немає (очищено) — нічого зберігати */
+  }
+  _unsyncedBanner();
+}
 async function cloudDeleteAllDays(){if(!supa)return;try{await supa.from("app_data").delete().like("key","day:%");}catch(e){console.error(e);}}
 async function cloudSaveKV(k,v){if(!supa)return;try{await supa.from("app_data").upsert({key:"kv:"+k,value:v});}catch(e){console.error(e);}}
 async function cloudLoadKV(){if(!supa)return;try{const r=await supa.from("app_data").select("key,value").in("key",["kv:fleet","kv:notes","kv:drvpass","kv:planfuel","kv:bordur","kv:plannames","kv:planorder","kv:drv_names","kv:drvdeleted","kv:promo","kv:boltbrand","kv:boltearn","kv:uklonbrand","kv:brand_fix","kv:brandsplit","kv:pct_cuts","kv:drv_cat","kv:rent","kv:dhcfg"]);if(r.error){console.error(r.error);return;}(r.data||[]).forEach(x=>{if(x.key==="kv:rent"&&x.value&&typeof rentCloudMerge==="function"){try{rentCloudMerge(x.value);}catch(e){}}
@@ -6050,7 +6128,8 @@ if(x.key==="kv:dhcfg"&&x.value){try{localStorage.setItem("dh_cfg",(typeof x.valu
 if(x.key==="kv:fleet"&&typeof x.value==="string"){try{localStorage.setItem("fleet_plates",x.value);}catch(e){}}if(x.key==="kv:notes"&&x.value){try{localStorage.setItem("cars_notes",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:drvpass"&&x.value){try{localStorage.setItem("drv_pass",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:planfuel"&&x.value){try{localStorage.setItem("plan_fuel",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:bordur"&&x.value){try{localStorage.setItem("bordur_all",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:promo"&&x.value){try{localStorage.setItem("promo_all",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:boltbrand"&&x.value!=null){try{localStorage.setItem("boltbrand",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:boltearn"&&x.value!=null){try{localStorage.setItem("boltearn",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:uklonbrand"&&x.value!=null){try{localStorage.setItem("uklonbrand",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:brand_fix"&&x.value!=null){try{localStorage.setItem("brand_fix",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:pct_cuts"&&x.value!=null){try{localStorage.setItem("pct_cuts",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:drv_cat"&&x.value!=null){try{localStorage.setItem("drv_cat",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:brandsplit"&&x.value!=null){try{localStorage.setItem("brandsplit",String(x.value));}catch(e){}}if(x.key==="kv:plannames"&&x.value){try{localStorage.setItem("plan_names",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:planorder"&&x.value){try{localStorage.setItem("plan_order",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:drv_names"&&x.value){try{localStorage.setItem("drv_names",JSON.stringify(x.value));}catch(e){}}if(x.key==="kv:drvdeleted"&&x.value){try{localStorage.setItem("drv_deleted",JSON.stringify(x.value));}catch(e){}}});}catch(e){console.error(e);}}
 function showLogin(b){var el=document.getElementById("login");if(el)el.style.display=b?"flex":"none";}
 function revealForm(){var l=document.getElementById("loginLoading"),f=document.getElementById("loginForm");if(l)l.style.display="none";if(f)f.style.display="block";}
-async function startCloud(){await cloudLoadDays();await cloudLoadKV();try{loadDays();}catch(e){}var ks=Object.keys(DAYS).sort();if(ks.length){DATA=hydrate(DAYS[ks[ks.length-1]]);boot();}else{showUploaderOnly();}}
+async function startCloud(){try{loadDays();}catch(e){}  /* спершу локальні дні: інакше cloudLoadDays→saveDays затирав у браузері новіші, ще не збережені в хмару */
+await cloudLoadDays();await cloudLoadKV();try{loadDays();}catch(e){}var ks=Object.keys(DAYS).sort();if(ks.length){DATA=hydrate(DAYS[ks[ks.length-1]]);boot();}else{showUploaderOnly();}try{if(Object.keys(_unsyncedGet()).length)cloudRetryUnsynced();}catch(e){}}
 function startLocal(){try{loadDays();var ks=Object.keys(DAYS).sort();if(ks.length){DATA=hydrate(DAYS[ks[ks.length-1]]);boot();}else{showUploaderOnly();}}catch(e){console.error(e);}}
 async function checkAuth(){if(!supa){startLocal();return;}try{const sx=await supa.auth.getSession();if(sx&&sx.data&&sx.data.session){startCloud();}else{showLogin(true);revealForm();}}catch(e){console.error(e);showLogin(true);revealForm();}}
 (function(){var lb=document.getElementById("loginBtn");
