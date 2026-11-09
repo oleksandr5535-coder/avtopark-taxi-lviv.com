@@ -168,6 +168,13 @@ function ev(w, code) { return w.eval(code); }
   ev(s2.w, "document.querySelector('#unsyncBanner button').click()"); await sleep(1500);
   check('кнопка «Повторити» зберегла 13.10 і прибрала плашку', (CLOUD.get('day:2026-10-13') || {})._ts === ev(s2.w, "DAYS['2026-10-13']._ts") && !ev(s2.w, "document.getElementById('unsyncBanner')"));
 
+  // кнопка «Новий тиждень» прибрана, масове видалення вимкнене
+  check('кнопки «Новий тиждень» на головній немає', !ev(s2.w, "document.getElementById('newWeek')") && !ev(s2.w, "[].some.call(document.querySelectorAll('button'),function(b){return /Новий тиждень/.test(b.textContent)})"));
+  check('блок «Дані наживо» на місці: Оновити все, Bolt/Uklon/GPS, Завантажити файли', ev(s2.w, "!!(document.querySelector('.liveblk')&&document.getElementById('allBtn')&&document.getElementById('gpsBtn')&&/Завантажити файли/.test(document.querySelector('.liveblk').textContent))"));
+  const nDays = [...CLOUD.keys()].filter(k => k.startsWith('day:')).length;
+  await ev(s2.w, 'cloudDeleteAllDays()');
+  check('навіть прямий виклик не видаляє дні з хмари (' + nDays + ' днів цілі)', [...CLOUD.keys()].filter(k => k.startsWith('day:')).length === nDays && nDays > 30);
+
   // все решта як було
   const bad = []; const VIEWS = ['overview','drivers','cars','week','compare','report','tracker','history','branding','coverage','standing','status','morning','rent','trent','settings','owner','cabinet','help','dyn'];
   const e0 = s2.errs.length;

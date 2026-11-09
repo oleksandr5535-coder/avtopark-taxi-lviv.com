@@ -2134,7 +2134,7 @@ select:focus,textarea:focus{
 <div id="morning" class="hide"><h1>🌅 <span class="accent">Ранок</span></h1><p class="sub">Хто ще не виїхав, хто катається без замовлень, і які авто не в ростері. Станом на останнє оновлення.</p><div id="mornBody"></div></div><div id="report" class="hide"><h1>📋 <span class="accent">Звіт</span> за день</h1><p class="sub">Натисни «Копіювати дані» під таблицею — рядки копіюються через Tab і лягають рівно по клітинках у твоїй щоденній таблиці. Копіюються заголовки + рядки даних.</p><div id="reportBody"></div></div><div id="compare" class="hide"></div>
 <div id="week" class="hide"></div>
 <div id="overview">
-  <div class="ovhead"><div class="ovhead-l"><p class="eyebrow">AVTO PARK Lviv · Golubkov</p><h1>День <span class="accent">водіїв</span></h1><p class="sub" id="sub"></p><button id="reload" class="btnf">↻ Завантажити / скинути файли</button> <button id="newWeek" class="btnf" style="border-color:#E7B7B0;color:var(--bad)">🗓 Новий тиждень</button></div><div id="standMini" class="ovhead-r"></div></div><div class="boltbar" id="boltbar"><span class="bb-ic">⚡</span><span class="bb-lbl">Наживо</span><input id="boltDate" type="date"><button id="allBtn" class="btnf bb-all">⚡ Оновити все</button><button id="boltBtn" class="btnf bb-go">↻ Оновити Bolt</button><button id="uklonBtn" class="btnf bb-go">↻ Оновити Uklon</button><button id="gpsBtn" class="btnf bb-go">🛰 Оновити GPS</button><span id="boltStat" class="bb-stat"></span></div><div class="daybar" id="daybar"></div><div class="kpis" id="kpis"></div><div id="fleetMini"></div><div id="dayDash"></div>
+  <div class="ovhead"><div class="ovhead-l"><p class="eyebrow">AVTO PARK Lviv · Golubkov</p><h1>День <span class="accent">водіїв</span></h1><p class="sub" id="sub"></p><button id="reload" class="btnf">↻ Завантажити / скинути файли</button></div><div id="standMini" class="ovhead-r"></div></div><div class="boltbar" id="boltbar"><span class="bb-ic">⚡</span><span class="bb-lbl">Наживо</span><input id="boltDate" type="date"><button id="allBtn" class="btnf bb-all">⚡ Оновити все</button><button id="boltBtn" class="btnf bb-go">↻ Оновити Bolt</button><button id="uklonBtn" class="btnf bb-go">↻ Оновити Uklon</button><button id="gpsBtn" class="btnf bb-go">🛰 Оновити GPS</button><span id="boltStat" class="bb-stat"></span></div><div class="daybar" id="daybar"></div><div class="kpis" id="kpis"></div><div id="fleetMini"></div><div id="dayDash"></div>
   
 </div>
 <div id="drivers" class="hide"><h1>Во<span class="accent">дії</span></h1><p class="sub">Робочий список: фільтри, пошук, картки водіїв.</p><div id="drvSum" class="drvsum"></div><div class="bar2">
@@ -4839,7 +4839,7 @@ function renderCoverage(){var el=document.getElementById('coverage');if(!el)retu
   }).join('');
   el.innerHTML='<h1>📦 <span class="accent">Завантажено</span></h1><p class="sub">Що є в системі — по місяцях і тижнях (пн–нд). Зелені клітинки — дні зі щоденними даними; під ними — брендування за тиждень.</p>'+body;
 }
-var APP_BUILD_N=113;
+var APP_BUILD_N=114;
 var APP_BUILD='збірка 09.11 · v'+APP_BUILD_N;
 async function versionCheck(){if(typeof supa==='undefined'||!supa)return;try{
   var r=await supa.from('app_data').select('value').eq('key','kv:appbuild').maybeSingle();
@@ -5826,7 +5826,8 @@ fileListEl.querySelectorAll('.x').forEach(x=>x.onclick=()=>{collected.splice(+x.
 function addFiles(list){for(const f of list){const t=(f.type||'').toLowerCase();if(t.startsWith('image/')||t.startsWith('video/')||t.startsWith('audio/'))continue;collected.push(f);}renderFiles();upErr.classList.add('hide');}
 fileInput.onchange=e=>addFiles(e.target.files);
 document.getElementById('clearFiles').onclick=()=>{collected=[];renderFiles();}
-const _nw=document.getElementById('newWeek');if(_nw)_nw.onclick=()=>{if(!confirm('Очистити ВСІ збережені дні й почати новий тиждень? Денні звіти буде видалено (налаштування, список авто та причини лишаться). Дію не можна скасувати.'))return;try{localStorage.removeItem('days_store');}catch(e){}if(typeof cloudDeleteAllDays==='function')cloudDeleteAllDays();DAYS={};DATA=null;collected=[];fillDaySel&&fillDaySel();const up=document.getElementById('uploader'),ap=document.getElementById('app');if(up)up.classList.remove('hide');if(ap)ap.classList.add('hide');const ub=document.getElementById('upBack');if(ub)ub.classList.add('hide');renderFiles();alert('Готово. Усі дні очищено — завантаж звіти нового тижня.');};;
+/* Кнопку «Новий тиждень» прибрано (09.11.2026): вона видаляла з Supabase ВСЮ історію днів одним натисканням.
+   Дні тягнуться з API й зберігаються в хмарі, тиждень починається сам — очищати нічого не треба. */
 ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over');}));
 ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();if(ev==='dragleave'&&drop.contains(e.relatedTarget))return;drop.classList.remove('over');}));
 drop.addEventListener('drop',e=>{if(e.dataTransfer&&e.dataTransfer.files)addFiles(e.dataTransfer.files);});
@@ -6121,7 +6122,8 @@ async function cloudRetryUnsynced(){
   }
   _unsyncedBanner();
 }
-async function cloudDeleteAllDays(){if(!supa)return;try{await supa.from("app_data").delete().like("key","day:%");}catch(e){console.error(e);}}
+/* Масове видалення всіх днів із хмари вимкнено навмисно — історія має лишатись. */
+async function cloudDeleteAllDays(){console.warn('cloudDeleteAllDays: вимкнено, історія днів у хмарі не видаляється');}
 async function cloudSaveKV(k,v){if(!supa)return;try{await supa.from("app_data").upsert({key:"kv:"+k,value:v});}catch(e){console.error(e);}}
 async function cloudLoadKV(){if(!supa)return;try{const r=await supa.from("app_data").select("key,value").in("key",["kv:fleet","kv:notes","kv:drvpass","kv:planfuel","kv:bordur","kv:plannames","kv:planorder","kv:drv_names","kv:drvdeleted","kv:promo","kv:boltbrand","kv:boltearn","kv:uklonbrand","kv:brand_fix","kv:brandsplit","kv:pct_cuts","kv:drv_cat","kv:rent","kv:dhcfg"]);if(r.error){console.error(r.error);return;}(r.data||[]).forEach(x=>{if(x.key==="kv:rent"&&x.value&&typeof rentCloudMerge==="function"){try{rentCloudMerge(x.value);}catch(e){}}
 if(x.key==="kv:dhcfg"&&x.value){try{localStorage.setItem("dh_cfg",(typeof x.value==="string")?x.value:JSON.stringify(x.value));}catch(e){}}
